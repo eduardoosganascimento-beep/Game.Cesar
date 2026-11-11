@@ -1,0 +1,203 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="theme-color" content="#08110f" />
+    <meta
+      name="description"
+      content="Sandman — jogo indie 2D em pixel art sobre memória, perda e reencontro na floresta."
+    />
+    <title>Sandman — uma lenda da floresta</title>
+    <script type="module" crossorigin src="./index-f4JSmZ0c.js"></script>
+    <link rel="stylesheet" crossorigin href="./index-7WoVC1Hz.css">
+  </head>
+  <body>
+    <div id="app">
+      <div id="frame">
+        <canvas id="game" width="320" height="180" aria-label="Área do jogo Sandman"></canvas>
+
+        <div id="hud" class="hud is-hidden">
+          <div class="hud-bar">
+            <div class="hud-group">
+              <span class="hud-caption">Vida</span>
+              <div id="hearts" class="hearts" aria-label="Vida de Sandman"></div>
+            </div>
+
+            <span class="hud-divider" aria-hidden="true"></span>
+
+            <div class="hud-group">
+              <span class="memory-icon" aria-hidden="true"></span>
+              <span class="memory-count"><b id="memories">0</b><span id="memory-total">/ 0</span></span>
+              <span class="hud-caption">memórias</span>
+            </div>
+
+            <span class="hud-spacer"></span>
+
+            <span id="chapter" class="chapter">Capítulo 1</span>
+            <button id="mute" class="mute" type="button" aria-label="Ligar ou desligar o som">
+              <span id="mute-icon" aria-hidden="true">♪</span>
+            </button>
+          </div>
+
+          <div id="boss" class="boss is-hidden" aria-live="polite">
+            <span class="boss-crest" aria-hidden="true">✦</span>
+            <span id="boss-label" class="boss-label">Capitão</span>
+            <div id="boss-pips" class="boss-pips" aria-label="Vida do capitão"></div>
+          </div>
+        </div>
+
+        <div id="chapter-card" class="chapter-card is-hidden" aria-live="polite">
+          <p class="chapter-kicker">Capítulo um</p>
+          <h2 id="chapter-title">A Aldeia</h2>
+          <p id="chapter-subtitle">A floresta guarda o que a aldeia perdeu.</p>
+        </div>
+
+        <div id="controls-hint" class="controls-hint is-hidden">
+          <kbd>←</kbd><kbd>→</kbd> mover <span>·</span> <kbd>Espaço</kbd> pular <span>·</span>
+          <kbd>J</kbd> atacar <span>·</span> <kbd>L</kbd> lançar <span>·</span> <kbd>Shift</kbd>
+          avançar
+        </div>
+
+        <div id="interact" class="interact is-hidden" aria-live="polite"></div>
+
+        <div id="overlay" class="overlay menu-overlay">
+          <div class="menu-screen" data-screen="main">
+            <p class="eyebrow">Uma lenda da floresta</p>
+            <h1 class="logo"><span>SAND</span><em>MAN</em></h1>
+            <p class="tagline">A memória é a única coisa que não podem roubar.</p>
+
+            <nav id="menu-main" class="menu-list" aria-label="Menu principal">
+              <button class="menu-item is-selected" type="button" data-action="chapters">
+                <span class="menu-index">01</span>
+                <span class="menu-label">Jogar</span>
+                <span class="menu-note">4 capítulos</span>
+              </button>
+              <button class="menu-item" type="button" data-action="how">
+                <span class="menu-index">02</span>
+                <span class="menu-label">Como jogar</span>
+                <span class="menu-note">controles</span>
+              </button>
+              <button class="menu-item" type="button" data-action="credits">
+                <span class="menu-index">03</span>
+                <span class="menu-label">Créditos</span>
+                <span class="menu-note">a lenda</span>
+              </button>
+            </nav>
+
+            <p class="menu-hint">↑ ↓ navegar · Enter escolher</p>
+          </div>
+
+          <div class="menu-screen is-hidden" data-screen="chapters">
+            <p class="eyebrow">Quatro travessias</p>
+            <h2 class="menu-title">Escolha o capítulo</h2>
+            <p class="menu-lead">
+              A história pode ser jogada em sequência ou revisitada. Cada capítulo guarda memórias
+              próprias e um pedaço da família de Sandman.
+            </p>
+            <nav id="chapter-list" class="chapter-list" aria-label="Capítulos"></nav>
+            <button class="menu-back" type="button" data-action="back">Voltar</button>
+          </div>
+
+          <div class="menu-screen is-hidden" data-screen="how">
+            <p class="eyebrow">Antes de partir</p>
+            <h2 class="menu-title">Como jogar</h2>
+            <p class="menu-lead">
+              Atravesse a floresta, recupere as memórias da sua família e chegue ao totem no fim da
+              trilha.
+            </p>
+            <div class="key-grid">
+              <div class="key-row">
+                <span class="key-keys"><kbd>←</kbd><kbd>→</kbd><kbd>A</kbd><kbd>D</kbd></span>
+                <span>Mover</span>
+              </div>
+              <div class="key-row">
+                <span class="key-keys"><kbd>Espaço</kbd><kbd>W</kbd></span>
+                <span>Pular (segure para ir mais alto)</span>
+              </div>
+              <div class="key-row">
+                <span class="key-keys"><kbd>J</kbd><kbd>Z</kbd></span>
+                <span>Atacar com o tacape</span>
+              </div>
+              <div class="key-row">
+                <span class="key-keys"><kbd>Shift</kbd><kbd>K</kbd></span>
+                <span>Avançar num impulso rápido</span>
+              </div>
+              <div class="key-row">
+                <span class="key-keys"><kbd>Esc</kbd></span>
+                <span>Pausar</span>
+              </div>
+              <div class="key-row">
+                <span class="key-keys"><kbd>R</kbd></span>
+                <span>Recomeçar o capítulo</span>
+              </div>
+            </div>
+            <p class="menu-footnote">
+              Pisar na cabeça dos colonos também os derruba. Soldados atiram de longe, feitores e
+              capitães avançam de espada. A água é funda e as estacas ferem: use os marcos de
+              fogueira como renascimento.
+            </p>
+            <button class="menu-back" type="button" data-action="back">Voltar</button>
+          </div>
+
+          <div class="menu-screen is-hidden" data-screen="credits">
+            <p class="eyebrow">Feito à mão</p>
+            <h2 class="menu-title">Créditos</h2>
+            <div class="credits-list">
+              <p><b>História e direção</b><span>Projeto Game.Cesar</span></p>
+              <p><b>Código e design</b><span>TypeScript · Canvas 2D · CSS</span></p>
+              <p><b>Arte de Sandman</b><span>Folha de sprites do projeto</span></p>
+              <p><b>Cenário</b><span>Floresta pintada em pixel art</span></p>
+              <p><b>Efeitos sonoros</b><span>Sintetizados no navegador</span></p>
+            </div>
+            <p class="menu-footnote">
+              Uma história sobre perda, resistência e a teimosia de lembrar.
+            </p>
+            <button class="menu-back" type="button" data-action="back">Voltar</button>
+          </div>
+
+          <div class="menu-footer">
+            <span>Sandman</span>
+            <span>v0.4 · quatro capítulos</span>
+          </div>
+        </div>
+
+        <div id="pause" class="overlay pause is-hidden">
+          <p class="eyebrow">A floresta espera</p>
+          <h2 class="menu-title">Pausa</h2>
+          <nav class="menu-list menu-list-compact" aria-label="Menu de pausa">
+            <button class="menu-item is-selected" type="button" data-action="resume">
+              <span class="menu-label">Continuar</span>
+            </button>
+            <button class="menu-item" type="button" data-action="restart">
+              <span class="menu-label">Recomeçar capítulo</span>
+            </button>
+            <button class="menu-item" type="button" data-action="menu">
+              <span class="menu-label">Voltar ao menu</span>
+            </button>
+          </nav>
+          <p class="menu-hint">Esc para continuar</p>
+        </div>
+
+        <div id="end" class="overlay end is-hidden">
+          <p id="end-kicker" class="eyebrow">Capítulo concluído</p>
+          <h2 id="end-title" class="menu-title">A Aldeia</h2>
+          <p id="end-text" class="menu-lead">A trilha continua para além das árvores.</p>
+          <div id="end-stats" class="end-stats"></div>
+          <div class="end-actions">
+            <button id="end-next" class="menu-back is-selected" type="button" data-action="next">
+              Próximo capítulo
+            </button>
+            <button class="menu-back ghost" type="button" data-action="replay">
+              Jogar de novo
+            </button>
+            <button class="menu-back ghost" type="button" data-action="menu">Menu</button>
+          </div>
+        </div>
+
+        <div class="scanlines" aria-hidden="true"></div>
+        <div class="frame-vignette" aria-hidden="true"></div>
+      </div>
+    </div>
+  </body>
+</html>
