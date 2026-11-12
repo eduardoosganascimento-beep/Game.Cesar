@@ -5,7 +5,7 @@ Jogo indie 2D em pixel art, feito para rodar no navegador com **TypeScript + Can
 > A aldeia caiu. A família de Sandman foi levada por colonos portugueses.
 > Anos de preparo depois, ele volta para resgatar quem ama — e acertar as contas.
 
-**Versão atual:** `0.4` — quatro capítulos jogáveis, cabanas exploráveis e o boss **Kennedy**.
+**Versão atual:** `0.5` — quatro capítulos jogáveis, cabanas em vista de cima e o guardião dos colonos.
 
 ## 🎮 Jogar agora no navegador
 
@@ -13,6 +13,21 @@ Jogo indie 2D em pixel art, feito para rodar no navegador com **TypeScript + Can
 
 O site é servido pelo **GitHub Pages** a partir da pasta `docs/` deste repositório.
 Funciona em qualquer computador com navegador — não precisa instalar nada.
+
+## O que tem no jogo
+
+- **Sandman (índio)** com a folha de sprites nova: idle, corrida, salto, arremesso
+  de lança, ataque corpo a corpo, dano e morte — todos os quadros com a mesma
+  altura e as mesmas cores da arte original.
+- **Cabanas** que o Sandman entra com `E` (ou `S`/`↓`): as cabanas de colonos,
+  com guardas e um **Guardião** com vida extra.
+  - Dentro a visão muda: o cômodo é visto **de cima**, com chão de tábuas,
+    tapete, mesa, barris, lareira e a porta que só abre quando o interior é limpo.
+- **Noite** no capítulo 4, com o fundo de luar e estrelas.
+- Mapas grandes (100, 124, 140 e 152 colunas) com plataformas, espinhos,
+  colonos, memórias e marcos.
+- Tiro de mosquete com projétil visível, pisão que machuca o colono (nunca o
+  jogador) e pixels de impacto diferentes para cada arma (faca, bala, lança).
 
 ## Rodar localmente
 
@@ -52,7 +67,8 @@ npm run preview
 - Pisão que machuca o colono (nunca o jogador)
 - Cabanas que o Sandman entra, com porta trancada até limpar o interior
 - Colonos que atiram de mosquete com bala visível e dano por impacto
-- Boss **Kennedy**, o lobo que protege o acampamento no capítulo 4
+- Guardião (o chefão das cabanas de colonos) com 9 de vida
+- Fundo de dia (floresta) e de noite (lua e estrelas) no capítulo 4
 - Fogo de artillery, água, espinhos, marcos de renascimento e memórias
 - Câmera com suavização, pausa, reinício e fim de capítulo
 - Parallax de floresta em duas camadas
