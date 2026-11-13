@@ -2,7 +2,20 @@ import cap1 from './data/levels/cap1.json'
 import cap2 from './data/levels/cap2.json'
 import cap3 from './data/levels/cap3.json'
 import cap4 from './data/levels/cap4.json'
+import tutorial from './data/levels/tutorial.json'
 import type { LevelData } from './level'
+
+// Fase de tutorial: jogável pelo menu principal, mas não aparece na lista
+// de capítulos nem entra na sequência de capítulos.
+export const TUTORIAL: ChapterDef = {
+  data: tutorial as unknown as LevelData,
+  kicker: 'Tutorial',
+  endText:
+    'Controles dominados. A floresta espera por você na Aldeia — boa travessia, Sand.',
+  tint: 'rgba(255, 209, 102, 0.06)',
+  lockGoalUntilBoss: false,
+  tag: 'Tutorial',
+}
 
 export type ChapterDef = {
   data: LevelData

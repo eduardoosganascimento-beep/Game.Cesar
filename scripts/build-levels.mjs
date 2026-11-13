@@ -18,6 +18,7 @@ function makeLevel(config) {
     blocks = [],
     platforms = [],
     spikes = [],
+    bg = [],
     entities = [],
     tail,
   } = config
@@ -91,6 +92,7 @@ function makeLevel(config) {
   for (const block of blocks) fill(block.x, block.y, block.w, block.h, '#')
   for (const platform of platforms) fill(platform.x, platform.y, platform.w, 1, '-')
   for (const spike of spikes) fill(spike.x, spike.y, spike.w, 1, '^')
+  for (const [x, y, w, h] of bg) fill(x, y, w, h, '+')
 
   const rows = grid.map((row) => row.join(''))
   const goalX = width - 4
@@ -182,6 +184,10 @@ const chapters = [
       { x: 58, y: 7, w: 3 },
     ],
     spikes: [{ x: 47, y: 8, w: 2 }],
+    bg: [
+      [10, 0, 40, 4],
+      [60, 0, 30, 4],
+    ],
     entities: [
       { type: 'memory', x: 10, y: 6 },
       { type: 'memory', x: 18, y: 5 },
@@ -197,15 +203,15 @@ const chapters = [
       { type: 'enemy', kind: 'capanga', x: 64, y: 8, left: 60, right: 67 },
     ],
     tail: {
-      width: 100,
+      width: 132,
       from: 72,
       kinds: ['capanga', 'soldado', 'capanga'],
       enemyEvery: 9,
       memoryEvery: 9,
-      platformEvery: 7,
-      spikeEvery: 18,
-      checkpointEvery: 22,
-      safe: [281, 581],
+      platformEvery: 6,
+      spikeEvery: 16,
+      checkpointEvery: 20,
+      safe: [80, 320],
     },
   }),
 
@@ -220,6 +226,7 @@ const chapters = [
       [35, 43],
       [56, 62],
       [72, 77],
+      [46, 48],
     ],
     blocks: [
       { x: 18, y: 8, w: 2, h: 1 },
@@ -247,6 +254,11 @@ const chapters = [
       { x: 30, y: 8, w: 2 },
       { x: 68, y: 8, w: 2 },
     ],
+    bg: [
+      [20, 0, 60, 4],
+      [90, 0, 60, 4],
+      [150, 0, 50, 4],
+    ],
     entities: [
       { type: 'memory', x: 8, y: 5 },
       { type: 'memory', x: 25, y: 4 },
@@ -266,15 +278,15 @@ const chapters = [
       { type: 'enemy', kind: 'soldado', x: 86, y: 8, left: 85, right: 87 },
     ],
     tail: {
-      width: 124,
+      width: 156,
       from: 88,
       kinds: ['capanga', 'soldado', 'feitor'],
       enemyEvery: 9,
       memoryEvery: 9,
-      platformEvery: 7,
-      spikeEvery: 18,
-      checkpointEvery: 22,
-      safe: [180, 720],
+      platformEvery: 6,
+      spikeEvery: 16,
+      checkpointEvery: 20,
+      safe: [90, 360],
     },
   }),
 
@@ -288,6 +300,7 @@ const chapters = [
       [24, 26],
       [58, 60],
       [76, 78],
+      [64, 66],
     ],
     blocks: [
       { x: 18, y: 8, w: 1, h: 1 },
@@ -318,6 +331,11 @@ const chapters = [
       { x: 52, y: 8, w: 2 },
       { x: 72, y: 8, w: 2 },
     ],
+    bg: [
+      [10, 0, 30, 4],
+      [60, 0, 25, 4],
+      [140, 0, 24, 4],
+    ],
     entities: [
       { type: 'memory', x: 7, y: 5 },
       { type: 'memory', x: 14, y: 4 },
@@ -340,15 +358,15 @@ const chapters = [
       { type: 'enemy', kind: 'soldado', x: 91, y: 8, left: 90, right: 94 },
     ],
     tail: {
-      width: 140,
+      width: 176,
       from: 96,
       kinds: ['capanga', 'soldado', 'feitor'],
       enemyEvery: 9,
       memoryEvery: 9,
-      platformEvery: 7,
-      spikeEvery: 18,
-      checkpointEvery: 22,
-      safe: [296, 748],
+      platformEvery: 6,
+      spikeEvery: 16,
+      checkpointEvery: 20,
+      safe: [110, 420],
     },
   }),
 
@@ -363,6 +381,7 @@ const chapters = [
       [48, 52],
       [70, 74],
       [88, 90],
+      [112, 114],
     ],
     blocks: [
       { x: 21, y: 8, w: 1, h: 1 },
@@ -395,6 +414,11 @@ const chapters = [
       { x: 32, y: 8, w: 2 },
       { x: 64, y: 8, w: 2 },
     ],
+    bg: [
+      [30, 0, 60, 4],
+      [90, 0, 60, 4],
+      [150, 0, 40, 4],
+    ],
     entities: [
       { type: 'memory', x: 8, y: 5 },
       { type: 'memory', x: 15, y: 4 },
@@ -416,15 +440,15 @@ const chapters = [
       { type: 'enemy', kind: 'capanga', x: 86, y: 8, left: 83, right: 87 },
     ],
     tail: {
-      width: 152,
+      width: 196,
       from: 104,
       kinds: ['soldado', 'feitor', 'capanga'],
       enemyEvery: 9,
       memoryEvery: 9,
-      platformEvery: 7,
-      spikeEvery: 18,
-      checkpointEvery: 22,
-      safe: [220, 760],
+      platformEvery: 6,
+      spikeEvery: 16,
+      checkpointEvery: 20,
+      safe: [130, 460],
     },
   }),
 ]

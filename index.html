@@ -58,7 +58,7 @@
           avançar
         </div>
 
-        <div id="interact" class="interact is-hidden" aria-live="polite"></div>
+        <div id="tutorial-prompt" class="tutorial-prompt is-hidden" aria-live="polite"></div>
 
         <div id="overlay" class="overlay menu-overlay">
           <div class="menu-screen" data-screen="main">
@@ -72,13 +72,18 @@
                 <span class="menu-label">Jogar</span>
                 <span class="menu-note">4 capítulos</span>
               </button>
-              <button class="menu-item" type="button" data-action="how">
+              <button class="menu-item" type="button" data-action="tutorial">
                 <span class="menu-index">02</span>
+                <span class="menu-label">Tutorial</span>
+                <span class="menu-note">aprenda na prática</span>
+              </button>
+              <button class="menu-item" type="button" data-action="how">
+                <span class="menu-index">03</span>
                 <span class="menu-label">Como jogar</span>
                 <span class="menu-note">controles</span>
               </button>
               <button class="menu-item" type="button" data-action="credits">
-                <span class="menu-index">03</span>
+                <span class="menu-index">04</span>
                 <span class="menu-label">Créditos</span>
                 <span class="menu-note">a lenda</span>
               </button>
@@ -123,12 +128,8 @@
                 <span>Arremessar a lança</span>
               </div>
               <div class="key-row">
-                <span class="key-keys"><kbd>E</kbd><kbd>S</kbd><kbd>↓</kbd></span>
-                <span>Entrar e sair das cabanas</span>
-              </div>
-              <div class="key-row">
                 <span class="key-keys"><kbd>Shift</kbd><kbd>K</kbd></span>
-                <span>Avançar num impulso rápido</span>
+                <span>Avançar num impulso rápido (dash)</span>
               </div>
               <div class="key-row">
                 <span class="key-keys"><kbd>Esc</kbd></span>
@@ -162,10 +163,11 @@
             </p>
             <button class="menu-back" type="button" data-action="back">Voltar</button>
           </div>
+        </div>
 
-          <div class="menu-footer">
+        <div class="menu-footer">
             <span>Sandman</span>
-            <span>v0.4 · quatro capítulos</span>
+            <span>v1.1 · quatro capítulos e tutorial</span>
           </div>
         </div>
 

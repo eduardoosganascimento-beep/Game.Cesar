@@ -1,6 +1,5 @@
 import { TILE, VIEW_H, VIEW_W } from './engine'
 import { Tile, type LevelTheme, type TileMap } from './level'
-import { publicAssetUrl } from './sprites'
 
 type Palette = {
   soilA: string
@@ -137,11 +136,9 @@ export function drawScenery(
   time: number,
   theme: LevelTheme,
   goalLocked: boolean,
-  cabins: { kind: string; doorX: number; doorRow: number }[] = [],
 ): void {
   const palette = PALETTES[theme]
   paintProps(ctx, theme, cameraX, cameraY, time)
-  paintCabinStructures(ctx, cabins, cameraX, cameraY, time)
   paintWater(ctx, map, cameraX, cameraY, time, palette, theme)
   paintSolids(ctx, map, cameraX, cameraY, palette)
   paintSpikes(ctx, map, cameraX, cameraY, palette)
@@ -150,244 +147,7 @@ export function drawScenery(
   paintGoal(ctx, goalX, goalBaseY, cameraX, cameraY, time, theme, goalLocked)
 }
 
-// Cada cabana recebe a construção correspondente ao tema, com a porta
-// exatamente sobre o ponto de interação.
-function paintCabinStructures(
-  ctx: CanvasRenderingContext2D,
-  cabins: { kind: string; doorX: number; doorRow: number }[],
-  cameraX: number,
-  cameraY: number,
-  time: number,
-): void {
-  cabins.forEach((cabin) => {
-    const baseY = cabin.doorRow * TILE - cameraY
-    const image = cabin.kind === 'indigena' ? cabinImages.indigena : cabinImages.colonial
-    if (!image.naturalWidth) {
-      const width = 58
-      paintHut(ctx, cabin.doorX - width / 2 - cameraX, baseY, time, 1)
-      return
-    }
-
-    const x = Math.round(cabin.doorX - image.naturalWidth / 2 - cameraX)
-    const y = Math.round(baseY - image.naturalHeight)
-
-    // Sombra no chão para a construção não parecer solta.
-    ctx.fillStyle = 'rgba(0, 0, 0, 0.3)'
-    ctx.fillRect(x + 4, baseY - 2, image.naturalWidth - 8, 3)
-
-    ctx.drawImage(image, x, y)
-
-    // Luz quente na porta da cabana.
-    const glow = ctx.createRadialGradient(
-      cabin.doorX - cameraX,
-      baseY - 8,
-      2,
-      cabin.doorX - cameraX,
-      baseY - 8,
-      44,
-    )
-    const pulse = 0.72 + Math.sin(time * 2.6 + cabin.doorX * 0.03) * 0.14
-    glow.addColorStop(0, `rgba(255, 196, 110, ${(0.2 * pulse).toFixed(3)})`)
-    glow.addColorStop(1, 'rgba(255, 196, 110, 0)')
-    ctx.fillStyle = glow
-    ctx.fillRect(cabin.doorX - cameraX - 44, baseY - 52, 88, 88)
-  })
-}
-
-// ---------- interior de cabana ----------
-
-type CabinRoom = {
-  exitDoorX: number
-  exitDoorY: number
-  cleared: boolean
-  locked: boolean
-}
-
-// Artes das cabanas (recortadas em scripts/build-cabin-assets.mjs).
-const cabinImages = {
-  indigena: loadCabinImage('assets/sprites/cabin/indigena.png'),
-  colonial: loadCabinImage('assets/sprites/cabin/colonial.png'),
-}
-
-function loadCabinImage(path: string): HTMLImageElement {
-  const image = new Image()
-  image.src = publicAssetUrl(path)
-  return image
-}
-
-export function drawCabinInterior(
-  ctx: CanvasRenderingContext2D,
-  map: TileMap,
-  cameraX: number,
-  cameraY: number,
-  time: number,
-  room: CabinRoom,
-): void {
-  const height = map.height
-  const wallTop = 2 * TILE
-  const wallBottom = (height - 2) * TILE
-  const floorTop = Math.round(wallTop - cameraY)
-  const floorBottom = Math.round(wallBottom - cameraY)
-
-  // Chão visto de cima: tábuas largas com juntas escuras.
-  ctx.fillStyle = '#4a321d'
-  ctx.fillRect(0, floorTop, VIEW_W, floorBottom - floorTop)
-  const boardHeight = 12
-  for (let y = floorTop; y < floorBottom; y += boardHeight) {
-    ctx.fillStyle = '#5b3d21'
-    ctx.fillRect(0, y, VIEW_W, boardHeight - 1)
-    ctx.fillStyle = 'rgba(255, 220, 170, 0.04)'
-    ctx.fillRect(0, y, VIEW_W, 1)
-    ctx.fillStyle = 'rgba(0, 0, 0, 0.26)'
-    ctx.fillRect(0, y + boardHeight - 1, VIEW_W, 1)
-    // Emenda das tábuas.
-    for (let x = (y / boardHeight) % 2 === 0 ? 24 : 56; x < VIEW_W; x += 64) {
-      ctx.fillStyle = 'rgba(0, 0, 0, 0.22)'
-      ctx.fillRect(x, y + 1, 1, boardHeight - 2)
-    }
-  }
-
-  // Paredes vistas de cima (faixas grossas no topo, embaixo e nas laterais).
-  ctx.fillStyle = '#2a1c11'
-  ctx.fillRect(0, floorTop - 18, VIEW_W, 18)
-  ctx.fillRect(0, floorBottom, VIEW_W, VIEW_H - floorBottom + 18)
-  ctx.fillRect(0, floorTop - 18, 14, floorBottom - floorTop + 36)
-  ctx.fillRect(VIEW_W - 14, floorTop - 18, 14, floorBottom - floorTop + 36)
-  ctx.fillStyle = '#4a321d'
-  ctx.fillRect(0, floorTop - 16, VIEW_W, 3)
-  ctx.fillRect(0, floorBottom, VIEW_W, 3)
-  ctx.fillRect(0, floorTop - 16, 3, floorBottom - floorTop + 32)
-  ctx.fillRect(VIEW_W - 3, floorTop - 16, 3, floorBottom - floorTop + 32)
-  ctx.fillStyle = 'rgba(0, 0, 0, 0.35)'
-  ctx.fillRect(0, floorTop - 13, VIEW_W, 4)
-  ctx.fillRect(0, floorBottom, VIEW_W, 4)
-  ctx.fillRect(12, floorTop - 13, 4, floorBottom - floorTop + 30)
-  ctx.fillRect(VIEW_W - 16, floorTop - 13, 4, floorBottom - floorTop + 30)
-
-  // Tapete de palha no centro da sala.
-  const rugX = Math.round(6 * TILE - cameraX)
-  const rugY = Math.round(7 * TILE - cameraY)
-  ctx.fillStyle = '#7a4a2c'
-  ctx.fillRect(rugX, rugY, 72, 44)
-  ctx.fillStyle = '#9c5f36'
-  ctx.fillRect(rugX + 3, rugY + 3, 66, 38)
-  ctx.fillStyle = '#5c3520'
-  for (let i = 0; i < 5; i += 1) ctx.fillRect(rugX + 7 + i * 13, rugY + 16, 6, 10)
-
-  // Mesa redonda vista de cima.
-  const tableX = Math.round(4 * TILE - cameraX)
-  const tableY = Math.round(5 * TILE - cameraY)
-  ctx.fillStyle = 'rgba(0, 0, 0, 0.28)'
-  ctx.fillRect(tableX + 2, tableY + 4, 34, 30)
-  ctx.fillStyle = '#6b4a2d'
-  ctx.fillRect(tableX, tableY, 34, 30)
-  ctx.fillStyle = '#8a6439'
-  ctx.fillRect(tableX + 2, tableY + 2, 30, 26)
-  ctx.fillStyle = '#5c3f22'
-  ctx.fillRect(tableX + 8, tableY + 7, 8, 5)
-  ctx.fillStyle = '#d8c9a2'
-  ctx.fillRect(tableX + 19, tableY + 8, 6, 4)
-  ctx.fillStyle = '#8a5a2a'
-  ctx.fillRect(tableX + 11, tableY + 17, 5, 5)
-
-  // Barris vistos de cima (circulos).
-  const barrelX = Math.round(12 * TILE - cameraX)
-  const barrelY = Math.round(4 * TILE - cameraY)
-  for (const [ox, oy] of [[0, 0], [20, 10]]) {
-    ctx.fillStyle = 'rgba(0, 0, 0, 0.3)'
-    ctx.fillRect(barrelX + ox + 2, barrelY + oy + 2, 16, 16)
-    ctx.fillStyle = '#6b4a2d'
-    ctx.fillRect(barrelX + ox, barrelY + oy, 16, 16)
-    ctx.fillStyle = '#3a2717'
-    ctx.fillRect(barrelX + ox, barrelY + oy + 6, 16, 2)
-    ctx.fillRect(barrelX + ox + 6, barrelY + oy, 2, 16)
-    ctx.fillStyle = '#8a6439'
-    ctx.fillRect(barrelX + ox + 1, barrelY + oy + 1, 14, 1)
-  }
-
-  // Caixote.
-  const crateX = Math.round(16 * TILE - cameraX)
-  const crateY = Math.round(5 * TILE - cameraY)
-  ctx.fillStyle = 'rgba(0, 0, 0, 0.28)'
-  ctx.fillRect(crateX + 2, crateY + 2, 18, 18)
-  ctx.fillStyle = '#5c4028'
-  ctx.fillRect(crateX, crateY, 18, 18)
-  ctx.fillStyle = '#7d5932'
-  ctx.fillRect(crateX + 1, crateY + 1, 16, 16)
-  ctx.fillStyle = '#4a3320'
-  ctx.fillRect(crateX, crateY + 8, 18, 2)
-  ctx.fillRect(crateX + 8, crateY, 2, 18)
-
-  // Lareira vista de cima, com brasa e luz.
-  const hearthX = Math.round(16 * TILE - cameraX)
-  const hearthY = Math.round(9 * TILE - cameraY)
-  ctx.fillStyle = '#4a4038'
-  ctx.fillRect(hearthX, hearthY, 40, 26)
-  ctx.fillStyle = '#5f5449'
-  for (let i = 0; i < 5; i += 1) ctx.fillRect(hearthX + i * 8, hearthY, 7, 4)
-  ctx.fillStyle = '#2a201a'
-  ctx.fillRect(hearthX + 4, hearthY + 5, 32, 20)
-  const ember = 0.55 + Math.sin(time * 3.4) * 0.2
-  ctx.globalAlpha = ember
-  ctx.fillStyle = '#d9534f'
-  ctx.fillRect(hearthX + 7, hearthY + 12, 26, 8)
-  ctx.fillStyle = '#ffb84d'
-  ctx.fillRect(hearthX + 11, hearthY + 8, 18, 8)
-  ctx.fillStyle = '#fff0b8'
-  ctx.fillRect(hearthX + 17, hearthY + 6, 8, 5)
-  ctx.globalAlpha = 1
-  const fire = ctx.createRadialGradient(
-    hearthX + 20,
-    hearthY + 13,
-    2,
-    hearthX + 20,
-    hearthY + 13,
-    76,
-  )
-  fire.addColorStop(0, 'rgba(255, 168, 68, 0.26)')
-  fire.addColorStop(1, 'rgba(255, 168, 68, 0)')
-  ctx.fillStyle = fire
-  ctx.fillRect(hearthX - 56, hearthY - 62, 152, 152)
-
-  // Estante com potes encostada na parede de cima.
-  const shelfX = Math.round(7 * TILE - cameraX)
-  const shelfY = Math.round(2 * TILE - cameraY)
-  ctx.fillStyle = '#3a2717'
-  ctx.fillRect(shelfX, shelfY, 56, 12)
-  ctx.fillStyle = '#6b4a2d'
-  ctx.fillRect(shelfX + 1, shelfY + 1, 54, 3)
-  ctx.fillStyle = '#8a6439'
-  ctx.fillRect(shelfX + 5, shelfY + 4, 7, 7)
-  ctx.fillStyle = '#7d3f36'
-  ctx.fillRect(shelfX + 16, shelfY + 4, 6, 7)
-  ctx.fillStyle = '#5c6b4a'
-  ctx.fillRect(shelfX + 26, shelfY + 4, 8, 7)
-  ctx.fillStyle = '#c9a86a'
-  ctx.fillRect(shelfX + 38, shelfY + 4, 5, 7)
-
-  // Porta de saída na parede da esquerda (vista de cima).
-  const doorX = Math.round(room.exitDoorX * TILE - cameraX)
-  const doorY = Math.round(room.exitDoorY * TILE - cameraY)
-  ctx.fillStyle = '#150d06'
-  ctx.fillRect(doorX - 4, doorY, 18, 26)
-  ctx.fillStyle = '#6b4a2d'
-  ctx.fillRect(doorX - 2, doorY + 2, 14, 22)
-  ctx.fillStyle = '#8a6439'
-  ctx.fillRect(doorX - 2, doorY + 2, 14, 2)
-  ctx.fillStyle = '#3a2717'
-  ctx.fillRect(doorX + 3, doorY + 3, 2, 20)
-  ctx.fillStyle = room.locked ? '#c4473a' : '#8ac46f'
-  ctx.fillRect(doorX + 8, doorY + 10, 3, 3)
-
-  const doorColor = room.locked ? 'rgba(196, 71, 58, 0.32)' : 'rgba(255, 209, 102, 0.32)'
-  const doorGlow = ctx.createRadialGradient(doorX + 4, doorY + 13, 2, doorX + 4, doorY + 13, 48)
-  doorGlow.addColorStop(0, doorColor)
-  doorGlow.addColorStop(1, 'rgba(0, 0, 0, 0)')
-  ctx.fillStyle = doorGlow
-  ctx.fillRect(doorX - 44, doorY - 35, 96, 96)
-}
-
-// ---------- construções ----------
+// ---------- construÃƒÂ§ÃƒÂµes ----------
 
 function paintHut(
   ctx: CanvasRenderingContext2D,
@@ -897,7 +657,7 @@ function paintProps(
     paintSpirit(ctx, 1790 - cameraX, baseY - 54, time, 2)
   }
 
-  // cipós pendurados na copa
+  // cipÃƒÂ³s pendurados na copa
   const vines = theme === 'camp' ? [92, 386, 674, 1012] : [64, 236, 392, 476, 660, 886, 1080]
   for (const vineX of vines) {
     const x = vineX - cameraX
@@ -918,7 +678,7 @@ function paintProps(
   }
 }
 
-// ---------- água e chão ----------
+// ---------- ÃƒÂ¡gua e chÃƒÂ£o ----------
 
 function paintWater(
   ctx: CanvasRenderingContext2D,

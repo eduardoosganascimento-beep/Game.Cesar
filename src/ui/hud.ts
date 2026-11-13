@@ -12,7 +12,7 @@ export class Hud {
   private readonly chapterTitle = document.querySelector<HTMLElement>('#chapter-title')
   private readonly chapterSubtitle = document.querySelector<HTMLElement>('#chapter-subtitle')
   private readonly controls = document.querySelector<HTMLDivElement>('#controls-hint')
-  private readonly interact = document.querySelector<HTMLDivElement>('#interact')
+  private readonly tutorialPrompt = document.querySelector<HTMLDivElement>('#tutorial-prompt')
   private readonly boss = document.querySelector<HTMLDivElement>('#boss')
   private readonly bossLabel = document.querySelector<HTMLElement>('#boss-label')
   private readonly bossPips = document.querySelector<HTMLDivElement>('#boss-pips')
@@ -23,7 +23,6 @@ export class Hud {
   private lastCollected = 0
   private chapterTimer = 0
   private controlsTimer = 0
-  private interactTimer = 0
 
   constructor() {
     if (this.hearts) {
@@ -150,27 +149,20 @@ export class Hud {
   hideOverlays(): void {
     window.clearTimeout(this.chapterTimer)
     window.clearTimeout(this.controlsTimer)
-    window.clearTimeout(this.interactTimer)
     this.chapterCard?.classList.add('is-hidden')
     this.controls?.classList.add('is-hidden')
-    this.interact?.classList.add('is-hidden')
+    this.hideTutorialPrompt()
   }
 
-  showInteract(text = 'Entrar na cabana'): void {
-    const element = this.interact
+  showTutorialPrompt(text: string): void {
+    const element = this.tutorialPrompt
     if (!element) return
-    const label = `E · ${text}`
-    if (element.textContent !== label) element.textContent = label
-    if (element.classList.contains('is-hidden')) element.classList.remove('is-hidden')
-    if (!element.classList.contains('is-pulsing')) {
-      element.classList.add('is-pulsing')
-      window.clearTimeout(this.interactTimer)
-      this.interactTimer = window.setTimeout(() => element.classList.remove('is-pulsing'), 1400)
-    }
+    if (element.textContent !== text) element.textContent = text
+    element.classList.remove('is-hidden')
   }
 
-  hideInteract(): void {
-    this.interact?.classList.add('is-hidden')
+  hideTutorialPrompt(): void {
+    this.tutorialPrompt?.classList.add('is-hidden')
   }
 
   private popMemory(): void {

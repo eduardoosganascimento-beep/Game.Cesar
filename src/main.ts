@@ -1,7 +1,8 @@
 import { Animator, type ClipName } from './animator'
 import { sfx } from './audio'
 import { drawBackground } from './background'
-import { CHAPTERS, shortTitle, type ChapterDef } from './chapters'
+import { CHAPTERS, TUTORIAL, shortTitle, type ChapterDef } from './chapters'
+import { DELTAS, readDifficulty, writeDifficulty, type Difficulty } from './difficulty'
 import { Effects } from './effects'
 import { Camera, Loop, TILE, VIEW_H, VIEW_W, overlaps } from './engine'
 import { Enemy } from './enemy'
@@ -56,6 +57,17 @@ type Spear = {
   life: number
 }
 
+// Passos do tutorial jogável. Cada passo avança quando a condição
+// correspondente é cumprida; o último fica na tela até o fim da fase.
+const TUTORIAL_STEPS = [
+  'Ande com ← e → pela trilha',
+  'Pule com Espaço (segure para ir mais alto)',
+  'Ataque com J — o tacape é seu',
+  'Arremesse a lança com L',
+  'Colete a memória brilhante',
+  'Siga até a fogueira no fim da trilha',
+]
+
 class Game {
   onWin?: (stats: RunStats) => void
 
@@ -67,6 +79,9 @@ class Game {
 
   private chapterIndex = 0
   private chapter: ChapterDef = CHAPTERS[0]
+  private tutorialMode = false
+  private tutorialStep = 0
+  private tutorialStartX = 0
   private map!: TileMap
   private player!: Player
   private enemies: Enemy[] = []
@@ -92,6 +107,7 @@ class Game {
   private runTime = 0
   private winTimer = 0
   private hudKey = ''
+  private difficulty: Difficulty = readDifficulty()
 
   constructor() {
     this.hud.setMuted(sfx.muted)
@@ -117,12 +133,23 @@ class Game {
     return this.won
   }
 
+  getDifficulty(): Difficulty {
+    return this.difficulty
+  }
+
+  setDifficulty(difficulty: Difficulty): void {
+    this.difficulty = difficulty
+    writeDifficulty(difficulty)
+  }
+
   get nextChapterIndex(): number {
     return Math.min(CHAPTERS.length - 1, this.chapterIndex + 1)
   }
 
   start(chapterIndex = this.chapterIndex): void {
     window.clearTimeout(this.winTimer)
+    this.tutorialMode = false
+    this.hud.hideTutorialPrompt()
     this.loadChapter(chapterIndex)
     this.reset()
     this.running = true
@@ -143,7 +170,67 @@ class Game {
   }
 
   restart(): void {
+    if (this.tutorialMode) {
+      this.startTutorial()
+      return
+    }
     this.start(this.chapterIndex)
+  }
+
+  startTutorial(): void {
+    window.clearTimeout(this.winTimer)
+    this.tutorialMode = true
+    this.tutorialStep = 0
+    this.chapterIndex = 0
+    this.chapter = TUTORIAL
+    const data = this.chapter.data as LevelData
+    this.map = new TileMap(data)
+    this.player = new Player(this.map, data.spawn)
+    this.goalX = (this.map.cols - 4) * TILE
+    this.goalRow = this.findGoalRow(this.map.cols - 4)
+    this.goalBaseY = this.goalRow * TILE
+    this.reset()
+    this.tutorialStartX = this.player.x
+    this.running = true
+    this.paused = false
+    this.input.clear()
+    this.hud.show()
+    this.hud.hideOverlays()
+    this.hud.showChapterCard('Tutorial', 'A Trilha', 'Aprenda os controles jogando.')
+    this.hud.setChapter('Tutorial · A Trilha')
+    this.hud.showTutorialPrompt(TUTORIAL_STEPS[0])
+    this.syncHud(true)
+  }
+
+  private updateTutorial(): void {
+    if (!this.tutorialMode || this.dying > 0 || this.won) return
+    const player = this.player
+    let done = false
+
+    switch (this.tutorialStep) {
+      case 0:
+        done = player.x > this.tutorialStartX + TILE * 4
+        break
+      case 1:
+        done = player.justJumped
+        break
+      case 2:
+        done = player.justAttacked
+        break
+      case 3:
+        done = player.justThrew
+        break
+      case 4:
+        done = this.collected >= 1
+        break
+      default:
+        return
+    }
+
+    if (done) {
+      this.tutorialStep = Math.min(this.tutorialStep + 1, TUTORIAL_STEPS.length - 1)
+      this.hud.showTutorialPrompt(TUTORIAL_STEPS[this.tutorialStep])
+    }
   }
 
   nextChapter(): void {
@@ -166,6 +253,8 @@ class Game {
     window.clearTimeout(this.winTimer)
     this.running = false
     this.paused = false
+    this.tutorialMode = false
+    this.hud.hideTutorialPrompt()
     this.reset()
     this.hud.hide()
     this.hud.hideOverlays()
@@ -178,7 +267,15 @@ class Game {
 
     this.enemies = this.chapter.data.entities
       .filter((entity) => entity.type === 'enemy')
-      .map((entity) => new Enemy(entity, TILE))
+      .map((entity) => {
+        const enemy = new Enemy(entity, TILE, this.chapterIndex + 1)
+        // Aplica multiplicador de velocidade conforme dificuldade
+        const diff = this.difficulty as 'facil' | 'normal' | 'dificil'
+        const speedMult = DELTAS.speed[diff]
+        enemy.speed *= speedMult
+        enemy.vx = enemy.speed
+        return enemy
+      })
 
     this.memories = this.chapter.data.entities
       .filter((entity) => entity.type === 'memory')
@@ -238,7 +335,7 @@ class Game {
     if (this.dying > 0) {
       this.dying = Math.max(0, this.dying - safeDt)
       // A câmera continua seguindo Sand enquanto ele cai: a animação de
-      // morte nunca fica fora da tela, dentro ou fora da cabana.
+      // morte nunca fica fora da tela.
       const dying = this.player
       const look = dying.facing * 12
       this.camera.follow(
@@ -255,7 +352,7 @@ class Game {
     }
 
     if (this.input.restartPressed) {
-      this.start()
+      this.restart()
       this.input.endFrame()
       return
     }
@@ -323,7 +420,7 @@ class Game {
       if (
         enemy.justStruck &&
         overlaps(enemy.attackBox, player.hurtbox) &&
-        this.hurtPlayer(enemy.x, 'blade')
+        this.hurtPlayer(enemy.x, 'blade', enemy.attackDamage)
       ) {
         this.effects.addShake(2.6)
         this.effects.burst(
@@ -356,7 +453,7 @@ class Game {
         continue
       }
 
-      if (overlaps(player.hurtbox, enemy.rect)) this.hurtPlayer(enemy.x, 'blade')
+      if (overlaps(player.hurtbox, enemy.rect)) this.hurtPlayer(enemy.x, 'blade', enemy.attackDamage)
     }
 
     this.updateShots(safeDt)
@@ -373,11 +470,8 @@ class Game {
       this.effects.addShake(0.8)
     }
 
-    // Interação: porta de cabana (fora) e saída (dentro).
-    this.updateInteraction()
-
-    // A morte é verificada antes do interior: sem isso, cair dentro da
-    // cabana deixava Sand congelado com vida zerada.
+    // A morte é verificada antes de qualquer interior: sem isso, cair com
+    // vida zerada deixava Sand congelado.
     if (player.hp <= 0) {
       this.beginDeath('Sand caiu — a floresta o chama de volta.')
       this.input.endFrame()
@@ -436,6 +530,7 @@ class Game {
       )
     }
 
+    this.updateTutorial()
     this.updateBossBar()
     this.updateAnimator(safeDt)
     this.syncHud()
@@ -686,9 +781,11 @@ class Game {
     }
   }
 
-  private hurtPlayer(fromX: number, kind: 'bullet' | 'blade' = 'bullet'): boolean {
+  private hurtPlayer(fromX: number, kind: 'bullet' | 'blade' = 'bullet', damage: number = 1): boolean {
+    const diff = this.difficulty as 'facil' | 'normal' | 'dificil'
+    const finalDamage = Math.max(1, Math.round(damage * DELTAS.damage[diff]))
     const before = this.player.hp
-    this.player.hit(fromX)
+    this.player.hit(fromX, finalDamage)
     if (this.player.hp >= before) return false
 
     sfx.hit()
@@ -870,12 +967,6 @@ class Game {
     this.syncHud(true)
   }
 
-  private updateInteraction(): void {
-    // A versão 1.0 do jogo não tem cabanas nem portas: não há nada para
-    // interagir, então o aviso do HUD é sempre escondido.
-    this.hud.hideInteract()
-  }
-
   private beginDeath(message: string): void {
     this.dying = 1.05
     this.deathMessage = message
@@ -947,6 +1038,12 @@ class Game {
     this.hud.hide()
     this.hud.hideOverlays()
     const stats = this.debugStats()
+    if (this.tutorialMode) {
+      stats.kicker = 'Tutorial'
+      stats.chapterName = 'Tutorial concluído!'
+      stats.endText = this.chapter.endText
+      stats.nextChapter = false
+    }
 
     window.clearTimeout(this.winTimer)
     this.winTimer = window.setTimeout(() => {
@@ -1308,6 +1405,18 @@ const screens = new Screens({
     sfx.click()
     game.resume()
     screens.hideAll()
+  },
+  onTutorial: () => {
+    sfx.unlock()
+    sfx.click()
+    game.startTutorial()
+    screens.hideAll()
+  },
+  onDifficulty: (difficulty: Difficulty) => {
+    sfx.unlock()
+    sfx.click()
+    game.setDifficulty(difficulty)
+    screens.setDifficultySelection(difficulty)
   },
   onRestart: () => {
     sfx.unlock()

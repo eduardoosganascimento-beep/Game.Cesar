@@ -7,6 +7,7 @@ export type RunStats = {
   chapterName: string
   endText: string
   nextChapter: boolean
+  kicker?: string
 }
 
 export type ChapterOption = {
@@ -16,12 +17,16 @@ export type ChapterOption = {
   subtitle: string
 }
 
+import type { Difficulty } from '../difficulty'
+
 export type ScreenHandlers = {
   onChapter: (index: number) => void
   onNext: () => void
   onResume: () => void
   onRestart: () => void
   onMenu: () => void
+  onTutorial: () => void
+  onDifficulty: (difficulty: Difficulty) => void
 }
 
 type ScreenName = 'main' | 'chapters' | 'how' | 'credits'
@@ -37,6 +42,7 @@ export class Screens {
   private readonly endStats = document.querySelector<HTMLElement>('#end-stats')
   private readonly endNext = document.querySelector<HTMLButtonElement>('#end-next')
   private readonly chapterList = document.querySelector<HTMLElement>('#chapter-list')
+  private readonly difficultyList = document.querySelector<HTMLElement>('#difficulty-list')
 
   private buttons: HTMLButtonElement[] = []
   private readonly bound = new WeakSet<HTMLButtonElement>()
@@ -86,6 +92,12 @@ export class Screens {
     if (this.visible === 'menu' && this.screen === 'chapters') this.select(0)
   }
 
+  setDifficultySelection(difficulty: Difficulty): void {
+    this.difficultyList
+      ?.querySelectorAll<HTMLButtonElement>('.difficulty-item')
+      .forEach((item) => item.classList.toggle('is-selected', item.dataset.difficulty === difficulty))
+  }
+
   showMenu(): void {
     this.visible = 'menu'
     this.menu?.classList.remove('is-hidden')
@@ -117,9 +129,9 @@ export class Screens {
     this.end?.classList.remove('is-hidden')
 
     if (this.endKicker) {
-      this.endKicker.textContent = stats.nextChapter
-        ? `Capítulo ${stats.chapterIndex + 1} concluído`
-        : 'Fim da jornada'
+      this.endKicker.textContent =
+        stats.kicker ??
+        (stats.nextChapter ? `Capítulo ${stats.chapterIndex + 1} concluído` : 'Fim da jornada')
     }
     if (this.endTitle) this.endTitle.textContent = stats.chapterName
     if (this.endText) this.endText.textContent = stats.endText
@@ -197,7 +209,7 @@ export class Screens {
     if (this.visible === 'menu') {
       return Array.from(
         this.menu?.querySelectorAll<HTMLButtonElement>(
-          '.menu-screen:not(.is-hidden) .menu-item, .menu-screen:not(.is-hidden) .chapter-item, .menu-screen:not(.is-hidden) .menu-back',
+          '.menu-screen:not(.is-hidden) .menu-item, .menu-screen:not(.is-hidden) .chapter-item, .menu-screen:not(.is-hidden) .menu-back, .menu-screen:not(.is-hidden) .difficulty-item',
         ) ?? [],
       )
     }
@@ -240,6 +252,21 @@ export class Screens {
       case 'credits':
         this.setScreen('credits')
         break
+      case 'tutorial':
+        this.handlers.onTutorial()
+        break
+      case 'difficulty': {
+        const difficulty = button.dataset.difficulty
+        if (difficulty === 'facil' || difficulty === 'normal' || difficulty === 'dificil') {
+          this.handlers.onDifficulty(difficulty)
+          this.difficultyList
+            ?.querySelectorAll<HTMLButtonElement>('.difficulty-item')
+            .forEach((item) =>
+              item.classList.toggle('is-selected', item.dataset.difficulty === difficulty),
+            )
+        }
+        break
+      }
       case 'back':
         this.setScreen('main')
         break

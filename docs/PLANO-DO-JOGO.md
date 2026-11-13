@@ -113,11 +113,9 @@ Loop de combate: aproximar → atacar/esquivar → recuar → repetir.
 - Pisão: cair sobre um colono machuca o colono, nunca o jogador
 - Cada arma deixa pixels de impacto próprios (faca, bala, lança)
 
-### 8.2.1 Cabanas
-- Sandman entra nas cabanas do caminho com `E` (ou `S`/`↓`)
-- Dentro há colonos guarding a mesa e uma porta de saída
-- A porta fica trancada até o interior ser limpo
-- Cabana limpa continua limpa até o capítulo recomeçar
+### 8.2.1 Cabanas _(removidas na v1.0)_
+- As cabanas de colonos foram removidas: cada capítulo é uma rota contínua
+  ao ar livre com checkpoints (fogueiras).
 
 ### 8.3 Recursos
 - **Vida:** 3 corações, recuperáveis em fogueiras
@@ -134,7 +132,6 @@ Loop de combate: aproximar → atacar/esquivar → recuar → repetir.
 | Atacar | J ou Z | Botão X |
 | Arremessar lança | L ou X | Botão Y |
 | Avançar | Shift ou K | Botão B |
-| Entrar/sair de cabana | E / S / ↓ | Botão A |
 | Pausar | Esc | Start |
 
 ## 9. Progressão e regras

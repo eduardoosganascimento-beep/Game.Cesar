@@ -5,7 +5,7 @@ Jogo indie 2D em pixel art, feito para rodar no navegador com **TypeScript + Can
 > A aldeia caiu. A família de Sandman foi levada por colonos portugueses.
 > Anos de preparo depois, ele volta para resgatar quem ama — e acertar as contas.
 
-**Versão atual:** `1.0` — quatro capítulos jogáveis em mapa aberto, com checkpoints.
+**Versão atual:** `1.1` — quatro capítulos jogáveis em mapa aberto, com checkpoints, e um tutorial jogável.
 
 ## 🎮 Jogar agora no navegador
 
@@ -27,6 +27,9 @@ computador com navegador — não precisa instalar nada.
   colonos, memórias e marcos.
 - Tiro de mosquete com projétil visível, pisão que machuca o colono (nunca o
   jogador) e pixels de impacto diferentes para cada arma (daca, bala, lança).
+- **Tutorial jogável** no menu principal: uma fase curta que ensina a andar,
+  pular, atacar, arremessar a lança, coletar memórias e ativar checkpoints,
+  passo a passo.
 
 ## Rodar localmente
 
@@ -86,8 +89,7 @@ Game.Cesar/
 │   ├── level.ts          # tilemap e dados de fase
 │   ├── player.ts         # movimento, colisão, ataque e arremesso
 │   ├── enemy.ts          # IA dos colonos, índios e do lobo
-│   ├── cabins.ts         # reservado: as cabanas foram removidas na v1.0
-│   ├── scenery.ts        # cenário, cabanas e interiores
+│   ├── scenery.ts        # cenário, água, construções e objetivo
 │   ├── animator.ts       # clipes de animação
 │   ├── sprites.ts        # atlas, brilho e recortes
 │   ├── ui/hud.ts         # corações, memórias, boss e prompts

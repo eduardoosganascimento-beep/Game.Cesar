@@ -72,10 +72,6 @@ export class Input {
     return this.pressed('KeyL', 'KeyX')
   }
 
-  get interactPressed(): boolean {
-    return this.pressed('KeyE', 'KeyS', 'ArrowDown')
-  }
-
   get pausePressed(): boolean {
     return this.pressed('Escape')
   }

@@ -18,6 +18,10 @@ type Stats = {
   cooldown: number
   visualScale: number
   label: string
+  // Alcance máximo (em tiles) para o ataque à distância do inimigo.
+  // O aguaceiro só atira nessa janela: longe o suficiente para dar abertura,
+  // perto o suficiente para o disparo fazer sentido.
+  rangedRange?: number
 }
 
 const STATS: Record<EnemyKind, Stats> = {
@@ -41,6 +45,7 @@ const STATS: Record<EnemyKind, Stats> = {
     chase: 118,
     melee: true,
     ranged: true,
+    rangedRange: 60,
     cooldown: 1.6,
     visualScale: 1,
     label: 'Soldado',
@@ -65,6 +70,7 @@ const STATS: Record<EnemyKind, Stats> = {
     chase: 130,
     melee: true,
     ranged: true,
+    rangedRange: 80,
     cooldown: 1.1,
     visualScale: 1,
     label: 'Capitão',
@@ -77,6 +83,7 @@ const STATS: Record<EnemyKind, Stats> = {
     chase: 100,
     melee: true,
     ranged: true,
+    rangedRange: 64,
     cooldown: 1.5,
     visualScale: 1,
     label: 'Indio',
@@ -89,6 +96,7 @@ const STATS: Record<EnemyKind, Stats> = {
     chase: 155,
     melee: true,
     ranged: true,
+    rangedRange: 92,
     cooldown: 1.0,
     visualScale: 1,
     label: 'Kennedy',
@@ -101,6 +109,7 @@ const STATS: Record<EnemyKind, Stats> = {
     chase: 140,
     melee: true,
     ranged: true,
+    rangedRange: 74,
     cooldown: 1.15,
     visualScale: 1,
     label: 'Guardião',
@@ -144,6 +153,7 @@ export class Enemy {
   justStruck = false
 
   private readonly stats: Stats
+  public speed: number
   private readonly left: number
   private readonly right: number
   private readonly spawnX: number
@@ -155,7 +165,7 @@ export class Enemy {
   private struck = false
   private deathTimer = 0
 
-  constructor(spawn: EntitySpawn, tileSize: number) {
+  constructor(spawn: EntitySpawn, tileSize: number, level: number = 1) {
     this.kind = spawn.kind ?? 'capanga'
     this.stats = STATS[this.kind]
     this.label = this.stats.label
@@ -175,7 +185,11 @@ export class Enemy {
     this.spawnY = this.y
     this.left = (spawn.left ?? spawn.x - 3) * tileSize
     this.right = (spawn.right ?? spawn.x + 4) * tileSize
-    this.vx = this.stats.speed
+    // Velocidade proporcional ao nível: inimigos dos capítulos seguintes
+    // perseguem um pouco mais rápido (e com mais agressividade).
+    const levelFactor = 1 + Math.max(0, level - 1) * 0.06
+    this.speed = this.stats.speed * levelFactor
+    this.vx = this.speed
     this.facing = 1
     // IMPORTANTE: O dash foi removido do indígena.
     // O vx inicial virá do patrol/chase logic abaixo, não de um dash separado.
@@ -222,10 +236,15 @@ export class Enemy {
     return this.attackKind !== null
   }
 
+  get attackDamage(): number {
+    // Chefes e feitores encaram com mais força; capangas e colonos, menos.
+    return this.isBoss || this.kind === 'feitor' ? 2 : 1
+  }
+
   reset(): void {
     this.x = this.spawnX
     this.y = this.spawnY
-    this.vx = this.stats.speed
+    this.vx = this.speed
     this.vy = 0
     this.hp = this.maxHp
     this.alive = true
@@ -314,15 +333,17 @@ export class Enemy {
         this.facing = distance >= 0 ? 1 : -1
 
         if (this.attackCooldown <= 0 && this.canAttack(distance)) {
-          this.startAttack(
-            this.stats.ranged && Math.abs(distance) > 46 ? 'shoot' : 'slash',
-            distance,
-          )
+          const useShoot =
+            this.stats.ranged && Math.abs(distance) > (this.stats.rangedRange ?? this.stats.chase + 10) * 0.6
+          this.startAttack(useShoot ? 'shoot' : 'slash', distance)
           return
         }
 
-        if (Math.abs(distance) > 22) {
-          this.vx = Math.sign(distance) * this.stats.speed
+        // Distância de parada: o inimigo só persegue até a distância de
+        // abertura; chefes param mais longe e atacam com mais mão.
+        const stopDistance = this.isBoss ? 30 : 22
+        if (Math.abs(distance) > stopDistance) {
+          this.vx = Math.sign(distance) * this.speed
         } else {
           this.vx = 0
         }
@@ -338,18 +359,23 @@ export class Enemy {
     // O inimigo patrola dentro dos limites definidos no spawn.
     // Se chegar na borda, inverte a direção suavemente.
     // Nota: o dash foi removido do indígena, então o vx vem apenas do patrol.
-    if (this.x <= this.left + 1) this.vx = Math.abs(this.stats.speed)
-    if (this.x + this.w >= this.right - 1) this.vx = -Math.abs(this.stats.speed)
+    if (this.x <= this.left + 1) this.vx = Math.abs(this.speed)
+    if (this.x + this.w >= this.right - 1) this.vx = -Math.abs(this.speed)
     this.facing = this.vx >= 0 ? 1 : -1
   }
 
   private canAttack(distance: number): boolean {
     const range = Math.abs(distance)
-    // Ranged: ataca à distância, mas não se o jogador estiver muito perto
-    // e nem muito longe (dentro do Chase).
-    if (this.stats.ranged && range > 46 && range < this.stats.chase + 10) return true
-    // Melee: ataca quando o jogador está perto.
-    if (this.stats.melee && range < (this.isBoss ? 42 : 34)) return true
+    if (this.stats.ranged) {
+      const maxRange = this.stats.rangedRange ?? this.stats.chase + 10
+      // Aguaceiro: atira quando o alvo está a uma distância útil — longe o
+      // suficiente para dar abertura, perto o suficiente para o disparo pegar.
+      return range > 24 && range < maxRange
+    }
+    if (this.stats.melee) {
+      const meleeRange = this.isBoss ? 42 : this.kind === 'feitor' ? 30 : 34
+      return range > 0 && range < meleeRange
+    }
     return false
   }
 

@@ -184,9 +184,9 @@ export class Player {
     this.skidCooldown = 0
   }
 
-  hit(fromX?: number): void {
+  hit(fromX?: number, damage: number = 1): void {
     if (this.invuln > 0) return
-    this.hp = Math.max(0, this.hp - 1)
+    this.hp = Math.max(0, this.hp - damage)
     this.invuln = 1.15
     this.hurt = HURT_TIME
     this.attack = 0
