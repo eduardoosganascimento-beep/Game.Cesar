@@ -1,0 +1,30 @@
+﻿# Dependências
+node_modules/
+
+# Build (o site é gerado em dist/ e publicado pelo GitHub Actions)
+dist/
+
+# Arte original de trabalho (~12 MB de folhas de sprite e referências).
+# Os scripts em scripts/ leem daqui para gerar public/assets/, que é versionado.
+raw/
+
+# Logs de build
+build_log.txt
+build_output.txt
+npm-debug.log*
+yarn-error.log*
+
+# Arquivos locais de override
+*.local
+.env
+.env.*
+
+# Sistema operacional
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Editores
+.vscode/
+.idea/
+*.swp

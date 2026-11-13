@@ -1,0 +1,19 @@
+{
+  "name": "sandman",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Jogo indie 2D em pixel art sobre Sandman.",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc --noEmit && vite build",
+    "preview": "vite preview",
+    "sprites": "node scripts/crop-sheet.mjs"
+  },
+  "devDependencies": {
+    "pngjs": "^7.0.0",
+    "sharp": "^0.35.5",
+    "typescript": "^5.6.3",
+    "vite": "^5.4.10"
+  }
+}

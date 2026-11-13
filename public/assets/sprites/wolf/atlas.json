@@ -1,0 +1,310 @@
+{
+  "source": "wolf-source.png",
+  "scale": 1,
+  "clips": {
+    "idle": {
+      "frames": [
+        "idle-1",
+        "idle-2"
+      ],
+      "fps": 2.6,
+      "loop": true
+    },
+    "walk": {
+      "frames": [
+        "walk-1",
+        "walk-2",
+        "walk-3",
+        "walk-4"
+      ],
+      "fps": 9,
+      "loop": true
+    },
+    "slash": {
+      "frames": [
+        "slash-1",
+        "slash-2",
+        "slash-3",
+        "slash-4"
+      ],
+      "fps": 12,
+      "loop": false
+    },
+    "hurt": {
+      "frames": [
+        "hurt-1",
+        "hurt-2"
+      ],
+      "fps": 8,
+      "loop": false
+    },
+    "death": {
+      "frames": [
+        "death-1",
+        "death-2",
+        "death-3",
+        "death-4"
+      ],
+      "fps": 6,
+      "loop": false
+    }
+  },
+  "frames": [
+    {
+      "file": "idle-1.png",
+      "name": "idle-1",
+      "w": 48,
+      "h": 32,
+      "anchor": {
+        "x": 24,
+        "y": 31
+      },
+      "source": {
+        "x": 62,
+        "y": 8,
+        "w": 48,
+        "h": 32
+      }
+    },
+    {
+      "file": "idle-2.png",
+      "name": "idle-2",
+      "w": 48,
+      "h": 32,
+      "anchor": {
+        "x": 24,
+        "y": 31
+      },
+      "source": {
+        "x": 110,
+        "y": 8,
+        "w": 48,
+        "h": 32
+      }
+    },
+    {
+      "file": "walk-1.png",
+      "name": "walk-1",
+      "w": 48,
+      "h": 32,
+      "anchor": {
+        "x": 24,
+        "y": 31
+      },
+      "source": {
+        "x": 77,
+        "y": 54,
+        "w": 48,
+        "h": 32
+      }
+    },
+    {
+      "file": "walk-2.png",
+      "name": "walk-2",
+      "w": 48,
+      "h": 32,
+      "anchor": {
+        "x": 30,
+        "y": 31
+      },
+      "source": {
+        "x": 125,
+        "y": 52,
+        "w": 48,
+        "h": 32
+      }
+    },
+    {
+      "file": "walk-3.png",
+      "name": "walk-3",
+      "w": 48,
+      "h": 32,
+      "anchor": {
+        "x": 27,
+        "y": 31
+      },
+      "source": {
+        "x": 175,
+        "y": 52,
+        "w": 48,
+        "h": 32
+      }
+    },
+    {
+      "file": "walk-4.png",
+      "name": "walk-4",
+      "w": 48,
+      "h": 32,
+      "anchor": {
+        "x": 28,
+        "y": 31
+      },
+      "source": {
+        "x": 223,
+        "y": 54,
+        "w": 48,
+        "h": 32
+      }
+    },
+    {
+      "file": "slash-1.png",
+      "name": "slash-1",
+      "w": 47,
+      "h": 32,
+      "anchor": {
+        "x": 26,
+        "y": 31
+      },
+      "source": {
+        "x": 291,
+        "y": 51,
+        "w": 47,
+        "h": 32
+      }
+    },
+    {
+      "file": "slash-2.png",
+      "name": "slash-2",
+      "w": 48,
+      "h": 32,
+      "anchor": {
+        "x": 19,
+        "y": 31
+      },
+      "source": {
+        "x": 80,
+        "y": 91,
+        "w": 48,
+        "h": 32
+      }
+    },
+    {
+      "file": "slash-3.png",
+      "name": "slash-3",
+      "w": 48,
+      "h": 32,
+      "anchor": {
+        "x": 23,
+        "y": 31
+      },
+      "source": {
+        "x": 128,
+        "y": 89,
+        "w": 48,
+        "h": 32
+      }
+    },
+    {
+      "file": "slash-4.png",
+      "name": "slash-4",
+      "w": 48,
+      "h": 32,
+      "anchor": {
+        "x": 17,
+        "y": 31
+      },
+      "source": {
+        "x": 178,
+        "y": 89,
+        "w": 48,
+        "h": 32
+      }
+    },
+    {
+      "file": "hurt-1.png",
+      "name": "hurt-1",
+      "w": 48,
+      "h": 32,
+      "anchor": {
+        "x": 23,
+        "y": 31
+      },
+      "source": {
+        "x": 226,
+        "y": 91,
+        "w": 48,
+        "h": 32
+      }
+    },
+    {
+      "file": "hurt-2.png",
+      "name": "hurt-2",
+      "w": 50,
+      "h": 32,
+      "anchor": {
+        "x": 26,
+        "y": 31
+      },
+      "source": {
+        "x": 74,
+        "y": 148,
+        "w": 50,
+        "h": 32
+      }
+    },
+    {
+      "file": "death-1.png",
+      "name": "death-1",
+      "w": 50,
+      "h": 32,
+      "anchor": {
+        "x": 15,
+        "y": 31
+      },
+      "source": {
+        "x": 128,
+        "y": 147,
+        "w": 50,
+        "h": 32
+      }
+    },
+    {
+      "file": "death-2.png",
+      "name": "death-2",
+      "w": 50,
+      "h": 27,
+      "anchor": {
+        "x": 11,
+        "y": 26
+      },
+      "source": {
+        "x": 182,
+        "y": 145,
+        "w": 50,
+        "h": 27
+      }
+    },
+    {
+      "file": "death-3.png",
+      "name": "death-3",
+      "w": 48,
+      "h": 32,
+      "anchor": {
+        "x": 39,
+        "y": 31
+      },
+      "source": {
+        "x": 234,
+        "y": 144,
+        "w": 48,
+        "h": 32
+      }
+    },
+    {
+      "file": "death-4.png",
+      "name": "death-4",
+      "w": 48,
+      "h": 32,
+      "anchor": {
+        "x": 24,
+        "y": 31
+      },
+      "source": {
+        "x": 287,
+        "y": 144,
+        "w": 48,
+        "h": 32
+      }
+    }
+  ]
+}

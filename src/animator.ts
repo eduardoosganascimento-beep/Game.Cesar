@@ -4,6 +4,8 @@
 // Cada linha da nova folha usa apenas os quadros coerentes de um mesmo movimento,
 // então o personagem nunca troca de lado no meio do ciclo.
 
+import { type Sprite, getFrame, getColonistFrame, getIndioFrame, getWolfFrame } from './sprites'
+
 export type Clip = {
   frames: readonly string[]
   fps: number

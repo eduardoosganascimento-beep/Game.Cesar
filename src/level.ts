@@ -1,7 +1,7 @@
 // Level data — mapas maiores, mais detalhes, sem cabanas.
 // Cada nível tem mais cols/rows, mais tiles de fundo e campo de visão aumentado.
 
-import { TILE } from './engine'
+import { TILE, type Rect } from './engine'
 
 export enum Tile {
   Empty = 0,
@@ -13,6 +13,9 @@ export enum Tile {
 }
 
 export type LevelTheme = 'village' | 'river' | 'camp' | 'grove' | 'night'
+
+// Campo de visão padrão (em tiles) quando o mapa não define um valor.
+export const DEFAULT_FOV = 16
 export type EnemyKind =
   | 'capanga'
   | 'soldado'
@@ -31,7 +34,7 @@ const CHARS: Record<string, Tile> = {
   '+': Tile.Background, // fundo decorativo
 }
 
-export type EntityKind = 'enemy' | 'checkpoint'
+export type EntityKind = 'enemy' | 'checkpoint' | 'memory'
 
 export type EntitySpawn = {
   type: EntityKind
@@ -50,7 +53,8 @@ export type LevelData = {
   spawn: { x: number; y: number }
   entities: EntitySpawn[]
   // Campo de visão do jogador (em tiles). Aumentado de 10 para 16.
-  fov: number
+  // Opcional: os mapas em JSON não sempre definem o valor.
+  fov?: number
 }
 
 export class TileMap {
@@ -302,10 +306,15 @@ export function getLevel(numero: number): LevelData {
 // Função para verificar se o jogador está dentro do campo de visão
 // (usado pelos inimigos para detectar o jogador)
 export function checkFov(player: Rect, level: LevelData): boolean {
+  // O tamanho do mapa vem das linhas do próprio nível.
+  const cols = Math.max(...level.rows.map((row) => row.length))
+  const rows = level.rows.length
+  const fov = level.fov ?? DEFAULT_FOV
+
   // Retorna true se o jogador estiver dentro do campo de visão do centro do mapa
-  const centerX = level.cols / 2
-  const centerY = level.rows / 2
+  const centerX = cols / 2
+  const centerY = rows / 2
   const distX = Math.abs(player.x / TILE - centerX)
   const distY = Math.abs(player.y / TILE - centerY)
-  return distX <= level.fov / 2 && distY <= level.fov / 2
+  return distX <= fov / 2 && distY <= fov / 2
 }

@@ -6,7 +6,7 @@ import { Effects } from './effects'
 import { Camera, Loop, TILE, VIEW_H, VIEW_W, overlaps } from './engine'
 import { Enemy } from './enemy'
 import { Input } from './input'
-import { TileMap, type LevelData, checkFov, levels, getLevel } from './level'
+import { TileMap, Tile, type LevelData } from './level'
 import { MAX_HP, Player } from './player'
 import { drawScenery } from './scenery'
 import { loadSprites, type Sprite } from './sprites'
@@ -78,11 +78,6 @@ class Game {
   private deathMessage = ''
   private damageFlash = 0
   private killFlash = 0
-  private cabins: Cabin[] = []
-  private cabin: Cabin | null = null
-  private clearedCabins = new Set<string>()
-  private cabinMemories = new Map<string, Memory[]>()
-  private cabinMemoryList: Memory[] = []
 
   private goalX = 0
   private goalRow = 9
@@ -367,7 +362,7 @@ class Game {
     this.updateShots(safeDt)
     this.updateSpears(safeDt)
 
-    for (const memory of [...this.memories, ...this.cabinMemoryList]) {
+    for (const memory of this.memories) {
       if (memory.got) continue
       const orb = { x: memory.x + 2, y: memory.y + 2, w: TILE - 4, h: TILE - 4 }
       if (!overlaps(player.hurtbox, orb)) continue
@@ -385,12 +380,6 @@ class Game {
     // cabana deixava Sand congelado com vida zerada.
     if (player.hp <= 0) {
       this.beginDeath('Sand caiu — a floresta o chama de volta.')
-      this.input.endFrame()
-      return
-    }
-
-    if (this.cabin) {
-      this.updateCabinState(safeDt)
       this.input.endFrame()
       return
     }
@@ -606,10 +595,7 @@ class Game {
   }
 
   private get collected(): number {
-    return (
-      this.memories.filter((memory) => memory.got).length +
-      this.cabinMemoryList.filter((memory) => memory.got).length
-    )
+    return this.memories.filter((memory) => memory.got).length
   }
 
   private loadChapter(index: number): void {
@@ -619,7 +605,6 @@ class Game {
     const data = this.chapter.data as LevelData
     this.map = new TileMap(data)
     this.player = new Player(this.map, data.spawn)
-    this.cabins = []  // removido: cabinsForChapter(clamped)
     this.goalX = (this.map.cols - 4) * TILE
     this.goalRow = this.findGoalRow(this.map.cols - 4)
     this.goalBaseY = this.goalRow * TILE
@@ -886,157 +871,8 @@ class Game {
   }
 
   private updateInteraction(): void {
-    const player = this.player
-    const center = player.x + player.w / 2
-
-    if (this.cabin) {
-      const door = this.cabin.interior.exitDoor
-      const doorX = door.x * TILE + TILE / 2
-      const doorBottom = door.y * TILE + TILE
-      const near =
-        Math.abs(center - doorX) < 30 && Math.abs(player.y + player.h - doorBottom) < 42
-      if (near) {
-        const cleared =
-          this.clearedCabins.has(this.cabin.id) || !this.enemies.some((enemy) => enemy.alive)
-        this.hud.showInteract(cleared ? 'Sair da cabana' : 'Porta trancada')
-        if (this.input.interactPressed) {
-          if (cleared) {
-            this.exitCabin()
-          } else {
-            this.effects.text(doorX, player.y - 14, 'Há colonos dentro.', '#ff8b73')
-          }
-        }
-      } else {
-        this.hud.hideInteract()
-      }
-      return
-    }
-
-    const near = this.cabins.find((cabin) => Math.abs(center - cabin.doorX) < 34)
-    if (near) {
-      this.hud.showInteract(`Entrar · ${near.name}`)
-      if (this.input.interactPressed) this.enterCabin(near)
-    } else {
-      this.hud.hideInteract()
-    }
-  }
-
-  private updateCabinState(dt: number): void {
-    const cabin = this.cabin
-    if (!cabin) return
-
-    const anyAlive = this.enemies.some((enemy) => enemy.alive)
-    if (!anyAlive && !this.clearedCabins.has(cabin.id)) {
-      this.clearedCabins.add(cabin.id)
-      this.effects.text(
-        this.player.x + this.player.w / 2,
-        this.player.y - 18,
-        'Cabana livre!',
-        '#8ac46f',
-      )
-      sfx.win()
-    }
-
-    const look = this.player.facing * 14
-    this.camera.follow(
-      { x: this.player.x + look, y: this.player.y, w: this.player.w, h: this.player.h },
-      this.map.width,
-      this.map.height,
-      0.12,
-    )
-    this.updateAnimator(dt)
-    this.updateBossBar()
-    this.syncHud()
-  }
-
-  private enterCabin(cabin: Cabin): void {
-    const player = this.player
-    this.outsideState = {
-      map: this.map,
-      enemies: this.enemies,
-      memories: this.memories,
-      checkpoints: this.checkpoints,
-      playerX: player.x,
-      playerY: player.y,
-      spawn: player.saveSpawn(),
-    }
-
-    const data: LevelData = {
-      name: cabin.interior.name,
-      subtitle: cabin.name,
-      theme: this.chapter.data.theme,
-      rows: cabin.interior.rows,
-      spawn: cabin.interior.spawn,
-      entities: [],
-    }
-    const interiorMap = new TileMap(data)
-    this.map = interiorMap
-    this.cabin = cabin
-    player.setMap(interiorMap)
-
-    const spawnX = cabin.interior.spawn.x * TILE
-    const spawnY = cabin.interior.spawn.y * TILE + TILE - player.h
-    player.teleport(spawnX, spawnY)
-    player.setCheckpoint(cabin.interior.spawn.x, cabin.interior.spawn.y)
-
-    this.enemies = this.clearedCabins.has(cabin.id)
-      ? []
-      : cabin.interior.enemies.map(
-          (enemy) =>
-            new Enemy(
-              {
-                type: 'enemy',
-                kind: enemy.kind,
-                x: enemy.x,
-                y: enemy.y,
-                left: enemy.left,
-                right: enemy.right,
-              },
-              TILE,
-            ),
-        )
-
-    // Memórias da cabana (as ancestrais guardam lembranças da família).
-    let memories = this.cabinMemories.get(cabin.id)
-    if (!memories) {
-      memories = cabin.interior.memories.map((memory, index) => ({
-        x: memory.x * TILE,
-        y: memory.y * TILE,
-        phase: index * 1.7,
-        got: false,
-      }))
-      this.cabinMemories.set(cabin.id, memories)
-    }
-    this.cabinMemoryList = memories
-
-    this.memories = []
-    this.checkpoints = []
-    this.shots = []
-    this.spears = []
-    this.camera.snapTo(player.hurtbox, this.map.width, this.map.height)
-    this.effects.text(player.x + player.w / 2, player.y - 12, cabin.name, '#ffe9a8')
-    this.animator.reset()
-    this.hud.hideInteract()
-  }
-
-  private exitCabin(): void {
-    const state = this.outsideState
-    if (!state) return
-
-    this.map = state.map
-    this.player.setMap(this.map)
-    this.enemies = state.enemies
-    this.memories = state.memories
-    this.checkpoints = state.checkpoints
-    this.player.teleport(state.playerX, state.playerY)
-    this.player.restoreSpawn(state.spawn)
-    this.cabin = null
-    this.outsideState = null
-    this.cabinMemoryList = []
-    this.shots = []
-    this.spears = []
-    this.camera.snapTo(this.player.hurtbox, this.map.width, this.map.height)
-    this.animator.reset()
+    // A versão 1.0 do jogo não tem cabanas nem portas: não há nada para
+    // interagir, então o aviso do HUD é sempre escondido.
     this.hud.hideInteract()
   }
 
@@ -1119,7 +955,7 @@ class Game {
   }
 
   private syncHud(force = false): void {
-    const total = this.memories.length + this.cabinMemoryList.length
+    const total = this.memories.length
     const key = `${this.player.hp}:${this.collected}:${total}`
     if (!force && key === this.hudKey) return
     this.hudKey = key
@@ -1249,34 +1085,6 @@ class Game {
       ctx.globalAlpha = pulse
       ctx.fillStyle = '#ffd166'
       ctx.fillRect(feetX - 1, feetY - 46, 2, 2)
-      ctx.globalAlpha = 1
-    }
-  }
-
-  private paintCabinDoors(time: number): void {
-    for (const cabin of this.cabins) {
-      const x = Math.round(cabin.doorX - this.camera.px)
-      if (x < -40 || x > VIEW_W + 40) continue
-      const y = Math.round(cabin.doorRow * TILE - 62 - this.camera.py)
-      const pulse = 0.55 + Math.sin(time * 3 + cabin.doorX * 0.05) * 0.25
-
-      const glow = ctx.createRadialGradient(x, y, 1, x, y, 18)
-      glow.addColorStop(0, `rgba(255, 209, 102, ${0.22 * pulse})`)
-      glow.addColorStop(1, 'rgba(255, 209, 102, 0)')
-      ctx.fillStyle = glow
-      ctx.fillRect(x - 18, y - 18, 36, 36)
-
-      ctx.globalAlpha = 0.65 + pulse * 0.35
-      ctx.fillStyle = '#ffd166'
-      ctx.fillRect(x - 1, y - 4, 2, 8)
-      ctx.fillRect(x - 4, y - 1, 8, 2)
-      ctx.globalAlpha = 1
-
-      // Seta pulsando que aponta para a porta.
-      ctx.globalAlpha = 0.35 + pulse * 0.4
-      ctx.fillStyle = '#ffe9a8'
-      ctx.fillRect(x - 1, y + 6, 2, 4)
-      ctx.fillRect(x - 3, y + 9, 6, 2)
       ctx.globalAlpha = 1
     }
   }
