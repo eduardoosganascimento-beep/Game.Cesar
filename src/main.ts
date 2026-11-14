@@ -23,6 +23,8 @@ ctx.imageSmoothingEnabled = false
 
 const SPRITE_SCALE = 1.0
 const WIN_DELAY = 1100
+// Tempo do esmagamento do corpo ao aterrissar.
+const LAND_SQUASH_TIME = 0.2
 
 type Memory = {
   x: number
@@ -108,6 +110,7 @@ class Game {
   private dashGhosts: DashGhost[] = []
   private dashGhostTimer = 0
   private hitStop = 0
+  private landSquash = 0
   private dying = 0
   private deathMessage = ''
   private damageFlash = 0
@@ -142,6 +145,11 @@ class Game {
 
   get isRunning(): boolean {
     return this.running
+  }
+
+  // Capítulos de noite usam o fundo de luar e uma grade azulada.
+  get isNight(): boolean {
+    return this.chapter.data.night ?? this.chapter.data.theme === 'night'
   }
 
   get isPaused(): boolean {
@@ -288,9 +296,11 @@ class Game {
       .filter((entity) => entity.type === 'enemy')
       .map((entity) => {
         const enemy = new Enemy(entity, TILE, this.chapterIndex + 1)
-        // A dificuldade escolhida no menu escala a velocidade uma única vez.
-        const diffFac = DELTAS.speed[this.difficulty as 'facil' | 'normal' | 'dificil'] || 1
-        enemy.setSpeedScale(diffFac)
+        // A dificuldade escolhida no menu escala velocidade e resistência
+        // uma única vez, sem repetir o fator de nível.
+        const diff = this.difficulty
+        enemy.setSpeedScale(DELTAS.speed[diff] || 1)
+        enemy.setHealthScale(DELTAS.enemies[diff] || 1)
         return enemy
       })
 
@@ -319,6 +329,7 @@ class Game {
     this.dashGhosts.length = 0
     this.dashGhostTimer = 0
     this.hitStop = 0
+    this.landSquash = 0
     this.dying = 0
     this.deathMessage = ''
     this.won = false
@@ -416,9 +427,11 @@ class Game {
       this.spawnSpear()
     }
     if (player.justLanded) {
+      this.landSquash = LAND_SQUASH_TIME
       this.effects.burst(player.x + player.w / 2, player.y + player.h, 'dust', 6, 30)
       this.effects.addShake(Math.min(2.2, player.landingSpeed / 220))
     }
+    this.landSquash = Math.max(0, this.landSquash - safeDt)
     if (player.dash > 0 && Math.random() < 0.85) {
       this.effects.trail(
         player.x + player.w / 2 - player.facing * 7,
@@ -451,6 +464,16 @@ class Game {
       if (!enemy.alive) continue
 
       if (enemy.justShot) this.spawnShot(enemy)
+
+      // Poeira dos passos: só quando o colono realmente anda.
+      if (enemy.alive && enemy.onGround && Math.abs(enemy.vx) > 8 && Math.random() < 0.09) {
+        this.effects.trail(enemy.x + enemy.w / 2, enemy.y + enemy.h - 1, 'dust')
+      }
+
+      // O zumbi pinga o que escorre dele.
+      if (enemy.isZombie && enemy.alive && Math.random() < 0.03) {
+        this.effects.burst(enemy.x + enemy.w / 2, enemy.y + 5, 'ooze', 2, 14)
+      }
 
       if (enemy.justStruck && overlaps(enemy.attackBox, player.hurtbox)) {
         if (enemy.isZombie) {
@@ -626,7 +649,7 @@ class Game {
       this.camera.px,
       this.camera.py,
       time,
-      this.chapter.data.theme === 'night',
+      this.isNight,
     )
 
     drawScenery(
@@ -643,6 +666,16 @@ class Game {
 
     ctx.fillStyle = this.chapter.tint
     ctx.fillRect(0, 0, VIEW_W, VIEW_H)
+
+    // À noite a floresta recebe um véu azul: o luar entra, a cor some.
+    if (this.isNight) {
+      const veil = ctx.createLinearGradient(0, 0, 0, VIEW_H)
+      veil.addColorStop(0, 'rgba(18, 28, 66, 0.34)')
+      veil.addColorStop(0.55, 'rgba(16, 26, 60, 0.2)')
+      veil.addColorStop(1, 'rgba(8, 14, 38, 0.36)')
+      ctx.fillStyle = veil
+      ctx.fillRect(0, 0, VIEW_W, VIEW_H)
+    }
 
     for (const checkpoint of this.checkpoints) this.paintCheckpoint(checkpoint, time)
 
@@ -1260,11 +1293,21 @@ class Game {
   private paintEnemy(enemy: Enemy, time: number): void {
     const sprite = enemy.animator.frame
     const scale = enemy.visualScale
+    const walking = enemy.alive && Math.abs(enemy.vx) > 4
+    // Andar balança o corpo; parado, o colono só respira.
+    const bob = enemy.alive
+      ? walking
+        ? Math.round(Math.sin(time * 10 + enemy.x * 0.25))
+        : Math.round(Math.sin(time * 2.1 + enemy.x * 0.07) * 0.6)
+      : 0
+    // Quem avança inclina o corpo para a frente.
+    const lean = walking ? (enemy.vx > 0 ? 1 : -1) : 0
     const feetX = Math.round(enemy.x + enemy.w / 2 - this.camera.px)
-    const feetY = Math.round(enemy.y + enemy.h - this.camera.py)
+    const shadowY = Math.round(enemy.y + enemy.h - this.camera.py)
+    const feetY = shadowY - bob
 
     ctx.fillStyle = 'rgba(0, 0, 0, 0.32)'
-    ctx.fillRect(feetX - 7, feetY - 2, 14, 2)
+    ctx.fillRect(feetX - 7, shadowY - 2, 14, 2)
 
     if (enemy.isBoss && enemy.alive) {
       const aura = ctx.createRadialGradient(feetX, feetY - 18, 2, feetX, feetY - 18, 34)
@@ -1302,10 +1345,10 @@ class Game {
         ctx.save()
         ctx.translate(feetX, 0)
         ctx.scale(-1, 1)
-        this.drawSprite(sprite, -sprite.ax * scale, feetY - sprite.ay * scale, scale, 0.2)
+        this.drawSprite(sprite, -sprite.ax * scale + lean, feetY - sprite.ay * scale, scale, 0.2)
         ctx.restore()
       } else {
-        const dx = feetX - sprite.ax * scale
+        const dx = feetX - sprite.ax * scale + lean
         const dy = feetY - sprite.ay * scale
         this.drawSprite(sprite, dx, dy, scale, 0.2)
       }
@@ -1314,6 +1357,36 @@ class Game {
     }
 
     ctx.globalAlpha = 1
+
+    // Olho do zumbi: um brilho doente que acompanha a cabeça.
+    if (enemy.isZombie && enemy.alive && sprite) {
+      const headY = feetY - sprite.ay * scale + 6
+      const headX = feetX + enemy.facing * 3
+      const glow = ctx.createRadialGradient(headX, headY, 0.5, headX, headY, 6)
+      const pulse = 0.55 + Math.sin(time * 4.4 + enemy.x * 0.11) * 0.25
+      glow.addColorStop(0, `rgba(168, 224, 99, ${0.3 * pulse})`)
+      glow.addColorStop(1, 'rgba(168, 224, 99, 0)')
+      ctx.fillStyle = glow
+      ctx.fillRect(headX - 6, headY - 6, 12, 12)
+      ctx.globalAlpha = 0.7 + pulse * 0.3
+      ctx.fillStyle = '#d8f79a'
+      ctx.fillRect(headX + enemy.facing, headY - 1, 1, 1)
+      ctx.fillRect(headX + enemy.facing * 3, headY - 1, 1, 1)
+      ctx.globalAlpha = 1
+    }
+
+    // Fagulha da arma no instante do disparo.
+    if (enemy.justShot) {
+      const origin = enemy.shotOrigin
+      const flashX = Math.round(origin.x - this.camera.px)
+      const flashY = Math.round(origin.y - this.camera.py)
+      const muzzle = ctx.createRadialGradient(flashX, flashY, 0.5, flashX, flashY, 12)
+      muzzle.addColorStop(0, 'rgba(255, 244, 198, 0.85)')
+      muzzle.addColorStop(0.4, 'rgba(255, 186, 84, 0.5)')
+      muzzle.addColorStop(1, 'rgba(255, 159, 67, 0)')
+      ctx.fillStyle = muzzle
+      ctx.fillRect(flashX - 12, flashY - 12, 24, 24)
+    }
 
     if (enemy.isBoss && enemy.alive) {
       const pulse = 0.4 + Math.sin(time * 3) * 0.2
@@ -1413,8 +1486,18 @@ class Game {
 
     if (blink) ctx.globalAlpha = 0.5
 
+    // Espremer e esticar: Sand afunda ao aterrissar e se estica na subida.
+    const squash = this.landSquash > 0 ? this.landSquash / LAND_SQUASH_TIME : 0
+    const rising = !player.onGround && player.vy < -50
+    const scaleY = 1 + squash * 0.2 - (rising ? 0.07 : 0)
+    const scaleX = 1 - squash * 0.16 + (rising ? 0.05 : 0)
+
     if (sprite) {
       const dy = feetY - sprite.ay * SPRITE_SCALE
+      ctx.save()
+      ctx.translate(feetX, feetY)
+      ctx.scale(scaleX, scaleY)
+      ctx.translate(-feetX, -feetY)
       if (player.facing < 0) {
         ctx.save()
         ctx.translate(feetX, 0)
@@ -1422,13 +1505,9 @@ class Game {
         this.drawSprite(sprite, -sprite.ax * SPRITE_SCALE, dy, SPRITE_SCALE)
         ctx.restore()
       } else {
-        this.drawSprite(
-          sprite,
-          feetX - sprite.ax * SPRITE_SCALE,
-          dy,
-          SPRITE_SCALE,
-        )
+        this.drawSprite(sprite, feetX - sprite.ax * SPRITE_SCALE, dy, SPRITE_SCALE)
       }
+      ctx.restore()
     } else {
       this.paintFallbackPlayer(feetX, feetY)
     }
@@ -1606,6 +1685,9 @@ screens.setChapters(
     subtitle: chapter.data.subtitle ?? '',
   })),
 )
+
+// Reflete no menu a dificuldade salva da última partida.
+screens.setDifficultySelection(readDifficulty())
 
 game.onWin = (stats) => {
   screens.showEnd(stats)

@@ -9,13 +9,10 @@ export enum Tile {
   Platform = 2,
   Water = 3,
   Spike = 4,
-  Background = 5, // novo: tile de fundo decorativo
+  Background = 5, // folhagem de fundo: enfeite, não bloqueia
 }
 
 export type LevelTheme = 'village' | 'river' | 'camp' | 'grove' | 'night'
-
-// Campo de visão padrão (em tiles) quando o mapa não define um valor.
-export const DEFAULT_FOV = 16
 export type EnemyKind =
   | 'capanga'
   | 'soldado'
@@ -53,9 +50,9 @@ export type LevelData = {
   rows: string[]
   spawn: { x: number; y: number }
   entities: EntitySpawn[]
-  // Campo de visão do jogador (em tiles). Aumentado de 10 para 16.
-  // Opcional: os mapas em JSON não sempre definem o valor.
-  fov?: number
+  // Quando true, o capítulo acontece à noite: fundo de luar, luar e
+  // vagalumes no lugar dos raios de sol.
+  night?: boolean
 }
 
 export class TileMap {
@@ -153,169 +150,4 @@ export class TileMap {
     }
     return false
   }
-}
-
-// ============================================================
-// Dados dos níveis — mapas alargados, mais detalhes, sem cabanas.
-// Cada nível tem mais linhas/colunas, tiles '+' de fundo e
-// fov aumentado para 16 tiles (~128px a 160px de visão).
-// ============================================================
-
-// --- Capítulo 1: aldeia ---
-const level1Rows = [
-  '#######################################',
-  '#.............+.###################...#',
-  '#+.################.#...............#.#',
-  '#.#.......#.......#.#...............#.#',
-  '#.#.......#.......#####............#..#',
-  '#.#.......###.....#.#.............#...#',
-  '#.#.......#.....#...#............#....#',
-  '#.#.......#.....#....#...........#.....#',
-  '#.#.......#.....#.....##.........#.....#',
-  '#.#.......#.....#....#.#........#......#',
-  '#.#.......#.....#.....#.#.......#.....#',
-  '#.#.......#.....#.......#.#.....#.....#.#',
-  '#.#.......#.....###########....#.......#..#',
-  '#.#.......#.....#.......#....#.......#...#.#',
-  '#.#.......#.....#.......#....#.......#...#..#',
-  '#.#.......#.....#.......#....#.......#...#...#',
-  '#.#.......#.....#.......#....#.......#...#....#',
-  '#.#.......#.....###########....#.......#.....#.#',
-  '#.............#.......................#.....#.',
-  '#######################################',
-]
-export const level1: LevelData = {
-  name: 'Aldeia',
-  subtitle: 'Apresentação da rotina, da família e do ataque',
-  theme: 'village',
-  rows: level1Rows,
-  spawn: { x: 2, y: 2 },
-  entities: [],
-  fov: 16, // aumentado de 10 para 16
-}
-
-// --- Capítulo 2: rio ---
-const level2Rows = [
-  '#############################',
-  '#.......#.......#.............#',
-  '#.###.#.###.#.###.#.###.#.###.#',
-  '#.#.#...#...#.#.#...#...#...#.#',
-  '#.#.#...#...#.#.#...#...#...#.#',
-  '#.#.#...#...#.#.#...#...#...#.#',
-  '#.#.#...#...#.#.#...#...#...#.#',
-  '#.#.#.#.#.#.#.#.#.#.#.#.#.#.#.#',
-  '#.#.....#...#.#.#.....#...#...#.#',
-  '#.###.#.###.#.###.#.###.#.###.#',
-  '#.......#.......#.............#',
-  '#############################',
-]
-export const level2: LevelData = {
-  name: 'Rio',
-  subtitle: 'Sand sobrevive sozinho, aprende a caçar',
-  theme: 'river',
-  rows: level2Rows,
-  spawn: { x: 3, y: 2 },
-  entities: [],
-  fov: 16,
-}
-
-// --- Capítulo 3: acampamento ---
-const level3Rows = [
-  '#################################',
-  '#.......+.###################....',
-  '#+.################.#.........+.##.',
-  '#.#.......#.......#.............#.',
-  '#.#.......#.......#.............#.',
-  '#.#.......###.....###########....#',
-  '#.#.......#.....#.......#.......#.',
-  '#.#.......#.....#.......#.......#.',
-  '#.#.......###.....###########....#',
-  '#.#.......#.......#.......#.......#.',
-  '#.#.......#.......#.......#.......#.',
-  '#.#.......###########.......######.#',
-  '#.#.......###########.......######.#',
-  '#.#.......#.......#.......#.......#.',
-  '#.#.......#.......#.......#.......#.',
-  '#.#.......#.......#.......#.......#.',
-  '#.#.......###########.......######.#',
-  '#.#.......###########.......######.#',
-  '#.#.......#.......#.......#.......#.',
-  '#.#.......#.......#.......#.......#.',
-  '#.#.......###########.......######.#',
-  '#.#.......###########.......######.#',
-  '#.#.......#.......#.......#.......#.',
-  '#.#.......#.......#.......#.......#.',
-  '#.#.......#############...########.#',
-  '#.....#############...########....#',
-  '#################################',
-]
-export const level3: LevelData = {
-  name: 'Acampamento',
-  subtitle: 'Anos de preparação, provas dos anciãos',
-  theme: 'camp',
-  rows: level3Rows,
-  spawn: { x: 3, y: 2 },
-  entities: [],
-  fov: 16,
-}
-
-// --- Capítulo 4: noite ---
-const level4Rows = [
-  '########################################',
-  '#.......#.......#.......#.......#.......#',
-  '#.###.#.###.#.###.#.###.#.###.#.###.#.###',
-  '#.#.#...#...#.#.#...#...#...#...#...#...#.',
-  '#.#.#...#...#.#.#...#...#...#...#...#...#.',
-  '#.#.#...#...#.#.#...#...#...#...#...#...#.',
-  '#.#.#...#...#.#.#...#...#...#...#...#...#.',
-  '#.#.#...#...#.#.#...#...#...#...#...#...#.',
-  '#.#.#.#.#.#.#.#.#.#.#.#.#.#.#.#.#.#.#.#.#',
-  '#.#.....#...#.#.#.....#...#...#...#...#...#.',
-  '#.###.#.###.#.###.#.###.#.###.#.###.#.###.#',
-  '#.#.#...#...#.#.#...#...#...#...#...#...#.',
-  '#.#.#...#...#.#.#...#...#...#...#...#...#.',
-  '#.#.#...#...#.#.#...#...#...#...#...#...#.',
-  '#.#.#...#...#.#.#...#...#...#...#...#...#.',
-  '#.#.#.#.#.#.#.#.#.#.#.#.#.#.#.#.#.#.#.#.#',
-  '#.#.....#...#.#.#.....#...#...#...#...#...#.',
-  '#.......#.......#.......#.......#.......#.',
-  '########################################',
-]
-export const level4: LevelData = {
-  name: 'Noite',
-  subtitle: 'Capítulo 4, com o fundo de luar e estrelas',
-  theme: 'night',
-  rows: level4Rows,
-  spawn: { x: 3, y: 2 },
-  entities: [],
-  fov: 16,
-}
-
-// Mapeia o nome do capítulo para os dados do nível
-export const levels: Record<string, LevelData> = {
-  1: level1,
-  2: level2,
-  3: level3,
-  4: level4,
-}
-
-// Função para obter o nível pelo número do capítulo
-export function getLevel(numero: number): LevelData {
-  return levels[numero] || level1
-}
-
-// Função para verificar se o jogador está dentro do campo de visão
-// (usado pelos inimigos para detectar o jogador)
-export function checkFov(player: Rect, level: LevelData): boolean {
-  // O tamanho do mapa vem das linhas do próprio nível.
-  const cols = Math.max(...level.rows.map((row) => row.length))
-  const rows = level.rows.length
-  const fov = level.fov ?? DEFAULT_FOV
-
-  // Retorna true se o jogador estiver dentro do campo de visão do centro do mapa
-  const centerX = cols / 2
-  const centerY = rows / 2
-  const distX = Math.abs(player.x / TILE - centerX)
-  const distY = Math.abs(player.y / TILE - centerY)
-  return distX <= fov / 2 && distY <= fov / 2
 }

@@ -2,6 +2,7 @@
   "name": "Capítulo 1 — A Aldeia",
   "subtitle": "A floresta guarda o que a aldeia perdeu.",
   "theme": "village",
+  "night": false,
   "spawn": {
     "x": 2,
     "y": 8

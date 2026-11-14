@@ -181,6 +181,7 @@ export class Enemy {
   private readonly spawnY: number
   private readonly levelFactor: number
   private speedScale = 1
+  private healthScale = 1
   private attackKind: AttackKind | null = null
   private attackElapsed = 0
   private attackCooldown = 0
@@ -228,6 +229,13 @@ export class Enemy {
     this.vx = Math.sign(this.vx || 1) * this.speed
   }
 
+  // Dificuldades mais duras dão mais fôlego aos inimigos (e chefes).
+  setHealthScale(scale: number): void {
+    this.healthScale = scale
+    this.maxHp = Math.max(1, Math.round(this.stats.hp * scale))
+    this.hp = this.maxHp
+  }
+
   get rect(): Rect {
     return { x: this.x, y: this.y, w: this.w, h: this.h }
   }
@@ -252,8 +260,8 @@ export class Enemy {
     this.w = this.stats.w
     this.h = this.stats.h
     this.y = feet - this.h
-    this.hp = this.stats.hp
-    this.maxHp = this.stats.hp
+    this.hp = Math.max(1, Math.round(this.stats.hp * this.healthScale))
+    this.maxHp = this.hp
     this.speed = this.stats.speed * this.levelFactor * this.speedScale
     this.vx = 0
     this.vy = 0
@@ -502,6 +510,14 @@ export class Enemy {
     // |vx| > 4 → andando; otherwise → quieto.
     const state: EnemyClipName = Math.abs(this.vx) > 4 ? 'walk' : 'idle'
     this.animator.play(state)
+
+    // A passada acompanha a velocidade real: quem corre, corre com os pés.
+    if (state === 'walk') {
+      const ratio = Math.min(1, Math.abs(this.vx) / Math.max(1, this.speed))
+      this.animator.setTimeScale(0.72 + ratio * 0.55)
+    } else {
+      this.animator.setTimeScale(1)
+    }
   }
 
   // ============================================================

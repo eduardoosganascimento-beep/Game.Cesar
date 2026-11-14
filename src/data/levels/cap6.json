@@ -2,6 +2,7 @@
   "name": "Capítulo 6 — A Caverna",
   "subtitle": "Pedras brilhantes guiam o caminho nas profundezas.",
   "theme": "grove",
+  "night": true,
   "spawn": {
     "x": 2,
     "y": 8

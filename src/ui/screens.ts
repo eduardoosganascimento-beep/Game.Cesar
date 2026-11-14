@@ -43,7 +43,9 @@ export class Screens {
   private readonly endNext = document.querySelector<HTMLButtonElement>('#end-next')
   private readonly chapterList = document.querySelector<HTMLElement>('#chapter-list')
   private readonly difficultyList = document.querySelector<HTMLElement>('#difficulty-list')
+  private readonly chapterDetail = document.querySelector<HTMLElement>('#chapter-detail')
 
+  private chapters: ChapterOption[] = []
   private buttons: HTMLButtonElement[] = []
   private readonly bound = new WeakSet<HTMLButtonElement>()
   private visible: Visible = 'menu'
@@ -59,6 +61,7 @@ export class Screens {
   setChapters(chapters: ChapterOption[]): void {
     const list = this.chapterList
     if (!list) return
+    this.chapters = chapters
     list.textContent = ''
 
     chapters.forEach((chapter, index) => {
@@ -223,7 +226,25 @@ export class Screens {
     if (!active.length) return
     const normalized = ((index % active.length) + active.length) % active.length
     this.selected = normalized
-    active[normalized]?.classList.add('is-selected')
+    const button = active[normalized]
+    button?.classList.add('is-selected')
+    // Mantém o item escolhido visível quando a lista é maior que a tela.
+    button?.scrollIntoView({ block: 'nearest' })
+    this.updateChapterDetail(button)
+  }
+
+  // A linha de detalhes mostra a história do capítulo em foco.
+  private updateChapterDetail(button?: HTMLButtonElement): void {
+    if (!this.chapterDetail) return
+    const index = button?.dataset.chapter
+    if (index === undefined) {
+      this.chapterDetail.textContent = ''
+      return
+    }
+    const chapter = this.chapters[Number(index)]
+    this.chapterDetail.textContent = chapter
+      ? `${chapter.tag} · ${chapter.shortTitle} — ${chapter.subtitle}`
+      : ''
   }
 
   private clearSelection(): void {

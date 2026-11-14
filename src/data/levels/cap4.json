@@ -1,7 +1,8 @@
 {
   "name": "Capítulo 4 — O Reencontro",
   "subtitle": "No coração da mata, o cativeiro tem nome e rosto.",
-  "theme": "night",
+  "theme": "grove",
+  "night": false,
   "spawn": {
     "x": 2,
     "y": 8

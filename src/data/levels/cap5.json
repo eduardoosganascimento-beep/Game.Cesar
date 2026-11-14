@@ -2,6 +2,7 @@
   "name": "Capítulo 5 — O Portal",
   "subtitle": "Um clarão entre as árvores abre passagem para o desconhecido.",
   "theme": "grove",
+  "night": true,
   "spawn": {
     "x": 2,
     "y": 8

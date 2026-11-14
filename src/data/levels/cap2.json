@@ -2,6 +2,7 @@
   "name": "Capítulo 2 — O Rio Escuro",
   "subtitle": "A correnteza leva tudo — menos a teimosia de voltar.",
   "theme": "river",
+  "night": false,
   "spawn": {
     "x": 2,
     "y": 8

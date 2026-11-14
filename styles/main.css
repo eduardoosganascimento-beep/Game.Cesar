@@ -684,19 +684,48 @@ body {
 
 .chapter-list {
   display: grid;
-  gap: 5px;
-  width: min(560px, 100%);
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 6px;
+  width: min(720px, 100%);
   text-align: left;
+}
+
+/* Em três colunas o subtítulo fica fora do cartão (aparece na linha de
+   detalhes logo abaixo da grade). */
+.chapter-copy small {
+  display: none;
+}
+
+.chapter-list .chapter-tag {
+  display: none;
+}
+
+[data-screen="chapters"] .menu-title {
+  font-size: clamp(24px, 3.4vw, 36px);
+}
+
+[data-screen="chapters"] .menu-lead {
+  margin-bottom: clamp(8px, 1.4vw, 14px);
+}
+
+.chapter-detail {
+  max-width: 62ch;
+  min-height: 1.6em;
+  margin: 8px 0 0;
+  font-size: clamp(9px, 1.1vw, 11px);
+  line-height: 1.5;
+  color: #93a08f;
+  text-align: center;
 }
 
 .chapter-item {
   position: relative;
   display: grid;
-  grid-template-columns: 38px 1fr auto;
+  grid-template-columns: 30px 1fr auto;
   align-items: center;
-  gap: 13px;
+  gap: 10px;
   width: 100%;
-  padding: 7px 13px;
+  padding: 7px 11px;
   border: 1px solid rgba(232, 203, 150, 0.13);
   border-radius: 8px;
   background:
@@ -751,7 +780,7 @@ body {
 .chapter-number {
   display: grid;
   place-items: center;
-  width: 31px;
+  width: 27px;
   aspect-ratio: 1;
   border: 1px solid rgba(232, 203, 150, 0.18);
   border-radius: 50%;
@@ -776,11 +805,14 @@ body {
 }
 
 .chapter-copy b {
+  overflow: hidden;
   font-family: var(--serif);
-  font-size: clamp(14px, 1.8vw, 19px);
+  font-size: clamp(13px, 1.55vw, 17px);
   font-weight: 500;
-  letter-spacing: 0.09em;
+  letter-spacing: 0.07em;
   color: #f1e3c5;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .chapter-copy small {
@@ -807,6 +839,76 @@ body {
 .chapter-item.is-selected .chapter-tag {
   border-color: rgba(232, 163, 61, 0.4);
   color: #ffd166;
+}
+
+/* ---------- dificuldade ---------- */
+
+.difficulty-panel {
+  display: grid;
+  gap: 6px;
+  width: min(720px, 100%);
+  margin: 10px 0 12px;
+  text-align: left;
+}
+
+.difficulty-label {
+  font-size: 7px;
+  font-weight: 700;
+  letter-spacing: 0.28em;
+  text-transform: uppercase;
+  color: rgba(220, 213, 193, 0.42);
+}
+
+.difficulty-list {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 5px;
+}
+
+.difficulty-item {
+  display: grid;
+  gap: 1px;
+  padding: 6px 9px;
+  border: 1px solid rgba(232, 203, 150, 0.13);
+  border-radius: 7px;
+  background: rgba(8, 14, 11, 0.56);
+  color: #bdb29c;
+  font: inherit;
+  font-size: clamp(9px, 1.1vw, 11px);
+  text-align: left;
+  cursor: pointer;
+  transition:
+    border-color 0.16s ease,
+    background 0.16s ease,
+    color 0.16s ease;
+}
+
+.difficulty-item b {
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  color: #e4d6b8;
+}
+
+.difficulty-item small {
+  font-size: 7px;
+  letter-spacing: 0.13em;
+  text-transform: uppercase;
+  color: rgba(220, 213, 193, 0.36);
+}
+
+.difficulty-item:hover,
+.difficulty-item.is-selected {
+  border-color: rgba(232, 163, 61, 0.55);
+  background: rgba(77, 55, 28, 0.46);
+  color: #ffd166;
+}
+
+.difficulty-item.is-selected b {
+  color: #ffd166;
+}
+
+.difficulty-item.is-selected small {
+  color: rgba(255, 218, 150, 0.6);
 }
 
 .menu-item {
@@ -916,6 +1018,13 @@ body {
   letter-spacing: 0.24em;
   text-transform: uppercase;
   color: rgba(220, 213, 193, 0.3);
+  transition: opacity 0.3s ease, visibility 0.3s ease;
+}
+
+/* O rodapé é parte do menu: some assim que a floresta começa. */
+.menu-overlay.is-hidden ~ .menu-footer {
+  visibility: hidden;
+  opacity: 0;
 }
 
 .menu-title {
@@ -983,6 +1092,14 @@ kbd {
   font-size: clamp(9px, 1.1vw, 11px);
   line-height: 1.55;
   color: #8a9689;
+}
+
+.menu-footnote-warn {
+  padding: 8px 11px;
+  border-left: 2px solid rgba(132, 186, 74, 0.55);
+  border-radius: 0 6px 6px 0;
+  background: rgba(132, 186, 74, 0.07);
+  color: #a8b79a;
 }
 
 .menu-back {
@@ -1132,6 +1249,20 @@ kbd {
 
   .key-row {
     grid-template-columns: 150px 1fr;
+  }
+}
+
+@media (max-width: 720px) {
+  .chapter-list {
+    grid-template-columns: 1fr;
+  }
+
+  .chapter-copy small {
+    display: block;
+  }
+
+  .chapter-list .chapter-tag {
+    display: inline-block;
   }
 }
 
