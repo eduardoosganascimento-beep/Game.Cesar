@@ -23,31 +23,6 @@
   ],
   "entities": [
     {
-      "type": "memory",
-      "x": 10,
-      "y": 6
-    },
-    {
-      "type": "memory",
-      "x": 18,
-      "y": 5
-    },
-    {
-      "type": "memory",
-      "x": 34,
-      "y": 6
-    },
-    {
-      "type": "memory",
-      "x": 45,
-      "y": 5
-    },
-    {
-      "type": "memory",
-      "x": 59,
-      "y": 6
-    },
-    {
       "type": "checkpoint",
       "x": 8,
       "y": 8
@@ -95,21 +70,6 @@
       "right": 67
     },
     {
-      "type": "memory",
-      "x": 76,
-      "y": 5
-    },
-    {
-      "type": "memory",
-      "x": 85,
-      "y": 5
-    },
-    {
-      "type": "checkpoint",
-      "x": 85,
-      "y": 8
-    },
-    {
       "type": "enemy",
       "kind": "soldado",
       "x": 87,
@@ -118,43 +78,12 @@
       "right": 93
     },
     {
-      "type": "memory",
-      "x": 94,
-      "y": 5
-    },
-    {
       "type": "enemy",
       "kind": "capanga",
       "x": 96,
       "y": 8,
       "left": 93,
       "right": 102
-    },
-    {
-      "type": "memory",
-      "x": 103,
-      "y": 5
-    },
-    {
-      "type": "enemy",
-      "kind": "soldado",
-      "x": 114,
-      "y": 8,
-      "left": 111,
-      "right": 120
-    },
-    {
-      "type": "memory",
-      "x": 121,
-      "y": 5
-    },
-    {
-      "type": "enemy",
-      "kind": "capanga",
-      "x": 123,
-      "y": 8,
-      "left": 120,
-      "right": 129
     },
     {
       "type": "enemy",
