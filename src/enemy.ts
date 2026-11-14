@@ -3,7 +3,14 @@
 // animações de morte e ataque alinhadas ao jogador.
 // O dash do indígena foi removido - o controle de dash agora só está no player.ts.
 
-import { COLONIST_CLIPS, ColonistAnimator, IndioAnimator, WolfAnimator, type EnemyClipName } from './animator'
+import {
+  COLONIST_CLIPS,
+  ColonistAnimator,
+  IndioAnimator,
+  WolfAnimator,
+  ZombieAnimator,
+  type EnemyClipName,
+} from './animator'
 import { GRAVITY, MAX_FALL, TILE, overlaps, type Rect } from './engine'
 import { Tile, type EnemyKind, type EntitySpawn, type TileMap } from './level'
 
@@ -114,6 +121,20 @@ const STATS: Record<EnemyKind, Stats> = {
     visualScale: 1,
     label: 'Guardião',
   },
+  // Zumbi: lento, resistente o bastante para levar dois golpes e sempre
+  // avança. A mordida é tratada à parte no main: encostar mata Sand.
+  zumbi: {
+    w: 16,
+    h: 30,
+    hp: 2,
+    speed: 22,
+    chase: 150,
+    melee: true,
+    ranged: false,
+    cooldown: 0.9,
+    visualScale: 1,
+    label: 'Zumbi',
+  },
 }
 
 type AttackKind = 'shoot' | 'slash'
@@ -132,9 +153,9 @@ function clipDuration(kind: AttackKind): number {
 // CLASSE INimigo
 // ============================================================
 export class Enemy {
-  readonly kind: EnemyKind
-  readonly label: string
-  readonly animator: ColonistAnimator | IndioAnimator
+  kind: EnemyKind
+  label: string
+  animator: ColonistAnimator | IndioAnimator | WolfAnimator | ZombieAnimator
 
   x: number
   y: number
@@ -152,12 +173,14 @@ export class Enemy {
   justShot = false
   justStruck = false
 
-  private readonly stats: Stats
+  private stats: Stats
   public speed: number
   private readonly left: number
   private readonly right: number
   private readonly spawnX: number
   private readonly spawnY: number
+  private readonly levelFactor: number
+  private speedScale = 1
   private attackKind: AttackKind | null = null
   private attackElapsed = 0
   private attackCooldown = 0
@@ -174,7 +197,9 @@ export class Enemy {
         ? new IndioAnimator()
         : this.kind === 'lobisomem'
           ? new WolfAnimator()
-          : new ColonistAnimator()
+          : this.kind === 'zumbi'
+            ? new ZombieAnimator()
+            : new ColonistAnimator()
     this.w = this.stats.w
     this.h = this.stats.h
     this.hp = this.stats.hp
@@ -186,13 +211,19 @@ export class Enemy {
     this.left = (spawn.left ?? spawn.x - 3) * tileSize
     this.right = (spawn.right ?? spawn.x + 4) * tileSize
     // Velocidade proporcional ao nível: inimigos dos capítulos seguintes
-    // perseguem um pouco mais rápido (e com mais agressividade).
-    const levelFactor = 1 + Math.max(0, level - 1) * 0.06
-    this.speed = this.stats.speed * levelFactor
+    // perseguem um pouco mais rápido. A dificuldade entra depois, via
+    // setSpeedScale, sem multiplicar o nível duas vezes.
+    this.levelFactor = 1 + Math.max(0, level - 1) * 0.06
+    this.speed = this.stats.speed * this.levelFactor
     this.vx = this.speed
     this.facing = 1
-    // IMPORTANTE: O dash foi removido do indígena.
-    // O vx inicial virá do patrol/chase logic abaixo, não de um dash separado.
+  }
+
+  // Aplicado no início da fase (dificuldade escolhida no menu).
+  setSpeedScale(scale: number): void {
+    this.speedScale = scale
+    this.speed = this.stats.speed * this.levelFactor * this.speedScale
+    this.vx = Math.sign(this.vx || 1) * this.speed
   }
 
   get rect(): Rect {
@@ -203,12 +234,48 @@ export class Enemy {
     return this.kind === 'capitao' || this.kind === 'lobisomem' || this.kind === 'guardiao'
   }
 
+  get isZombie(): boolean {
+    return this.kind === 'zumbi'
+  }
+
+  // Um zumbi que encosta em um colono armado o infecta: o colono vira
+  // zumbi na hora, com a mesma posição e os pés no chão.
+  convertToZombie(): boolean {
+    if (!this.alive || this.isZombie) return false
+    const feet = this.y + this.h
+    this.kind = 'zumbi'
+    this.stats = STATS.zumbi
+    this.label = this.stats.label
+    this.animator = new ZombieAnimator()
+    this.w = this.stats.w
+    this.h = this.stats.h
+    this.y = feet - this.h
+    this.hp = this.stats.hp
+    this.maxHp = this.stats.hp
+    this.speed = this.stats.speed * this.levelFactor * this.speedScale
+    this.vx = 0
+    this.vy = 0
+    this.attackKind = null
+    this.attackElapsed = 0
+    this.attackCooldown = 0.45
+    this.hurt = 0
+    this.invuln = 0.6
+    this.animator.reset()
+    return true
+  }
+
   get visualScale(): number {
     return this.stats.visualScale
   }
 
   get visible(): boolean {
     return this.alive || this.deathTimer > 0
+  }
+
+  // 0 → acabou de morrer; 1 → animação de queda terminou.
+  get deathProgress(): number {
+    if (this.alive) return 0
+    return 1 - Math.max(0, Math.min(1, this.deathTimer / DEATH_TIME))
   }
 
   get up(): boolean {
@@ -403,12 +470,17 @@ export class Enemy {
       this.justStruck = true
     }
 
-    if (this.attackElapsed >= clipDuration(this.attackKind) + 0.04) {
+    if (this.attackElapsed >= this.attackDuration(this.attackKind) + 0.04) {
       this.attackKind = null
       this.fired = false
       this.struck = false
       this.attackCooldown = this.stats.cooldown
     }
+  }
+
+  private attackDuration(kind: AttackKind): number {
+    if (this.isZombie) return kind === 'slash' ? 6 / 11 : 0.35
+    return clipDuration(kind)
   }
 
   // ============================================================

@@ -1,0 +1,378 @@
+{
+  "source": "Spritesheet de zumbi em pixel art – 13 Nov 2026, 9.15 pm.png",
+  "targetBody": 34,
+  "clips": {
+    "idle": {
+      "frames": [
+        "idle-1",
+        "idle-2",
+        "idle-3",
+        "idle-4"
+      ],
+      "fps": 2.2,
+      "loop": true
+    },
+    "walk": {
+      "frames": [
+        "walk-1",
+        "walk-2",
+        "walk-3",
+        "walk-4",
+        "walk-5",
+        "walk-6",
+        "walk-7",
+        "walk-8"
+      ],
+      "fps": 9,
+      "loop": true
+    },
+    "slash": {
+      "frames": [
+        "attack-1",
+        "attack-2",
+        "attack-3",
+        "attack-4",
+        "attack-5",
+        "attack-6"
+      ],
+      "fps": 11,
+      "loop": false
+    },
+    "hurt": {
+      "frames": [
+        "idle-1"
+      ],
+      "fps": 1,
+      "loop": false
+    },
+    "death": {
+      "frames": [
+        "bite-8"
+      ],
+      "fps": 1,
+      "loop": false
+    }
+  },
+  "frames": [
+    {
+      "file": "walk-1.png",
+      "name": "walk-1",
+      "w": 36,
+      "h": 53,
+      "anchor": {
+        "x": 18,
+        "y": 52
+      }
+    },
+    {
+      "file": "walk-2.png",
+      "name": "walk-2",
+      "w": 36,
+      "h": 53,
+      "anchor": {
+        "x": 18,
+        "y": 52
+      }
+    },
+    {
+      "file": "walk-3.png",
+      "name": "walk-3",
+      "w": 36,
+      "h": 53,
+      "anchor": {
+        "x": 18,
+        "y": 52
+      }
+    },
+    {
+      "file": "walk-4.png",
+      "name": "walk-4",
+      "w": 36,
+      "h": 53,
+      "anchor": {
+        "x": 18,
+        "y": 52
+      }
+    },
+    {
+      "file": "walk-5.png",
+      "name": "walk-5",
+      "w": 36,
+      "h": 53,
+      "anchor": {
+        "x": 18,
+        "y": 52
+      }
+    },
+    {
+      "file": "walk-6.png",
+      "name": "walk-6",
+      "w": 36,
+      "h": 53,
+      "anchor": {
+        "x": 18,
+        "y": 52
+      }
+    },
+    {
+      "file": "walk-7.png",
+      "name": "walk-7",
+      "w": 36,
+      "h": 53,
+      "anchor": {
+        "x": 18,
+        "y": 52
+      }
+    },
+    {
+      "file": "walk-8.png",
+      "name": "walk-8",
+      "w": 36,
+      "h": 53,
+      "anchor": {
+        "x": 18,
+        "y": 52
+      }
+    },
+    {
+      "file": "idle-1.png",
+      "name": "idle-1",
+      "w": 36,
+      "h": 53,
+      "anchor": {
+        "x": 18,
+        "y": 52
+      }
+    },
+    {
+      "file": "idle-2.png",
+      "name": "idle-2",
+      "w": 36,
+      "h": 53,
+      "anchor": {
+        "x": 18,
+        "y": 52
+      }
+    },
+    {
+      "file": "idle-3.png",
+      "name": "idle-3",
+      "w": 36,
+      "h": 53,
+      "anchor": {
+        "x": 18,
+        "y": 52
+      }
+    },
+    {
+      "file": "idle-4.png",
+      "name": "idle-4",
+      "w": 36,
+      "h": 53,
+      "anchor": {
+        "x": 18,
+        "y": 52
+      }
+    },
+    {
+      "file": "idle-5.png",
+      "name": "idle-5",
+      "w": 36,
+      "h": 53,
+      "anchor": {
+        "x": 18,
+        "y": 52
+      }
+    },
+    {
+      "file": "idle-6.png",
+      "name": "idle-6",
+      "w": 36,
+      "h": 53,
+      "anchor": {
+        "x": 18,
+        "y": 52
+      }
+    },
+    {
+      "file": "idle-7.png",
+      "name": "idle-7",
+      "w": 36,
+      "h": 53,
+      "anchor": {
+        "x": 18,
+        "y": 52
+      }
+    },
+    {
+      "file": "idle-8.png",
+      "name": "idle-8",
+      "w": 36,
+      "h": 53,
+      "anchor": {
+        "x": 18,
+        "y": 52
+      }
+    },
+    {
+      "file": "attack-1.png",
+      "name": "attack-1",
+      "w": 36,
+      "h": 53,
+      "anchor": {
+        "x": 18,
+        "y": 52
+      }
+    },
+    {
+      "file": "attack-2.png",
+      "name": "attack-2",
+      "w": 36,
+      "h": 53,
+      "anchor": {
+        "x": 18,
+        "y": 52
+      }
+    },
+    {
+      "file": "attack-3.png",
+      "name": "attack-3",
+      "w": 36,
+      "h": 53,
+      "anchor": {
+        "x": 18,
+        "y": 52
+      }
+    },
+    {
+      "file": "attack-4.png",
+      "name": "attack-4",
+      "w": 36,
+      "h": 53,
+      "anchor": {
+        "x": 18,
+        "y": 52
+      }
+    },
+    {
+      "file": "attack-5.png",
+      "name": "attack-5",
+      "w": 36,
+      "h": 53,
+      "anchor": {
+        "x": 18,
+        "y": 52
+      }
+    },
+    {
+      "file": "attack-6.png",
+      "name": "attack-6",
+      "w": 36,
+      "h": 53,
+      "anchor": {
+        "x": 18,
+        "y": 52
+      }
+    },
+    {
+      "file": "attack-7.png",
+      "name": "attack-7",
+      "w": 36,
+      "h": 53,
+      "anchor": {
+        "x": 18,
+        "y": 52
+      }
+    },
+    {
+      "file": "attack-8.png",
+      "name": "attack-8",
+      "w": 36,
+      "h": 53,
+      "anchor": {
+        "x": 18,
+        "y": 52
+      }
+    },
+    {
+      "file": "bite-1.png",
+      "name": "bite-1",
+      "w": 36,
+      "h": 53,
+      "anchor": {
+        "x": 18,
+        "y": 52
+      }
+    },
+    {
+      "file": "bite-2.png",
+      "name": "bite-2",
+      "w": 36,
+      "h": 53,
+      "anchor": {
+        "x": 18,
+        "y": 52
+      }
+    },
+    {
+      "file": "bite-3.png",
+      "name": "bite-3",
+      "w": 36,
+      "h": 53,
+      "anchor": {
+        "x": 18,
+        "y": 52
+      }
+    },
+    {
+      "file": "bite-4.png",
+      "name": "bite-4",
+      "w": 36,
+      "h": 53,
+      "anchor": {
+        "x": 18,
+        "y": 52
+      }
+    },
+    {
+      "file": "bite-5.png",
+      "name": "bite-5",
+      "w": 36,
+      "h": 53,
+      "anchor": {
+        "x": 18,
+        "y": 52
+      }
+    },
+    {
+      "file": "bite-6.png",
+      "name": "bite-6",
+      "w": 36,
+      "h": 53,
+      "anchor": {
+        "x": 18,
+        "y": 52
+      }
+    },
+    {
+      "file": "bite-7.png",
+      "name": "bite-7",
+      "w": 36,
+      "h": 53,
+      "anchor": {
+        "x": 18,
+        "y": 52
+      }
+    },
+    {
+      "file": "bite-8.png",
+      "name": "bite-8",
+      "w": 36,
+      "h": 53,
+      "anchor": {
+        "x": 18,
+        "y": 52
+      }
+    }
+  ]
+}

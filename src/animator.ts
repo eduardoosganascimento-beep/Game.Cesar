@@ -4,7 +4,7 @@
 // Cada linha da nova folha usa apenas os quadros coerentes de um mesmo movimento,
 // então o personagem nunca troca de lado no meio do ciclo.
 
-import { type Sprite, getFrame, getColonistFrame, getIndioFrame, getWolfFrame } from './sprites'
+import { type Sprite, getFrame, getColonistFrame, getIndioFrame, getWolfFrame, getZombieFrame } from './sprites'
 
 export type Clip = {
   frames: readonly string[]
@@ -99,6 +99,33 @@ export const WOLF_CLIPS: Record<EnemyClipName, Clip> = {
   slash: { frames: ['slash-1', 'slash-2', 'slash-3', 'slash-4'], fps: 13, loop: false },
   hurt: { frames: ['hurt-1', 'hurt-2'], fps: 8, loop: false },
   death: { frames: ['death-1', 'death-2', 'death-3', 'death-4'], fps: 6, loop: false },
+}
+
+// ============================================================
+// CLIPS DO ZUMBI
+// ============================================================
+// A folha do zumbi tem 4 linhas: caminhada, passos lentos, ataque com os
+// braços esticados e a mordida. O idle usa a segunda linha em ritmo lento
+// para dar aquele balanço de morto-vivo.
+export const ZOMBIE_CLIPS: Record<EnemyClipName, Clip> = {
+  idle: { frames: ['idle-1', 'idle-2', 'idle-3', 'idle-4'], fps: 2.2, loop: true },
+  walk: {
+    frames: ['walk-1', 'walk-2', 'walk-3', 'walk-4', 'walk-5', 'walk-6', 'walk-7', 'walk-8'],
+    fps: 9,
+    loop: true,
+  },
+  shoot: {
+    frames: ['attack-1', 'attack-2', 'attack-3', 'attack-4', 'attack-5', 'attack-6'],
+    fps: 11,
+    loop: false,
+  },
+  slash: {
+    frames: ['attack-1', 'attack-2', 'attack-3', 'attack-4', 'attack-5', 'attack-6'],
+    fps: 11,
+    loop: false,
+  },
+  hurt: { frames: ['idle-1'], fps: 1, loop: false },
+  death: { frames: ['bite-8'], fps: 1, loop: false },
 }
 
 // ============================================================
@@ -214,5 +241,12 @@ export class IndioAnimator extends SpriteClipAnimator {
 export class WolfAnimator extends SpriteClipAnimator {
   constructor() {
     super(WOLF_CLIPS, getWolfFrame, 'idle', 'idle-1')
+  }
+}
+
+// Zumbi: passos arrastados, mordida e queda.
+export class ZombieAnimator extends SpriteClipAnimator {
+  constructor() {
+    super(ZOMBIE_CLIPS, getZombieFrame, 'idle', 'idle-1')
   }
 }

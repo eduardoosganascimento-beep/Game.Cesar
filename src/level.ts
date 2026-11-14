@@ -24,6 +24,7 @@ export type EnemyKind =
   | 'indio'
   | 'lobisomem'
   | 'guardiao'
+  | 'zumbi'
 
 const CHARS: Record<string, Tile> = {
   '.': Tile.Empty,

@@ -7,7 +7,7 @@ import { Effects } from './effects'
 import { Camera, Loop, TILE, VIEW_H, VIEW_W, overlaps } from './engine'
 import { Enemy } from './enemy'
 import { Input } from './input'
-import { TileMap, Tile, type LevelData } from './level'
+import { TileMap, Tile, type EnemyKind, type LevelData } from './level'
 import { MAX_HP, Player } from './player'
 import { drawScenery } from './scenery'
 import { loadSprites, type Sprite } from './sprites'
@@ -67,6 +67,12 @@ const TUTORIAL_STEPS = [
   'Colete a memória brilhante',
   'Siga até a fogueira no fim da trilha',
 ]
+
+// Colonos armados (espada ou arma de fogo) podem ser infectados pelos
+// zumbis. Índios, lobos e guardiões não fazem parte desse grupo.
+function isArmedColonist(kind: EnemyKind): boolean {
+  return kind === 'capanga' || kind === 'soldado' || kind === 'feitor' || kind === 'capitao'
+}
 
 class Game {
   onWin?: (stats: RunStats) => void
@@ -269,11 +275,9 @@ class Game {
       .filter((entity) => entity.type === 'enemy')
       .map((entity) => {
         const enemy = new Enemy(entity, TILE, this.chapterIndex + 1)
-        // Aplica multiplicador de velocidade conforme dificuldade E nível
+        // A dificuldade escolhida no menu escala a velocidade uma única vez.
         const diffFac = DELTAS.speed[this.difficulty as 'facil' | 'normal' | 'dificil'] || 1
-        const levelFac = 1 + Math.max(0, this.chapterIndex - 1) * 0.06
-        enemy.speed *= diffFac * levelFac
-        enemy.vx = enemy.speed
+        enemy.setSpeedScale(diffFac)
         return enemy
       })
 
@@ -417,19 +421,22 @@ class Game {
 
       if (enemy.justShot) this.spawnShot(enemy)
 
-      if (
-        enemy.justStruck &&
-        overlaps(enemy.attackBox, player.hurtbox) &&
-        this.hurtPlayer(enemy.x, 'blade', enemy.attackDamage)
-      ) {
-        this.effects.addShake(2.6)
-        this.effects.burst(
-          player.x + player.w / 2,
-          player.y + player.h / 2,
-          'blade',
-          9,
-          46,
-        )
+      if (enemy.justStruck && overlaps(enemy.attackBox, player.hurtbox)) {
+        if (enemy.isZombie) {
+          this.zombieBite(enemy)
+          this.input.endFrame()
+          return
+        }
+        if (this.hurtPlayer(enemy.x, 'blade', enemy.attackDamage)) {
+          this.effects.addShake(2.6)
+          this.effects.burst(
+            player.x + player.w / 2,
+            player.y + player.h / 2,
+            'blade',
+            9,
+            46,
+          )
+        }
       }
 
       // Pisão: cair sobre o inimigo machuca o colono, nunca o jogador.
@@ -453,8 +460,17 @@ class Game {
         continue
       }
 
-      if (overlaps(player.hurtbox, enemy.rect)) this.hurtPlayer(enemy.x, 'blade', enemy.attackDamage)
+      if (overlaps(player.hurtbox, enemy.rect)) {
+        if (enemy.isZombie) {
+          this.zombieBite(enemy)
+          this.input.endFrame()
+          return
+        }
+        this.hurtPlayer(enemy.x, 'blade', enemy.attackDamage)
+      }
     }
+
+    this.updateInfections()
 
     this.updateShots(safeDt)
     this.updateSpears(safeDt)
@@ -781,8 +797,47 @@ class Game {
     }
   }
 
-  private hurtPlayer(fromX: number, kind: 'bullet' | 'blade' = 'bullet', damage: number = 1): boolean {
-    const diff = this.difficulty as 'facil' | 'normal' | 'dificil'
+  // A mordida do zumbi mata Sand na hora: não é dano, é fim de fase.
+  private zombieBite(zombie: Enemy): void {
+    if (this.dying > 0 || this.won) return
+    const cx = this.player.x + this.player.w / 2
+    const cy = this.player.y + this.player.h / 2
+    this.beginDeath('Mordida de zumbi — Sand não resistiu.')
+    this.damageFlash = 1
+    this.effects.burst(cx, cy, 'death', 20, 76)
+    this.effects.burst(
+      zombie.x + zombie.w / 2,
+      zombie.y + zombie.h / 2,
+      'hit',
+      10,
+      48,
+    )
+    this.effects.addShake(6)
+    sfx.hit()
+  }
+
+  // Zumbi encostou em colono armado → o colono vira zumbi.
+  private updateInfections(): void {
+    for (const zombie of this.enemies) {
+      if (!zombie.alive || !zombie.isZombie) continue
+      for (const other of this.enemies) {
+        if (other === zombie || !other.alive || other.isZombie) continue
+        if (!isArmedColonist(other.kind)) continue
+        if (!overlaps(zombie.rect, other.rect)) continue
+        if (!other.convertToZombie()) continue
+
+        const cx = other.x + other.w / 2
+        const cy = other.y + other.h / 2
+        this.effects.burst(cx, cy, 'death', 14, 62)
+        this.effects.burst(cx, other.y + other.h, 'dust', 8, 36)
+        this.effects.text(cx, other.y - 4, 'INFECTADO!', '#a8e063')
+        this.effects.addShake(2.4)
+        sfx.hit()
+      }
+    }
+  }
+
+  private hurtPlayer(fromX: number, kind: 'bullet' | 'blade' = 'bullet', damage: number = 1): boolean {    const diff = this.difficulty as 'facil' | 'normal' | 'dificil'
     const finalDamage = Math.max(1, Math.round(damage * DELTAS.damage[diff]))
     const before = this.player.hp
     this.player.hit(fromX, finalDamage)
@@ -1156,19 +1211,39 @@ class Game {
       ctx.fillRect(feetX - 36, feetY - 54, 72, 58)
     }
 
+    // Aura doentia ao redor dos zumbis vivos.
+    if (enemy.isZombie && enemy.alive) {
+      const pulse = 0.8 + Math.sin(time * 2.6 + enemy.x * 0.05) * 0.2
+      const aura = ctx.createRadialGradient(feetX, feetY - 16, 2, feetX, feetY - 16, 26)
+      aura.addColorStop(0, `rgba(132, 186, 74, ${0.16 * pulse})`)
+      aura.addColorStop(1, 'rgba(132, 186, 74, 0)')
+      ctx.fillStyle = aura
+      ctx.fillRect(feetX - 28, feetY - 44, 56, 48)
+    }
+
     const flash = enemy.invuln > 0 && Math.floor(enemy.invuln * 28) % 2 === 0
     if (flash) ctx.globalAlpha = 0.55
 
     if (sprite) {
-      const dx = feetX - sprite.ax * scale
-      const dy = feetY - sprite.ay * scale
-      if (enemy.facing < 0) {
+      if (enemy.isZombie && !enemy.alive) {
+        // Zumbi tomba para trás e some: não existe quadro de morte na
+        // folha, então a queda é feita girando o corpo ao redor dos pés.
+        const progress = Math.min(1, enemy.deathProgress * 1.5)
+        ctx.save()
+        ctx.translate(feetX, feetY)
+        ctx.rotate((enemy.facing > 0 ? 1 : -1) * (Math.PI / 2) * progress)
+        ctx.globalAlpha = 1 - progress * 0.7
+        this.drawSprite(sprite, -sprite.ax * scale, -sprite.ay * scale, scale, 0)
+        ctx.restore()
+      } else if (enemy.facing < 0) {
         ctx.save()
         ctx.translate(feetX, 0)
         ctx.scale(-1, 1)
-        this.drawSprite(sprite, -sprite.ax * scale, dy, scale, 0.2)
+        this.drawSprite(sprite, -sprite.ax * scale, feetY - sprite.ay * scale, scale, 0.2)
         ctx.restore()
       } else {
+        const dx = feetX - sprite.ax * scale
+        const dy = feetY - sprite.ay * scale
         this.drawSprite(sprite, dx, dy, scale, 0.2)
       }
     } else {

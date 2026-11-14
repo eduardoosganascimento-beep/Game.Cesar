@@ -219,6 +219,22 @@
       "y": 8,
       "left": 145,
       "right": 154
+    },
+    {
+      "type": "enemy",
+      "kind": "zumbi",
+      "x": 94,
+      "y": 8,
+      "left": 88,
+      "right": 99
+    },
+    {
+      "type": "enemy",
+      "kind": "zumbi",
+      "x": 144,
+      "y": 8,
+      "left": 140,
+      "right": 147
     }
   ]
 }

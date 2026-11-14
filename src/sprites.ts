@@ -26,12 +26,14 @@ const PLAYER_DIR = 'assets/sprites/player/'
 const COLONIST_DIR = 'assets/sprites/colonist/'
 const INDIO_DIR = 'assets/sprites/indio/'
 const WOLF_DIR = 'assets/sprites/wolf/'
+const ZOMBIE_DIR = 'assets/sprites/zombie/'
 const PROJECTILE_DIR = 'assets/sprites/projectile/'
 
 const playerCache = new Map<string, Sprite>()
 const colonistCache = new Map<string, Sprite>()
 const indioCache = new Map<string, Sprite>()
 const wolfCache = new Map<string, Sprite>()
+const zombieCache = new Map<string, Sprite>()
 let spearSprite: Sprite | undefined
 
 export function getFrame(name: string): Sprite | undefined {
@@ -50,12 +52,22 @@ export function getWolfFrame(name: string): Sprite | undefined {
   return wolfCache.get(name)
 }
 
+export function getZombieFrame(name: string): Sprite | undefined {
+  return zombieCache.get(name)
+}
+
 export function getSpearSprite(): Sprite | undefined {
   return spearSprite
 }
 
 export function loadedFrameCount(): number {
-  return playerCache.size + colonistCache.size + indioCache.size + wolfCache.size
+  return (
+    playerCache.size +
+    colonistCache.size +
+    indioCache.size +
+    wolfCache.size +
+    zombieCache.size
+  )
 }
 
 // Os arquivos de public/ vêm embutidos no bundle (data URI) no build e pela
@@ -211,10 +223,13 @@ export async function loadSprites(): Promise<void> {
       loadAtlas(COLONIST_DIR, colonistCache, '#0d0907', 1.25, 1.18),
       loadAtlas(INDIO_DIR, indioCache, '#2a1a10', 1.2, 1.1),
       loadAtlas(WOLF_DIR, wolfCache, '#120d14', 1.1, 1.1),
+      // Zumbi: contorno esverdeado e um leve ganho de luz para o corpo
+      // pálido não sumir no fundo escuro.
+      loadAtlas(ZOMBIE_DIR, zombieCache, '#0d1a0b', 1.16, 1.12),
       loadSpear(),
     ])
     console.info(
-      `[sandman] ${playerCache.size} quadros de Sand · ${colonistCache.size} de colono · ${indioCache.size} de indio · ${wolfCache.size} de lobo`,
+      `[sandman] ${playerCache.size} quadros de Sand · ${colonistCache.size} de colono · ${indioCache.size} de indio · ${wolfCache.size} de lobo · ${zombieCache.size} de zumbi`,
     )
   } catch {
     // sem sprites: o jogo segue com a arte provisória

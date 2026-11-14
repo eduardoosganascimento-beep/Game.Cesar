@@ -113,15 +113,6 @@ export const CHAPTERS: ChapterDef[] = [
     lockGoalUntilBoss: false,
     tag: 'Fim',
   },
-  {
-    data: tutorial as unknown as LevelData,
-    kicker: 'Tutorial',
-    endText:
-      'Controles dominados. A floresta espera por você na Aldeia — boa travessia, Sand.',
-    tint: 'rgba(255, 209, 102, 0.06)',
-    lockGoalUntilBoss: false,
-    tag: 'Tutorial',
-  },
 ]
 
 export function shortTitle(name: string): string {
