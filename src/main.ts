@@ -78,6 +78,7 @@ const TUTORIAL_STEPS = [
   'Arremesse a lança com L',
   'Colete a memória brilhante',
   'Siga até a fogueira no fim da trilha',
+  'Use o Perry (E) para bloquear e contra-atacar o índio',
 ]
 
 // Colonos armados (espada ou arma de fogo) podem ser infectados pelos
@@ -249,6 +250,17 @@ class Game {
         break
       case 4:
         done = this.collected >= 1
+        break
+      case 5:
+        done = false // completar o tutorial normalmente
+        break
+      case 6:
+        // Perry step - verifica se o jogador entrou em contato com o índio
+        // durante o estado parry
+        const indio = this.enemies.find((e) => e.kind === 'indio')
+        if (indio && indio.animator.state === 'parry') {
+          done = true // Perry ativado com sucesso
+        }
         break
       default:
         return
@@ -473,6 +485,22 @@ class Game {
       // O zumbi pinga o que escorre dele.
       if (enemy.isZombie && enemy.alive && Math.random() < 0.03) {
         this.effects.burst(enemy.x + enemy.w / 2, enemy.y + 5, 'ooze', 2, 14)
+      }
+
+      // Nova mecânica: Perry do índio.
+      // Quando o índio usa o ataque parry no momento certo,
+      // ele bloqueia o golpe entrante e contra-ataca imediatamente.
+      if (enemy.kind === 'indio' && enemy.alive && enemy.animator.state === 'parry') {
+        // Durante o estado parry, o índio está imune a danos do jogador
+        // mas contra-ataca após o frame de parry.
+        if (player.attackActive && overlaps(player.attackBox, enemy.rect)) {
+          // Contra-ataque do índio: danifica o jogador mas o índio permanece vivo
+          this.hurtPlayer(enemy.x, 'blade', enemy.attackDamage)
+          // Retorna o índio ao estado idle após o parry
+          enemy.animator.play('idle')
+          enemy.justStruck = false
+          continue
+        }
       }
 
       if (enemy.justStruck && overlaps(enemy.attackBox, player.hurtbox)) {

@@ -46,6 +46,14 @@
       "right": 47
     },
     {
+      "type": "enemy",
+      "kind": "indio",
+      "x": 60,
+      "y": 8,
+      "left": 56,
+      "right": 64
+    },
+    {
       "type": "checkpoint",
       "x": 58,
       "y": 8
