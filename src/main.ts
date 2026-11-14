@@ -269,10 +269,10 @@ class Game {
       .filter((entity) => entity.type === 'enemy')
       .map((entity) => {
         const enemy = new Enemy(entity, TILE, this.chapterIndex + 1)
-        // Aplica multiplicador de velocidade conforme dificuldade
-        const diff = this.difficulty as 'facil' | 'normal' | 'dificil'
-        const speedMult = DELTAS.speed[diff]
-        enemy.speed *= speedMult
+        // Aplica multiplicador de velocidade conforme dificuldade E nível
+        const diffFac = DELTAS.speed[this.difficulty as 'facil' | 'normal' | 'dificil'] || 1
+        const levelFac = 1 + Math.max(0, this.chapterIndex - 1) * 0.06
+        enemy.speed *= diffFac * levelFac
         enemy.vx = enemy.speed
         return enemy
       })

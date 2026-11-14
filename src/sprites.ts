@@ -205,12 +205,12 @@ async function loadSpear(): Promise<void> {
 export async function loadSprites(): Promise<void> {
   try {
     await Promise.all([
-      loadAtlas(PLAYER_DIR, playerCache, '#140f0b', 1.18, 1.12),
+      loadAtlas(PLAYER_DIR, playerCache, '#140f0b', 1.25, 1.18),  // mais luz e saturação
       // Os colonos ganham um pouco mais de luz para o casaco vermelho e o
       // chapéu branco saltarem do fundo escuro da mata.
-      loadAtlas(COLONIST_DIR, colonistCache, '#0d0907', 1.2, 1.14),
-      loadAtlas(INDIO_DIR, indioCache, '#2a1a10', 1.14, 1.06),
-      loadAtlas(WOLF_DIR, wolfCache, '#120d14', 1.04, 1.06),
+      loadAtlas(COLONIST_DIR, colonistCache, '#0d0907', 1.25, 1.18),
+      loadAtlas(INDIO_DIR, indioCache, '#2a1a10', 1.2, 1.1),
+      loadAtlas(WOLF_DIR, wolfCache, '#120d14', 1.1, 1.1),
       loadSpear(),
     ])
     console.info(
