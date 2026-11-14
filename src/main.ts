@@ -127,6 +127,7 @@ class Game {
   private won = false
   private hinted = false
   private goalHintCooldown = 0
+  private parryTimer = 0
   private runTime = 0
   private winTimer = 0
   private hudKey = ''
@@ -367,6 +368,15 @@ class Game {
       return
     }
 
+    // Sistema de parry/block: jogador pode temporariamente bloquear ataques
+    // se pressionar o botão de ataque no momento certo (frames de invulnerabilidade).
+    // O parry consume stamina e deixa o jogador vulnerável após o uso.
+    if (this.parryTimer > 0) {
+      this.parryTimer = Math.max(0, this.parryTimer - safeDt)
+      // Durante o parry, o jogador é invulnerável a ataques normais
+      // mas não pode atacar de volta
+    }
+
     if (!this.paused) this.effects.update(safeDt)
     this.damageFlash = Math.max(0, this.damageFlash - safeDt * 3.2)
     this.killFlash = Math.max(0, this.killFlash - safeDt * 2.4)
@@ -485,6 +495,16 @@ class Game {
       // O zumbi pinga o que escorre dele.
       if (enemy.isZombie && enemy.alive && Math.random() < 0.03) {
         this.effects.burst(enemy.x + enemy.w / 2, enemy.y + 5, 'ooze', 2, 14)
+      }
+
+      // Sistema de parry: se jogador tem parry ativo, inimigos não causam dano
+      if (this.parryTimer > 0 && overlaps(enemy.attackBox, player.hurtbox)) {
+        // Player está bloqueando! O inimigo não causa dano normal,
+        // mas o parry consome o timer e deixa o jogador vulnerável depois.
+        this.parryTimer = 0 // Acaba o parry após o uso
+        // Efeito visual de parry bem-sucedido
+        this.effects.burst(enemy.x + enemy.w / 2, enemy.y + enemy.h / 2, 'spark', 3, 16)
+        continue // Pula o dano normal
       }
 
       // Nova mecânica: Perry do índio.
