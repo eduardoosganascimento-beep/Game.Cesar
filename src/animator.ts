@@ -129,6 +129,28 @@ export const ZOMBIE_CLIPS: Record<EnemyClipName, Clip> = {
 }
 
 // ============================================================
+// ANIMATION CLIPS DO URSO (boss do Capítulo 1)
+// ============================================================
+// Animações do boss urso: ataque poderoso e postura de defesa.
+// Estas animações esperam uma spritesheet com frames disporados horizontalmente:
+// ursa-attack-1 through ursa-attack-4 e ursa-defend-1 through ursa-defend-3.
+
+export const URSA_CLIPS: Record<string, Clip> = {
+  // Ataque: 4 quadros a 8 fps - golpe de esmagamento para baixo.
+  attack: {
+    frames: ['attack-1', 'attack-2', 'attack-3', 'attack-4'],
+    fps: 8,
+    loop: false,
+  },
+  // Defenda: 3 quadros a 6 fps - postura de defesa com escudo levantado.
+  defend: {
+    frames: ['defend-1', 'defend-2', 'defend-3'],
+    fps: 6,
+    loop: false,
+  },
+}
+
+// ============================================================
 // ANIMADOR DE CLIPS (base para Sand, Colonista e Índio)
 // ============================================================
 export type ResolveSprite = (name: string) => Sprite | undefined
