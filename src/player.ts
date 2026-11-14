@@ -17,6 +17,8 @@ export const MAX_HP = 3
 export const ATTACK_TIME = 0.3
 export const ATTACK_HIT_START = 0.07
 export const ATTACK_HIT_END = 0.2
+export const ATTACK_LUNGE_TIME = 0.1
+export const ATTACK_LUNGE_SPEED = 175
 export const THROW_TIME = 0.34
 export const THROW_RELEASE_AT = 3 / 13
 export const THROW_COOLDOWN = 0.95
@@ -72,6 +74,7 @@ export class Player {
   private attackElapsed = 0
   private throwElapsed = 0
   private skidCooldown = 0
+  private lunge = 0
   private map: TileMap
   private spawnX: number
   private spawnY: number
@@ -107,6 +110,7 @@ export class Player {
     this.throwElapsed = 0
     this.hurt = 0
     this.dash = 0
+    this.lunge = 0
   }
 
   saveSpawn(): { x: number; y: number } {
@@ -169,6 +173,7 @@ export class Player {
     this.hurt = 0
     this.dash = 0
     this.dashCooldown = 0
+    this.lunge = 0
     this.invuln = 1.3
     this.onGround = false
     this.coyote = 0
@@ -196,6 +201,7 @@ export class Player {
     this.attackElapsed = 0
     this.throwElapsed = 0
     this.dash = 0
+    this.lunge = 0
     const push = fromX !== undefined && fromX > this.x ? -1 : 1
     this.vx = push * 135
     this.vy = -175
@@ -268,6 +274,14 @@ export class Player {
 
       this.moveX(this.vx * dt)
       this.moveY(this.vy * dt)
+
+      // Impulso curto do golpe: o corpo avança junto com a lança, mas
+      // continua sujeito às paredes e ao chão (nada de atravessar tiles).
+      if (this.lunge > 0) {
+        const step = Math.min(dt, this.lunge)
+        this.moveX(this.facing * ATTACK_LUNGE_SPEED * step)
+        this.lunge = Math.max(0, this.lunge - dt)
+      }
     }
 
     if (this.onGround) this.airDashUsed = false
@@ -284,6 +298,7 @@ export class Player {
       this.dashCooldown = DASH_COOLDOWN
       this.attack = 0
       this.throw = 0
+      this.lunge = 0
       this.attackElapsed = 0
       this.throwElapsed = 0
       this.throwReleased = false
@@ -308,6 +323,7 @@ export class Player {
       this.throwElapsed = 0
       this.attack = 0
       this.attackElapsed = 0
+      this.lunge = 0
     }
 
     // Golpe (corpo a corpo)
@@ -321,6 +337,7 @@ export class Player {
       this.attack = ATTACK_TIME
       this.attackElapsed = 0
       this.justAttacked = true
+      this.lunge = this.onGround ? ATTACK_LUNGE_TIME : 0
     }
 
     // Contagens decrescentes

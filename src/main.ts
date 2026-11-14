@@ -57,6 +57,16 @@ type Spear = {
   life: number
 }
 
+// Rastro do dash: cópias de Sand que se apagam atrás dele.
+type DashGhost = {
+  x: number
+  y: number
+  facing: number
+  life: number
+  max: number
+  sprite?: Sprite
+}
+
 // Passos do tutorial jogável. Cada passo avança quando a condição
 // correspondente é cumprida; o último fica na tela até o fim da fase.
 const TUTORIAL_STEPS = [
@@ -95,6 +105,9 @@ class Game {
   private checkpoints: Checkpoint[] = []
   private shots: Shot[] = []
   private spears: Spear[] = []
+  private dashGhosts: DashGhost[] = []
+  private dashGhostTimer = 0
+  private hitStop = 0
   private dying = 0
   private deathMessage = ''
   private damageFlash = 0
@@ -303,6 +316,9 @@ class Game {
 
     this.shots = []
     this.spears = []
+    this.dashGhosts.length = 0
+    this.dashGhostTimer = 0
+    this.hitStop = 0
     this.dying = 0
     this.deathMessage = ''
     this.won = false
@@ -320,6 +336,13 @@ class Game {
 
   update = (dt: number): void => {
     const safeDt = Math.min(dt, 1 / 30)
+
+    // Congelamento curtíssimo no impacto: o golpe "pesa" sem travar o jogo.
+    if (this.hitStop > 0) {
+      this.hitStop = Math.max(0, this.hitStop - safeDt)
+      this.input.endFrame()
+      return
+    }
 
     if (!this.paused) this.effects.update(safeDt)
     this.damageFlash = Math.max(0, this.damageFlash - safeDt * 3.2)
@@ -380,6 +403,14 @@ class Game {
     }
     if (player.justAttacked) {
       sfx.attack()
+      // Faísca no ar acompanha o avanço da lança, mesmo sem acertar ninguém.
+      this.effects.burst(
+        player.x + player.w / 2 + player.facing * 20,
+        player.y + player.h * 0.48,
+        'spark',
+        3,
+        20,
+      )
     }
     if (player.justThrew) {
       this.spawnSpear()
@@ -549,8 +580,36 @@ class Game {
     this.updateTutorial()
     this.updateBossBar()
     this.updateAnimator(safeDt)
+    this.updateDashGhosts(safeDt)
     this.syncHud()
     this.input.endFrame()
+  }
+
+  // O rastro do dash é só cosmético, mas dá a leitura de velocidade que
+  // faltava: uma fileira de Sand que se apaga atrás do corpo.
+  private updateDashGhosts(dt: number): void {
+    for (let i = this.dashGhosts.length - 1; i >= 0; i -= 1) {
+      const ghost = this.dashGhosts[i]
+      ghost.life -= dt
+      if (ghost.life <= 0) this.dashGhosts.splice(i, 1)
+    }
+
+    if (this.player.dash <= 0) {
+      this.dashGhostTimer = 0
+      return
+    }
+
+    this.dashGhostTimer -= dt
+    if (this.dashGhostTimer > 0) return
+    this.dashGhostTimer = 0.035
+    this.dashGhosts.push({
+      x: this.player.x,
+      y: this.player.y,
+      facing: this.player.facing,
+      life: 0.22,
+      max: 0.22,
+      sprite: this.animator.frame,
+    })
   }
 
   render = (): void => {
@@ -597,6 +656,7 @@ class Game {
 
     this.paintShots(time)
     this.paintSpears(time)
+    this.paintDashGhosts()
     this.paintPlayer(time)
 
     this.effects.render(ctx, {
@@ -768,6 +828,8 @@ class Game {
     if (weapon === 'stomp') this.effects.burst(cx, enemy.y + enemy.h, 'dust', 7, 34)
     if (killed) this.killFlash = 1
     this.effects.addShake(killed ? 2.4 : 1.2)
+    // Pequena pausa no impacto, maior quando o golpe derruba o inimigo.
+    if (!stomp) this.hitStop = Math.max(this.hitStop, killed ? 0.065 : 0.04)
 
     if (!killed) {
       this.effects.text(cx, enemy.y - 3, stomp ? 'PISÃO!' : 'ACERTO!', '#ffb38a')
@@ -1025,6 +1087,7 @@ class Game {
   private beginDeath(message: string): void {
     this.dying = 1.05
     this.deathMessage = message
+    this.player.hp = 0
     this.player.vx = 0
     this.player.attack = 0
     this.player.throw = 0
@@ -1299,6 +1362,34 @@ class Game {
       ctx.fillRect(x + 4, y + 1, 1, 1)
       ctx.globalAlpha = 1
     }
+  }
+
+  private paintDashGhosts(): void {
+    const player = this.player
+    for (const ghost of this.dashGhosts) {
+      if (!ghost.sprite) continue
+      const alpha = (ghost.life / ghost.max) * 0.28
+      if (alpha <= 0.01) continue
+      const feetX = Math.round(ghost.x + player.w / 2 - this.camera.px)
+      const feetY = Math.round(ghost.y + player.h - this.camera.py)
+      const dy = feetY - ghost.sprite.ay * SPRITE_SCALE
+      ctx.globalAlpha = alpha
+      if (ghost.facing < 0) {
+        ctx.save()
+        ctx.translate(feetX, 0)
+        ctx.scale(-1, 1)
+        this.drawSprite(ghost.sprite, -ghost.sprite.ax * SPRITE_SCALE, dy, SPRITE_SCALE)
+        ctx.restore()
+      } else {
+        this.drawSprite(
+          ghost.sprite,
+          feetX - ghost.sprite.ax * SPRITE_SCALE,
+          dy,
+          SPRITE_SCALE,
+        )
+      }
+    }
+    ctx.globalAlpha = 1
   }
 
   private paintPlayer(time: number): void {

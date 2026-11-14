@@ -425,9 +425,15 @@ export class Enemy {
   }
 
   private patrol(): void {
-    // O inimigo patrola dentro dos limites definidos no spawn.
+    // Zumbis não respeitam a área de patrulha: eles vagueiam pela margem
+    // até encontrar uma parede, um rio ou outra presa. É assim que um
+    // zumbi chega sozinho até um colono armado e o infecta.
+    if (this.isZombie) {
+      this.facing = this.vx >= 0 ? 1 : -1
+      return
+    }
+    // Os demais inimigos patrulham dentro dos limites definidos no spawn.
     // Se chegar na borda, inverte a direção suavemente.
-    // Nota: o dash foi removido do indígena, então o vx vem apenas do patrol.
     if (this.x <= this.left + 1) this.vx = Math.abs(this.speed)
     if (this.x + this.w >= this.right - 1) this.vx = -Math.abs(this.speed)
     this.facing = this.vx >= 0 ? 1 : -1
@@ -516,14 +522,17 @@ export class Enemy {
       this.facing = this.vx >= 0 ? 1 : -1
     }
 
-    // Limites do patrol (não sai da área designada)
-    if (this.x < this.left) {
-      this.x = this.left
-      this.vx = Math.abs(this.vx)
-    }
-    if (this.x + this.w > this.right) {
-      this.x = this.right - this.w
-      this.vx = -Math.abs(this.vx)
+    // Limites do patrol (não sai da área designada). Zumbis vagueiam
+    // livremente: é o que permite que eles encontrem novos colonos.
+    if (!this.isZombie) {
+      if (this.x < this.left) {
+        this.x = this.left
+        this.vx = Math.abs(this.vx)
+      }
+      if (this.x + this.w > this.right) {
+        this.x = this.right - this.w
+        this.vx = -Math.abs(this.vx)
+      }
     }
 
     // Gravidade e movimento vertical
