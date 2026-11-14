@@ -190,7 +190,9 @@ export class Enemy {
 
   constructor(spawn: EntitySpawn, tileSize: number, level: number = 1) {
     this.kind = spawn.kind ?? 'capanga'
-    this.stats = STATS[this.kind]
+    // Rede de segurança: um tipo novo no JSON nunca deve derrubar a fase.
+    this.stats = STATS[this.kind] ?? STATS.capanga
+    this.kind = (Object.keys(STATS) as EnemyKind[]).includes(this.kind) ? this.kind : 'capanga'
     this.label = this.stats.label
     this.animator =
       this.kind === 'indio'
@@ -504,9 +506,14 @@ export class Enemy {
     this.x += this.vx * dt
 
     for (const solid of map.solidsIn(this.rect)) {
-      if (this.vx > 0) this.x = solid.x - this.w
-      else if (this.vx < 0) this.x = solid.x + solid.w
-      this.vx = 0
+      if (this.vx > 0) {
+        this.x = solid.x - this.w
+        this.vx = -Math.abs(this.speed)
+      } else if (this.vx < 0) {
+        this.x = solid.x + solid.w
+        this.vx = Math.abs(this.speed)
+      }
+      this.facing = this.vx >= 0 ? 1 : -1
     }
 
     // Limites do patrol (não sai da área designada)
