@@ -123,6 +123,8 @@ const STATS: Record<EnemyKind, Stats> = {
   },
   // Zumbi: lento, resistente o bastante para levar dois golpes e sempre
   // avança. A mordida é tratada à parte no main: encostar mata Sand.
+  // Animação revista: 32 quadros recortados de uma folha 8×4,
+  // com contorno esverdeado e anchors centralizados (18,52) para pisada firme.
   zumbi: {
     w: 16,
     h: 30,
@@ -293,7 +295,7 @@ export class Enemy {
   }
 
   get attackBox(): Rect {
-    const reach = this.isBoss ? 34 : this.kind === 'feitor' ? 30 : 25
+    const reach = this.isBoss ? 34 : this.kind === 'feitor' ? 30 : this.isZombie ? 20 : 25
     return {
       x: this.facing > 0 ? this.x + this.w - 2 : this.x - reach + 2,
       y: this.y + 2,

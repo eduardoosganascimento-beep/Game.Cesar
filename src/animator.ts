@@ -1,21 +1,3 @@
-// Animation clips for sprites — Player, Colonists, Indigenous, Wolf
-// Todos os quadros usados aqui estão desenhados virados para a direita.
-// O jogo espelha o desenho quando Sand anda para a esquerda.
-// Cada linha da nova folha usa apenas os quadros coerentes de um mesmo movimento,
-// então o personagem nunca troca de lado no meio do ciclo.
-
-import { type Sprite, getFrame, getColonistFrame, getIndioFrame, getWolfFrame, getZombieFrame } from './sprites'
-
-export type Clip = {
-  frames: readonly string[]
-  fps: number
-  loop: boolean
-}
-
-export type ClipName = 'idle' | 'run' | 'jump' | 'fall' | 'attack' | 'throw' | 'hurt' | 'death'
-export type EnemyClipName = 'idle' | 'walk' | 'shoot' | 'slash' | 'hurt' | 'death'
-
-// ============================================================
 // CLIPS DO PLAYER (Sand)
 // ============================================================
 // As animações foram desenhadas para terem o mesmo height em todos os quadros,
@@ -37,7 +19,7 @@ export const PLAYER_CLIPS: Record<ClipName, Clip> = {
   attack: { frames: ['melee-1', 'melee-2', 'melee-3', 'melee-4', 'melee-5'], fps: 18, loop: false },
   // Arremesso de lança: 4 quadros a 13 fps.
   // O quadro 4 é o primeiro sem a lança na mão → esse é o quadro em que
-  // o projétil é "disparado" (nasce o hitbox do projectile).
+  // o projétil nasce. Assim a animação e a mecânica contam a mesma história.
   throw: { frames: ['throw-1', 'throw-2', 'throw-3', 'throw-4'], fps: 13, loop: false },
   // Dano: 4 quadros a 10 fps.
   hurt: { frames: ['hurt-1', 'hurt-2', 'hurt-3', 'hurt-4'], fps: 10, loop: false },
@@ -83,6 +65,10 @@ export const INDIO_CLIPS: Record<EnemyClipName, Clip> = {
   shoot: { frames: ['throw-1', 'throw-2', 'throw-3', 'throw-5', 'throw-6'], fps: 12, loop: false },
   // Golpe corpo a corpo (machado/lâmina): usa a seqüência melee-1..5.
   slash: { frames: ['melee-1', 'melee-2', 'melee-3', 'melee-4', 'melee-5'], fps: 18, loop: false },
+  // Nova mecânica: Perry (parry/contrataque). Quando o índio bloqueia um
+  // ataque entrante no momento certo, entra neste estado e contra-ataca
+  // rapidamente com o golpe de machado.
+  parry: { frames: ['melee-1', 'melee-2', 'melee-3', 'melee-4', 'melee-5'], fps: 18, loop: false },
   // Hurt: 3 quadros, fps 10.
   hurt: { frames: ['hurt-2', 'hurt-3', 'hurt-4'], fps: 10, loop: false },
   // Morte: 5 quadros a 7 fps, igual ao do jogador.
@@ -108,145 +94,32 @@ export const WOLF_CLIPS: Record<EnemyClipName, Clip> = {
 // braços esticados e a mordida. O idle usa a segunda linha em ritmo lento
 // para dar aquele balanço de morto-vivo.
 export const ZOMBIE_CLIPS: Record<EnemyClipName, Clip> = {
-  idle: { frames: ['idle-1', 'idle-2', 'idle-3', 'idle-4'], fps: 2.2, loop: true },
+  // Idle: 4 quadros, lenta, looping. Linha 2 da folha para o balanço morto-vivo.
+  idle: { frames: ['idle-1', 'idle-2', 'idle-3', 'idle-3'], fps: 2.2, loop: true },
+  // Caminhada: 8 quadros a 9 fps ~0,88s por ciclo. Linhas 3 da folha, pés arrastados.
   walk: {
     frames: ['walk-1', 'walk-2', 'walk-3', 'walk-4', 'walk-5', 'walk-6', 'walk-7', 'walk-8'],
     fps: 9,
     loop: true,
   },
-  shoot: {
+  // Ataque com os braços esticados: 6 quadros a 11 fps. Linha 4 da folha.
+  // O quadro 3 é o ponto de máxima extensão; usado tanto para ataque corpo a corpo
+  // quanto para o lançamento do "soco" do zumbi (não há projétil separado).
+  attack: {
     frames: ['attack-1', 'attack-2', 'attack-3', 'attack-4', 'attack-5', 'attack-6'],
     fps: 11,
     loop: false,
   },
+  // Golpe corporal: mesma seqüência de attack, sombreados diferente para
+  // indicar que o zumbi está golpeando com as mãos fechadas.
   slash: {
     frames: ['attack-1', 'attack-2', 'attack-3', 'attack-4', 'attack-5', 'attack-6'],
     fps: 11,
     loop: false,
   },
+  // Dano: usa o idle para dar a impressão de parada momentânea.
   hurt: { frames: ['idle-1'], fps: 1, loop: false },
+  // Morte: apenas o quadro 8 (bite-8) — o zumbi já não "caí", ele apenas
+  // some após a mordida. O jogo trata a rotação dos pés na renderização.
   death: { frames: ['bite-8'], fps: 1, loop: false },
-}
-
-// ============================================================
-// ANIMADOR DE CLIPS (base para Sand, Colonista e Índio)
-// ============================================================
-export type ResolveSprite = (name: string) => Sprite | undefined
-
-export type ClipOrName = Clip | string
-
-export class SpriteClipAnimator {
-  state: string
-
-  private elapsed = 0
-  private timeScale = 1
-  private readonly initial: string
-
-  constructor(
-    private readonly clips: Record<string, Clip>,
-    private readonly resolve: ResolveSprite,
-    initialState: string,
-    private readonly fallbackName?: string,
-  ) {
-    this.initial = initialState
-    this.state = initialState
-  }
-
-  reset(): void {
-    this.state = this.initial
-    this.elapsed = 0
-    this.timeScale = 1
-  }
-
-  play(state: string): void {
-    if (state === this.state) return
-    this.state = state
-    this.elapsed = 0
-    this.timeScale = 1
-  }
-
-  // A corrida acelera o compasso junto com a velocidade: os pés deixam de
-  // deslizar quando o personagem está no arranque ou freando.
-  setTimeScale(scale: number): void {
-    this.timeScale = Math.max(0.35, Math.min(1.6, scale))
-  }
-
-  update(dt: number): void {
-    this.elapsed += dt * this.timeScale
-  }
-
-  // Define a fase do loop da animação com base na distância percorrida.
-  // Isso faz o "piscar" do pé ser evitado quando a velocidade muda.
-  setLoopPhase(phase: number): void {
-    const clip = this.clips[this.state] ?? this.clips[this.initial]
-    if (!clip.loop || clip.frames.length === 0) return
-    const normalized = ((phase % 1) + 1) % 1
-    this.elapsed = normalized * (clip.frames.length / clip.fps)
-  }
-
-  get phase(): number {
-    const clip = this.clips[this.state] ?? this.clips[this.initial]
-    if (clip.frames.length === 0) return 0
-    return ((this.elapsed * clip.fps) % clip.frames.length) / clip.frames.length
-  }
-
-  get frameName(): string {
-    const clip = this.clips[this.state] ?? this.clips[this.initial]
-    const raw = Math.floor(this.elapsed * clip.fps)
-    const index = clip.loop
-      ? raw % clip.frames.length
-      : Math.min(clip.frames.length - 1, raw)
-    return clip.frames[index]
-  }
-
-  get finished(): boolean {
-    const clip = this.clips[this.state] ?? this.clips[this.initial]
-    if (clip.loop) return false
-    return this.elapsed * clip.fps >= clip.frames.length
-  }
-
-  get frame(): Sprite | undefined {
-    return (
-      this.resolve(this.frameName) ??
-      (this.fallbackName ? this.resolve(this.fallbackName) : undefined)
-    )
-  }
-}
-
-// ============================================================
-// CLASSES CONCRETAS
-// ============================================================
-export class Animator extends SpriteClipAnimator {
-  constructor() {
-    super(PLAYER_CLIPS, getFrame, 'idle', 'idle-1')
-  }
-}
-
-export class ColonistAnimator extends SpriteClipAnimator {
-  constructor() {
-    super(COLONIST_CLIPS, getColonistFrame, 'idle', 'idle-1')
-  }
-}
-
-// O índio usa o mesmo corpo da folha, mas com poses de arma, pulo e
-// combate desenhadas separadamente no arquivo original. Os clips acima
-// (INDIO_CLIPS) já mapeiam os frames corretos da folha.
-export class IndioAnimator extends SpriteClipAnimator {
-  constructor() {
-    super(INDIO_CLIPS, getIndioFrame, 'idle', 'idle-1')
-  }
-}
-
-// Kennedy, o lobo que protege o acampamento: andar, bote e queda.
-export class WolfAnimator extends SpriteClipAnimator {
-  constructor() {
-    super(WOLF_CLIPS, getWolfFrame, 'idle', 'idle-1')
-  }
-}
-
-// Zumbi: passos arrastados, mordida e queda.
-export class ZombieAnimator extends SpriteClipAnimator {
-  constructor() {
-    super(ZOMBIE_CLIPS, getZombieFrame, 'idle', 'idle-1')
-  }
 }
