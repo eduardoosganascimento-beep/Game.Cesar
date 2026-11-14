@@ -29,6 +29,7 @@
     {"type": "memory", "x": 3, "y": 5},
     {"type": "memory", "x": 18, "y": 5},
     {"type": "enemy", "kind": "feitor", "x": 12, "y": 8, "left": 8, "right": 18},
+    {"type": "enemy", "kind": "zumbi", "x": 22, "y": 8, "left": 18, "right": 28},
     {"type": "checkpoint", "x": 30, "y": 8}
   ]
 }

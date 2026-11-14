@@ -136,24 +136,6 @@
     },
     {
       "type": "enemy",
-      "kind": "capanga",
-      "x": 105,
-      "y": 8,
-      "left": 102,
-      "right": 111
-    },
-    {
-      "type": "checkpoint",
-      "x": 105,
-      "y": 8
-    },
-    {
-      "type": "memory",
-      "x": 112,
-      "y": 5
-    },
-    {
-      "type": "enemy",
       "kind": "soldado",
       "x": 114,
       "y": 8,
@@ -172,6 +154,14 @@
       "y": 8,
       "left": 120,
       "right": 129
+    },
+    {
+      "type": "enemy",
+      "kind": "zumbi",
+      "x": 30,
+      "y": 8,
+      "left": 25,
+      "right": 35
     }
   ]
 }
