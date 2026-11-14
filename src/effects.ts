@@ -10,7 +10,6 @@ export type BurstKind =
   | 'blade'
   | 'bullet'
   | 'spear'
-  | 'ooze'
 
 type Particle = {
   x: number
@@ -45,8 +44,6 @@ const PALETTES: Record<BurstKind, string[]> = {
   blade: ['#fff1dd', '#ffd7c2', '#e35d4f', '#ff8b73'],
   bullet: ['#c4473a', '#ff9f43', '#7d2820', '#ffd166'],
   spear: ['#e8c48a', '#8a5a2a', '#ffd166', '#b97d24'],
-  // Pingo doentio: o que escorre dos zumbis.
-  ooze: ['#8ec96a', '#6fa04a', '#cbe58f', '#4f7a45'],
 }
 
 export class Effects {

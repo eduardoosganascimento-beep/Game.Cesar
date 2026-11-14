@@ -2,7 +2,6 @@
   "name": "Capítulo 8 — O Futuro",
   "subtitle": "Torres antigas piscam entre a mata; o ar cheira a ozônio.",
   "theme": "night",
-  "night": true,
   "spawn": {
     "x": 2,
     "y": 8
@@ -180,6 +179,5 @@
       "left": 134,
       "right": 141
     }
-  ],
-  "tint": "rgba(30, 20, 25, 0.1)"
+  ]
 }

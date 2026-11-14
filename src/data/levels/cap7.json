@@ -2,7 +2,6 @@
   "name": "Capítulo 7 — O Castelo",
   "subtitle": "Ruínas antigas cobertas de musgo e trepadeiras.",
   "theme": "camp",
-  "night": true,
   "spawn": {
     "x": 2,
     "y": 8

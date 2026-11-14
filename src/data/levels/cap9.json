@@ -2,7 +2,6 @@
   "name": "Capítulo 9 — O Fim",
   "subtitle": "A família está livre. A floresta ainda guarda cicatrizes.",
   "theme": "night",
-  "night": true,
   "spawn": {
     "x": 2,
     "y": 8
@@ -22,6 +21,61 @@
     "##############################~~~#####################################~~~#######################################~~~#####################################"
   ],
   "entities": [
+    {
+      "type": "memory",
+      "x": 10,
+      "y": 5
+    },
+    {
+      "type": "memory",
+      "x": 22,
+      "y": 5
+    },
+    {
+      "type": "memory",
+      "x": 36,
+      "y": 5
+    },
+    {
+      "type": "memory",
+      "x": 48,
+      "y": 5
+    },
+    {
+      "type": "memory",
+      "x": 62,
+      "y": 5
+    },
+    {
+      "type": "memory",
+      "x": 76,
+      "y": 5
+    },
+    {
+      "type": "memory",
+      "x": 88,
+      "y": 5
+    },
+    {
+      "type": "memory",
+      "x": 104,
+      "y": 5
+    },
+    {
+      "type": "memory",
+      "x": 118,
+      "y": 5
+    },
+    {
+      "type": "memory",
+      "x": 130,
+      "y": 5
+    },
+    {
+      "type": "memory",
+      "x": 146,
+      "y": 5
+    },
     {
       "type": "checkpoint",
       "x": 6,
@@ -138,6 +192,5 @@
       "left": 134,
       "right": 142
     }
-  ],
-  "tint": "rgba(30, 20, 25, 0.1)"
+  ]
 }

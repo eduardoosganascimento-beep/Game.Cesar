@@ -2,7 +2,6 @@
   "name": "Capítulo 3 — O Acampamento",
   "subtitle": "Onde o ferro corta a mata, a fumaça esconde os cativos.",
   "theme": "camp",
-  "night": false,
   "spawn": {
     "x": 2,
     "y": 8

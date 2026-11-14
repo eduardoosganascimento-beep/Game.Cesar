@@ -16,9 +16,6 @@ type Palette = {
   waterMid: string
   waterLight: string
   foam: string
-  canopyA: string
-  canopyB: string
-  canopyLight: string
 }
 
 const PALETTES: Record<LevelTheme, Palette> = {
@@ -37,9 +34,6 @@ const PALETTES: Record<LevelTheme, Palette> = {
     waterMid: '#164650',
     waterLight: '#2f7b88',
     foam: '#a8dbe0',
-    canopyA: '#1d3320',
-    canopyB: '#25421f',
-    canopyLight: '#3f6b32',
   },
   river: {
     soilA: '#273a33',
@@ -56,9 +50,6 @@ const PALETTES: Record<LevelTheme, Palette> = {
     waterMid: '#0d3d49',
     waterLight: '#2c8a97',
     foam: '#b9ebef',
-    canopyA: '#16332a',
-    canopyB: '#1d4436',
-    canopyLight: '#2f6b4c',
   },
   camp: {
     soilA: '#3a3026',
@@ -75,9 +66,6 @@ const PALETTES: Record<LevelTheme, Palette> = {
     waterMid: '#3c3027',
     waterLight: '#6b5a3f',
     foam: '#b8a987',
-    canopyA: '#2b2417',
-    canopyB: '#37301e',
-    canopyLight: '#54492c',
   },
   grove: {
     soilA: '#252f35',
@@ -94,9 +82,6 @@ const PALETTES: Record<LevelTheme, Palette> = {
     waterMid: '#1b2c44',
     waterLight: '#46679a',
     foam: '#b9d6ee',
-    canopyA: '#16241f',
-    canopyB: '#1d2f27',
-    canopyLight: '#2f5244',
   },
   night: {
     soilA: '#1d2634',
@@ -113,9 +98,6 @@ const PALETTES: Record<LevelTheme, Palette> = {
     waterMid: '#132444',
     waterLight: '#3a5b93',
     foam: '#c6dcff',
-    canopyA: '#0f1720',
-    canopyB: '#152030',
-    canopyLight: '#223449',
   },
 }
 
@@ -156,7 +138,6 @@ export function drawScenery(
   goalLocked: boolean,
 ): void {
   const palette = PALETTES[theme]
-  paintCanopy(ctx, map, cameraX, cameraY, time, palette)
   paintProps(ctx, theme, cameraX, cameraY, time)
   paintWater(ctx, map, cameraX, cameraY, time, palette, theme)
   paintSolids(ctx, map, cameraX, cameraY, palette)
@@ -167,91 +148,6 @@ export function drawScenery(
 }
 
 // ---------- construÃƒÂ§ÃƒÂµes ----------
-
-// Blob pixelado: uma copa redonda desenhada em pixels cheios.
-function paintBlob(
-  ctx: CanvasRenderingContext2D,
-  cx: number,
-  cy: number,
-  r: number,
-  color: string,
-): void {
-  ctx.fillStyle = color
-  const r2 = r * r
-  for (let y = -Math.floor(r); y <= Math.floor(r); y += 1) {
-    const half = Math.floor(Math.sqrt(Math.max(0, r2 - y * y)))
-    ctx.fillRect(Math.round(cx - half), Math.round(cy + y), half * 2 + 1, 1)
-  }
-}
-
-// A copa da floresta: tiles de fundo ('+') viram massa de folhagem
-// com folhas iluminadas e galhos pendurados.
-function paintCanopy(
-  ctx: CanvasRenderingContext2D,
-  map: TileMap,
-  cameraX: number,
-  cameraY: number,
-  time: number,
-  palette: Palette,
-): void {
-  const x0 = Math.floor(cameraX / TILE) - 1
-  const x1 = Math.ceil((cameraX + VIEW_W) / TILE) + 1
-  const y0 = Math.max(0, Math.floor(cameraY / TILE) - 1)
-  const y1 = Math.min(map.rows - 1, Math.ceil((cameraY + VIEW_H) / TILE))
-
-  for (let ty = y0; ty <= y1; ty += 1) {
-    for (let tx = x0; tx <= x1; tx += 1) {
-      if (map.tileAt(tx, ty) !== Tile.Background) continue
-
-      const dx = tx * TILE - cameraX
-      const dy = ty * TILE - cameraY
-      const noise = Math.floor(hash(tx * 2.7 + ty * 5.3) * 100)
-      const sway = Math.sin(time * 0.5 + tx * 0.55 + ty * 0.3) * 1.1
-      const cx = dx + 8 + sway
-      const cy = dy + 9
-
-      // Massas irregulares: três blobs de tamanhos diferentes formam uma
-      // copa cheia de folhagem em vez de uma bola perfeita.
-      paintBlob(ctx, cx, cy, 8.5, palette.canopyA)
-      paintBlob(
-        ctx,
-        cx - 4 + hash(tx * 2.2) * 2,
-        cy + 1 + hash(tx * 5.4) * 2,
-        5 + hash(tx * 1.3) * 2,
-        palette.canopyA,
-      )
-      paintBlob(
-        ctx,
-        cx + 4 - hash(tx * 3.7) * 2,
-        cy - 2 - hash(tx * 4.1) * 2,
-        4.5 + hash(tx * 6.2) * 2,
-        palette.canopyB,
-      )
-      paintBlob(ctx, cx - 1, cy - 4, 4, palette.canopyB)
-
-      // Folhas que pegam a luz.
-      for (let i = 0; i < 3; i += 1) {
-        const lx = Math.round(cx - 5 + hash(tx * 3.1 + i * 4.7) * 10)
-        const ly = Math.round(cy - 5 + hash(tx * 1.9 + i * 2.3) * 9)
-        ctx.fillStyle = palette.canopyLight
-        ctx.fillRect(lx, ly, 2, 1)
-      }
-
-      // Galho e folhas pendurados.
-      if (noise % 6 === 0) {
-        const vx = Math.round(cx + (hash(tx * 4.3) - 0.5) * 8)
-        const length = 5 + (noise % 9)
-        ctx.fillStyle = palette.canopyA
-        for (let y = 0; y < length; y += 1) {
-          const drift = Math.sin(time * 0.7 + y * 0.35 + tx) * 1.2
-          ctx.fillRect(Math.round(vx + drift), dy + 12 + y, 1, 1)
-        }
-        ctx.fillStyle = palette.canopyLight
-        ctx.fillRect(Math.round(vx - 1), dy + 13 + length, 2, 1)
-      }
-    }
-  }
-}
 
 function paintHut(
   ctx: CanvasRenderingContext2D,
