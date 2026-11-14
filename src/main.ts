@@ -78,7 +78,8 @@ const TUTORIAL_STEPS = [
   'Arremesse a lança com L',
   'Colete a memória brilhante',
   'Siga até a fogueira no fim da trilha',
-  'Use o Perry (E) para bloquear e contra-atacar o índio',
+  'Use o Perry com F — bloqueie ataques inimigos e contra-ataca',
+  'Derrote o ursinho boss no Capítulo 1',
 ]
 
 // Colonos armados (espada ou arma de fogo) podem ser infectados pelos
@@ -256,11 +257,14 @@ class Game {
         done = false // completar o tutorial normalmente
         break
       case 6:
-        // Perry step - verifica se o jogador entrou em contato com o índio
-        // durante o estado parry
+        // Perry step - verifica se o jogador apertou F para bloquear
+        // ou se o índio está no estado parry
+        if (this.input.parryPressed) {
+          done = true // Jogador ativou o Perry com a tecla F
+        }
         const indio = this.enemies.find((e) => e.kind === 'indio')
         if (indio && indio.animator.state === 'parry') {
-          done = true // Perry ativado com sucesso
+          done = true // Perry ativado automaticamente
         }
         break
       default:
