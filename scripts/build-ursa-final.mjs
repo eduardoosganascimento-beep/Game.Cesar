@@ -139,18 +139,49 @@ for (let i = 0; i < 4; i += 1) {
   raw.push({ ...raw.find((f) => f.name === `hurt-${5 + i}`), name: `death-${i + 1}` })
 }
 
+// Escala ÚNICA para todos os quadros. Usar TARGET_BODY / item.reference fazia
+// o urso inchar e encolher a cada pose (as de ataque têm 26-45px de altura).
 const refs = raw.filter((f) => f.name.startsWith('walk')).map((f) => f.reference).sort((a, b) => a - b)
-const baseFactor = TARGET_BODY / (refs[Math.floor(refs.length / 2)] || 44)
+const factor = TARGET_BODY / (refs[Math.floor(refs.length / 2)] || 44)
 const frames = []
 for (const item of raw) {
-  const factor = Math.max(baseFactor * 0.9, Math.min(baseFactor * 1.1, TARGET_BODY / item.reference))
   const out = resampleArea(item.crop, factor, 0.3)
   snapPalette(out, palette)
   const anchorX = Math.max(0, Math.min(out.width, Math.round((item.headX - item.cropX) * factor)))
+  // Âncora Y alinhada ao chão: todas as poses assentam na mesma linha de pés.
   const anchorY = Math.max(1, Math.min(out.height, Math.ceil((item.bodyBottom - item.cropY) * factor)))
   frames.push({ name: item.name, file: `${item.name}.png`, png: out, w: out.width, h: out.height, anchor: { x: anchorX, y: anchorY } })
 }
 padFrames(frames)
+// Força TODOS os quadros ao mesmo tamanho (o padFrames alinha âncoras, mas
+// cada pose ainda tinha dimensões diferentes → urso "pulava" de tamanho).
+{
+  const W = Math.max(...frames.map((f) => f.png.width))
+  const H = Math.max(...frames.map((f) => f.png.height))
+  for (const frame of frames) {
+    const square = new PNG({ width: W, height: H })
+    square.data.fill(0)
+    const dx = Math.round(frame.anchor.x - W / 2)
+    const dy = Math.round(frame.anchor.y - H * 0.8)
+    for (let y = 0; y < frame.png.height; y += 1) {
+      for (let x = 0; x < frame.png.width; x += 1) {
+        const si = (y * frame.png.width + x) * 4
+        if (frame.png.data[si + 3] === 0) continue
+        const tx = x - dx, ty = y - dy
+        if (tx < 0 || ty < 0 || tx >= W || ty >= H) continue
+        const ti = (ty * W + tx) * 4
+        square.data[ti] = frame.png.data[si]
+        square.data[ti + 1] = frame.png.data[si + 1]
+        square.data[ti + 2] = frame.png.data[si + 2]
+        square.data[ti + 3] = 255
+      }
+    }
+    frame.png = square
+    frame.w = W
+    frame.h = H
+    frame.anchor = { x: Math.round(W / 2), y: Math.round(H * 0.8) }
+  }
+}
 
 fs.rmSync(OUT_DIR, { recursive: true, force: true })
 fs.mkdirSync(OUT_DIR, { recursive: true })
