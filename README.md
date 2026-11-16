@@ -5,7 +5,7 @@ Jogo indie 2D em pixel art feito para rodar no navegador com **TypeScript + Canv
 > A aldeia caiu. A família de Sandman foi levada por colonos portugueses.
 > Anos de preparo depois, ele volta para resgatar quem ama — e acertar as contas.
 
-**Versão atual:** `1.3` — nove capítulos, tutorial jogável, zumbis e três níveis de dificuldade.
+**Versão atual:** `1.4` — nove capítulos, tutorial jogável, zumbis e o boss Urso, com três níveis de dificuldade.
 
 ## 🎮 Jogar agora
 
