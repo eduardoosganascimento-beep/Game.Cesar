@@ -4,35 +4,51 @@
   "clips": {
     "idle": {
       "frames": [
-        "ursa-boss"
+        "idle-1",
+        "idle-2"
       ],
       "fps": 2.4,
       "loop": true
     },
     "walk": {
       "frames": [
-        "ursa-boss"
+        "walk-1",
+        "walk-2",
+        "walk-3",
+        "walk-4",
+        "walk-5",
+        "walk-6"
       ],
       "fps": 10,
       "loop": true
     },
     "attack": {
       "frames": [
-        "ursa-boss"
+        "attack-1",
+        "attack-2",
+        "attack-3",
+        "attack-4",
+        "attack-5",
+        "attack-6",
+        "attack-7"
       ],
       "fps": 10,
       "loop": false
     },
     "hurt": {
       "frames": [
-        "ursa-boss"
+        "hurt-1",
+        "hurt-2",
+        "hurt-3"
       ],
       "fps": 12,
       "loop": false
     },
     "death": {
       "frames": [
-        "ursa-boss"
+        "hurt-1",
+        "hurt-2",
+        "hurt-3"
       ],
       "fps": 6,
       "loop": false
@@ -40,13 +56,183 @@
   },
   "frames": [
     {
-      "file": "ursa-boss.png",
-      "name": "ursa-boss",
-      "w": 240,
-      "h": 127,
+      "file": "attack-1.png",
+      "name": "attack-1",
+      "w": 29,
+      "h": 42,
       "anchor": {
-        "x": 218,
-        "y": 126
+        "x": 13,
+        "y": 42
+      }
+    },
+    {
+      "file": "attack-2.png",
+      "name": "attack-2",
+      "w": 32,
+      "h": 41,
+      "anchor": {
+        "x": 10,
+        "y": 41
+      }
+    },
+    {
+      "file": "attack-3.png",
+      "name": "attack-3",
+      "w": 31,
+      "h": 44,
+      "anchor": {
+        "x": 12,
+        "y": 43
+      }
+    },
+    {
+      "file": "attack-4.png",
+      "name": "attack-4",
+      "w": 31,
+      "h": 39,
+      "anchor": {
+        "x": 17,
+        "y": 39
+      }
+    },
+    {
+      "file": "attack-5.png",
+      "name": "attack-5",
+      "w": 31,
+      "h": 38,
+      "anchor": {
+        "x": 16,
+        "y": 38
+      }
+    },
+    {
+      "file": "attack-6.png",
+      "name": "attack-6",
+      "w": 32,
+      "h": 27,
+      "anchor": {
+        "x": 14,
+        "y": 27
+      }
+    },
+    {
+      "file": "attack-7.png",
+      "name": "attack-7",
+      "w": 30,
+      "h": 29,
+      "anchor": {
+        "x": 11,
+        "y": 29
+      }
+    },
+    {
+      "file": "walk-1.png",
+      "name": "walk-1",
+      "w": 35,
+      "h": 46,
+      "anchor": {
+        "x": 15,
+        "y": 46
+      }
+    },
+    {
+      "file": "walk-2.png",
+      "name": "walk-2",
+      "w": 36,
+      "h": 49,
+      "anchor": {
+        "x": 18,
+        "y": 48
+      }
+    },
+    {
+      "file": "walk-3.png",
+      "name": "walk-3",
+      "w": 37,
+      "h": 47,
+      "anchor": {
+        "x": 21,
+        "y": 47
+      }
+    },
+    {
+      "file": "walk-4.png",
+      "name": "walk-4",
+      "w": 35,
+      "h": 47,
+      "anchor": {
+        "x": 21,
+        "y": 47
+      }
+    },
+    {
+      "file": "walk-5.png",
+      "name": "walk-5",
+      "w": 35,
+      "h": 48,
+      "anchor": {
+        "x": 21,
+        "y": 48
+      }
+    },
+    {
+      "file": "walk-6.png",
+      "name": "walk-6",
+      "w": 35,
+      "h": 49,
+      "anchor": {
+        "x": 16,
+        "y": 48
+      }
+    },
+    {
+      "file": "hurt-1.png",
+      "name": "hurt-1",
+      "w": 25,
+      "h": 33,
+      "anchor": {
+        "x": 14,
+        "y": 32
+      }
+    },
+    {
+      "file": "hurt-2.png",
+      "name": "hurt-2",
+      "w": 28,
+      "h": 35,
+      "anchor": {
+        "x": 15,
+        "y": 34
+      }
+    },
+    {
+      "file": "hurt-3.png",
+      "name": "hurt-3",
+      "w": 27,
+      "h": 38,
+      "anchor": {
+        "x": 15,
+        "y": 37
+      }
+    },
+    {
+      "name": "idle-1",
+      "file": "idle-1.png",
+      "w": 25,
+      "h": 33,
+      "anchor": {
+        "x": 14,
+        "y": 32
+      }
+    },
+    {
+      "name": "idle-2",
+      "file": "idle-2.png",
+      "w": 27,
+      "h": 32,
+      "anchor": {
+        "x": 13,
+        "y": 31
       }
     }
   ]
