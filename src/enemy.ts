@@ -169,6 +169,10 @@ const URSA_CHARGE_WINDUP = 0.45
 const URSA_CHARGE_ACTIVE = 0.52
 const URSA_CHARGE_DURATION = 1.2
 const URSA_CHARGE_SPEED = 150
+// O machado do urso toca o chão na horizontal do swing: a caixa de dano acompanha
+// o arco, então ela nasce um pouco antes do corpo e chega no impacto.
+const URSA_SLAM_REACH = 54
+const URSA_SLAM_BOX_H = 38
 
 function clipDuration(kind: AttackKind): number {
   const clip = COLONIST_CLIPS[kind as 'shoot' | 'slash']
@@ -378,12 +382,12 @@ export class Enemy {
     // larga, acompanhando o arco do quadro de impacto.
     if (this.isUrsa) {
       if (this.attackKind === 'slam') {
-        const reach = 48
+        const reach = URSA_SLAM_REACH
         return {
-          x: this.facing > 0 ? this.x + this.w - 10 : this.x - reach + 10,
-          y: this.y + this.h - 36,
+          x: this.facing > 0 ? this.x + this.w - 14 : this.x - reach + 14,
+          y: this.y + this.h - URSA_SLAM_BOX_H,
           w: reach,
-          h: 36,
+          h: URSA_SLAM_BOX_H,
         }
       }
       return { x: this.x + 4, y: this.y + 8, w: this.w - 8, h: this.h - 8 }
@@ -505,8 +509,8 @@ export class Enemy {
     if (!this.alive || this.invuln > 0) return false
 
     this.hp = Math.max(0, this.hp - amount)
-    this.invuln = this.isUrsa ? 0.18 : 0.3
-    this.hurt = this.isUrsa ? 0.1 : HURT_TIME
+    this.invuln = this.isUrsa ? 0.22 : 0.3
+    this.hurt = this.isUrsa ? 0.12 : HURT_TIME
     // O urso é pesado: o golpe não interrompe a investida nem o machado.
     // Os outros inimigos perdem o ataque quando são atingidos.
     if (!this.isUrsa || this.hp <= 0) {
