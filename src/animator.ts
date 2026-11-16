@@ -156,7 +156,9 @@ export const URSA_CLIPS: Record<UrsaClipName, Clip> = {
     loop: false,
   },
   hurt: { frames: ['hurt-1', 'hurt-2', 'hurt-3'], fps: 12, loop: false },
-  death: { frames: ['hurt-1', 'hurt-2', 'hurt-3'], fps: 6, loop: false },
+  // A folha tem quatro poses finais: queda do urso, sem precisar de efeito
+  // procedural além do desvanecimento feito em main.ts.
+  death: { frames: ['death-1', 'death-2', 'death-3', 'death-4'], fps: 7, loop: false },
 }
 
 // ============================================================
