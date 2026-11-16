@@ -23,22 +23,8 @@ ctx.imageSmoothingEnabled = false
 
 const SPRITE_SCALE = 1.0
 const WIN_DELAY = 1100
-
-type Memory = {
-  x: number
-  y: number
-  phase: number
-  got: boolean
-}
-
-type Checkpoint = {
-  tx: number
-  ty: number
-  x: number
-  baseY: number
-  phase: number
-  active: boolean
-}
+// Tempo do esmagamento do corpo ao aterrissar.
+const LAND_SQUASH_TIME = 0.2
 
 type Shot = {
   x: number
@@ -47,8 +33,6 @@ type Shot = {
   vy: number
   life: number
   boss: boolean
-  kind?: 'bullet' | 'axe'
-  rotation?: number
 }
 
 type Spear = {
@@ -57,17 +41,6 @@ type Spear = {
   vx: number
   vy: number
   life: number
-}
-
-// Onda de choque do golpe de machado do urso: viaja pelo chão para os dois
-// lados e obriga o jogador a pular mesmo estando longe do corpo do boss.
-type Shockwave = {
-  x: number
-  y: number
-  vx: number
-  life: number
-  max: number
-  phase: number
 }
 
 // Rastro do dash: cópias de Sand que se apagam atrás dele.
@@ -87,8 +60,8 @@ const TUTORIAL_STEPS = [
   'Pule com Espaço (segure para ir mais alto)',
   'Ataque com J — o tacape é seu',
   'Arremesse a lança com L',
-  'Colete a memória brilhante',
   'Siga até a fogueira no fim da trilha',
+  'Use o Perry com F — bloqueie ataques inimigos e contra-ataca',
 ]
 
 // Colonos armados (espada ou arma de fogo) podem ser infectados pelos
@@ -114,33 +87,27 @@ class Game {
   private map!: TileMap
   private player!: Player
   private enemies: Enemy[] = []
-  private memories: Memory[] = []
-  private checkpoints: Checkpoint[] = []
   private shots: Shot[] = []
-  private axes: Shot[] = []
   private spears: Spear[] = []
-  private shockwaves: Shockwave[] = []
   private dashGhosts: DashGhost[] = []
-  private deathDust = new Set<Enemy>()
   private dashGhostTimer = 0
   private hitStop = 0
+  private landSquash = 0
   private dying = 0
   private deathMessage = ''
   private damageFlash = 0
   private killFlash = 0
+  private deathDust = new Set<Enemy>()
 
   private goalX = 0
   private goalRow = 9
   private goalBaseY = 9 * TILE
-  private bossDefeated = false
-  private bossBarVisible = false
-  private bossIntroShown = false
-  private bossEnrageAnnounced = false
   private running = false
   private paused = false
   private won = false
   private hinted = false
   private goalHintCooldown = 0
+  private parryTimer = 0
   private runTime = 0
   private winTimer = 0
   private hudKey = ''
@@ -160,6 +127,11 @@ class Game {
 
   get isRunning(): boolean {
     return this.running
+  }
+
+  // Capítulos de noite usam o fundo de luar e uma grade azulada.
+  get isNight(): boolean {
+    return this.chapter.data.night ?? this.chapter.data.theme === 'night'
   }
 
   get isPaused(): boolean {
@@ -260,6 +232,20 @@ class Game {
       case 4:
         done = this.collected >= 1
         break
+      case 5:
+        done = false // completar o tutorial normalmente
+        break
+      case 6:
+        // Perry step - verifica se o jogador apertou F para bloquear
+        // ou se o índio está no estado parry
+        if (this.input.parryPressed) {
+          done = true // Jogador ativou o Perry com a tecla F
+        }
+        const indio = this.enemies.find((e) => e.kind === 'indio')
+        if (indio && indio.animator.state === 'parry') {
+          done = true // Perry ativado automaticamente
+        }
+        break
       default:
         return
     }
@@ -306,55 +292,31 @@ class Game {
       .filter((entity) => entity.type === 'enemy')
       .map((entity) => {
         const enemy = new Enemy(entity, TILE, this.chapterIndex + 1)
-        // A dificuldade escolhida no menu escala a velocidade uma única vez.
-        const diffFac = DELTAS.speed[this.difficulty as 'facil' | 'normal' | 'dificil'] || 1
-        enemy.setSpeedScale(diffFac)
+        // A dificuldade escolhida no menu escala velocidade e resistência
+        // uma única vez, sem repetir o fator de nível.
+        const diff = this.difficulty
+        enemy.setSpeedScale(DELTAS.speed[diff] || 1)
+        enemy.setHealthScale(DELTAS.enemies[diff] || 1)
         return enemy
       })
 
-    this.memories = this.chapter.data.entities
-      .filter((entity) => entity.type === 'memory')
-      .map((entity, index) => ({
-        x: entity.x * TILE,
-        y: entity.y * TILE,
-        phase: index * 1.9,
-        got: false,
-      }))
-
-    this.checkpoints = this.chapter.data.entities
-      .filter((entity) => entity.type === 'checkpoint')
-      .map((entity, index) => ({
-        tx: entity.x,
-        ty: entity.y,
-        x: entity.x * TILE,
-        baseY: (entity.y + 1) * TILE,
-        phase: index * 1.3,
-        active: false,
-      }))
-
     this.shots = []
-    this.axes = []
     this.spears = []
-    this.shockwaves = []
     this.dashGhosts.length = 0
     this.deathDust.clear()
     this.dashGhostTimer = 0
     this.hitStop = 0
+    this.landSquash = 0
     this.dying = 0
     this.deathMessage = ''
     this.won = false
-    this.bossDefeated = false
-    this.bossBarVisible = false
-    this.bossIntroShown = false
-    this.bossEnrageAnnounced = false
-    this.goalHintCooldown = 0
+            this.goalHintCooldown = 0
     this.runTime = 0
     this.effects.clear()
     this.animator.reset()
     this.camera.snapTo(this.player.hurtbox, this.map.width, this.map.height)
     this.hud.resetHp()
-    this.hud.hideBoss()
-    this.syncHud(true)
+        this.syncHud(true)
   }
 
   update = (dt: number): void => {
@@ -365,6 +327,15 @@ class Game {
       this.hitStop = Math.max(0, this.hitStop - safeDt)
       this.input.endFrame()
       return
+    }
+
+    // Sistema de parry/block: jogador pode temporariamente bloquear ataques
+    // se pressionar o botão de ataque no momento certo (frames de invulnerabilidade).
+    // O parry consume stamina e deixa o jogador vulnerável após o uso.
+    if (this.parryTimer > 0) {
+      this.parryTimer = Math.max(0, this.parryTimer - safeDt)
+      // Durante o parry, o jogador é invulnerável a ataques normais
+      // mas não pode atacar de volta
     }
 
     if (!this.paused) this.effects.update(safeDt)
@@ -439,9 +410,11 @@ class Game {
       this.spawnSpear()
     }
     if (player.justLanded) {
+      this.landSquash = LAND_SQUASH_TIME
       this.effects.burst(player.x + player.w / 2, player.y + player.h, 'dust', 6, 30)
       this.effects.addShake(Math.min(2.2, player.landingSpeed / 220))
     }
+    this.landSquash = Math.max(0, this.landSquash - safeDt)
     if (player.dash > 0 && Math.random() < 0.85) {
       this.effects.trail(
         player.x + player.w / 2 - player.facing * 7,
@@ -453,62 +426,45 @@ class Game {
       this.effects.trail(player.x + player.w / 2, player.y + player.h - 1, 'dust')
     }
 
-    for (const checkpoint of this.checkpoints) {
-      if (checkpoint.active) continue
-      const marker = {
-        x: checkpoint.x + 2,
-        y: checkpoint.baseY - 28,
-        w: TILE - 4,
-        h: 28,
-      }
-      if (!overlaps(player.hurtbox, marker)) continue
-      checkpoint.active = true
-      player.setCheckpoint(checkpoint.tx, checkpoint.ty)
-      sfx.collect()
-      this.effects.burst(checkpoint.x + TILE / 2, checkpoint.baseY - 20, 'spark', 12, 48)
-      this.effects.text(checkpoint.x + TILE / 2, checkpoint.baseY - 30, 'Marco aceso', '#ffe9a8')
-    }
-
-    for (const enemy of this.enemies) {
+        for (const enemy of this.enemies) {
       enemy.update(safeDt, this.map, player.hurtbox)
       if (!enemy.alive) continue
 
       if (enemy.justShot) this.spawnShot(enemy)
-      if (enemy.justThrew) this.spawnAxe(enemy)
-      if (enemy.justSlammed) this.spawnShockwaves(enemy)
-      if (enemy.justCharged) {
-        sfx.charge()
-        this.effects.addShake(1.6)
-        this.effects.burst(enemy.x + enemy.w / 2, enemy.y + enemy.h, 'dust', 10, 42)
-      }
-      if (enemy.justCrashed) {
-        sfx.slam()
-        this.effects.addShake(4)
-        this.effects.burst(enemy.x + enemy.w / 2, enemy.y + enemy.h, 'dust', 16, 58)
-        this.effects.text(
-          enemy.x + enemy.w / 2,
-          enemy.y - 6,
-          'ATORDOADO!',
-          '#ffd166',
-        )
+
+      // Poeira dos passos: só quando o colono realmente anda.
+      if (enemy.alive && enemy.onGround && Math.abs(enemy.vx) > 8 && Math.random() < 0.09) {
+        this.effects.trail(enemy.x + enemy.w / 2, enemy.y + enemy.h - 1, 'dust')
       }
 
-      // A investida machuca no contato. O invuln do jogador impede que ele
-      // perca as três vidas num único encostão.
-      if (
-        enemy.isCharging &&
-        !enemy.isStunned &&
-        overlaps(enemy.rect, player.hurtbox)
-      ) {
-        if (this.hurtPlayer(enemy.x, 'blade', enemy.attackDamage)) {
-          this.effects.addShake(3.4)
-          this.effects.burst(
-            player.x + player.w / 2,
-            player.y + player.h / 2,
-            'hit',
-            10,
-            52,
-          )
+      // O zumbi pinga o que escorre dele.
+      if (enemy.isZombie && enemy.alive && Math.random() < 0.03) {
+        this.effects.burst(enemy.x + enemy.w / 2, enemy.y + 5, 'ooze', 2, 14)
+      }
+
+      // Sistema de parry: se jogador tem parry ativo, inimigos não causam dano
+      if (this.parryTimer > 0 && overlaps(enemy.attackBox, player.hurtbox)) {
+        // Player está bloqueando! O inimigo não causa dano normal,
+        // mas o parry consome o timer e deixa o jogador vulnerável depois.
+        this.parryTimer = 0 // Acaba o parry após o uso
+        // Efeito visual de parry bem-sucedido
+        this.effects.burst(enemy.x + enemy.w / 2, enemy.y + enemy.h / 2, 'spark', 3, 16)
+        continue // Pula o dano normal
+      }
+
+      // Nova mecânica: Perry do índio.
+      // Quando o índio usa o ataque parry no momento certo,
+      // ele bloqueia o golpe entrante e contra-ataca imediatamente.
+      if (enemy.kind === 'indio' && enemy.alive && enemy.animator.state === 'parry') {
+        // Durante o estado parry, o índio está imune a danos do jogador
+        // mas contra-ataca após o frame de parry.
+        if (player.attackActive && overlaps(player.attackBox, enemy.rect)) {
+          // Contra-ataque do índio: danifica o jogador mas o índio permanece vivo
+          this.hurtPlayer(enemy.x, 'blade', enemy.attackDamage)
+          // Retorna o índio ao estado idle após o parry
+          enemy.animator.play('idle')
+          enemy.justStruck = false
+          continue
         }
       }
 
@@ -551,35 +507,22 @@ class Game {
         continue
       }
 
-      if (!enemy.isStunned && overlaps(player.hurtbox, enemy.rect)) {
+      if (overlaps(player.hurtbox, enemy.rect)) {
         if (enemy.isZombie) {
           this.zombieBite(enemy)
           this.input.endFrame()
           return
         }
-        this.hurtPlayer(enemy.x, 'blade', enemy.contactDamage)
+        this.hurtPlayer(enemy.x, 'blade', enemy.attackDamage)
       }
     }
 
     this.updateInfections()
 
     this.updateShots(safeDt)
-    this.updateAxes(safeDt)
     this.updateSpears(safeDt)
-    this.updateShockwaves(safeDt)
 
-    for (const memory of this.memories) {
-      if (memory.got) continue
-      const orb = { x: memory.x + 2, y: memory.y + 2, w: TILE - 4, h: TILE - 4 }
-      if (!overlaps(player.hurtbox, orb)) continue
-      memory.got = true
-      sfx.collect()
-      this.effects.burst(memory.x + TILE / 2, memory.y + TILE / 2, 'spark', 16, 62)
-      this.effects.text(memory.x + TILE / 2, memory.y - 2, '+1 memória', '#ffe9a8')
-      this.effects.addShake(0.8)
-    }
-
-    // A morte é verificada antes de qualquer interior: sem isso, cair com
+        // A morte é verificada antes de qualquer interior: sem isso, cair com
     // vida zerada deixava Sand congelado.
     if (player.hp <= 0) {
       this.beginDeath('Sand caiu — a floresta o chama de volta.')
@@ -605,17 +548,22 @@ class Game {
       return
     }
 
+    if (player.hp <= 0) {
+      this.beginDeath('Sand caiu — a floresta o chama de volta.')
+      this.input.endFrame()
+      return
+    }
+
     const locked = this.goalLocked
     if (locked && player.x + player.w >= this.goalX) {
       player.x = this.goalX - player.w
       player.vx = Math.min(0, player.vx)
       if (this.goalHintCooldown <= 0) {
         this.goalHintCooldown = 2.2
-        const boss = this.enemies.find((enemy) => enemy.isBoss)
         this.effects.text(
           this.goalX + TILE / 2,
           this.goalBaseY - 54,
-          boss ? `${boss.label} ainda está de pé.` : 'O caminho ainda está fechado.',
+          'O caminho ainda está fechado.',
           '#ff8b73',
         )
       }
@@ -634,7 +582,6 @@ class Game {
     }
 
     this.updateTutorial()
-    this.updateBossBar()
     this.updateAnimator(safeDt)
     this.updateDashGhosts(safeDt)
     this.syncHud()
@@ -682,7 +629,7 @@ class Game {
       this.camera.px,
       this.camera.py,
       time,
-      this.chapter.data.theme === 'night',
+      this.isNight,
     )
 
     drawScenery(
@@ -700,20 +647,22 @@ class Game {
     ctx.fillStyle = this.chapter.tint
     ctx.fillRect(0, 0, VIEW_W, VIEW_H)
 
-    for (const checkpoint of this.checkpoints) this.paintCheckpoint(checkpoint, time)
-
-    for (const memory of this.memories) {
-      if (!memory.got) this.paintMemory(memory, time)
+    // À noite a floresta recebe um véu azul: o luar entra, a cor some.
+    if (this.isNight) {
+      const veil = ctx.createLinearGradient(0, 0, 0, VIEW_H)
+      veil.addColorStop(0, 'rgba(18, 28, 66, 0.34)')
+      veil.addColorStop(0.55, 'rgba(16, 26, 60, 0.2)')
+      veil.addColorStop(1, 'rgba(8, 14, 38, 0.36)')
+      ctx.fillStyle = veil
+      ctx.fillRect(0, 0, VIEW_W, VIEW_H)
     }
 
-    for (const enemy of this.enemies) {
+        for (const enemy of this.enemies) {
       if (enemy.visible) this.paintEnemy(enemy, time)
     }
 
     this.paintShots(time)
-    this.paintAxes(time)
     this.paintSpears(time)
-    this.paintShockwaves(time)
     this.paintDashGhosts()
     this.paintPlayer(time)
 
@@ -786,7 +735,7 @@ class Game {
       y: Math.round(this.player.y),
       hp: this.player.hp,
       memories: this.collected,
-      totalMemories: this.memories.length,
+      totalMemories: 0,
       onGround: this.player.onGround,
       running: this.running,
       paused: this.paused,
@@ -809,9 +758,9 @@ class Game {
   debugStats(): RunStats {
     return {
       memories: this.collected,
-      total: this.memories.length,
+      total: 0,
       seconds: this.runTime,
-      allMemories: this.collected === this.memories.length,
+      allMemories: false,
       chapterIndex: this.chapterIndex,
       chapterName: shortTitle(this.chapter.data.name),
       endText: this.chapter.endText,
@@ -820,11 +769,11 @@ class Game {
   }
 
   private get goalLocked(): boolean {
-    return this.chapter.lockGoalUntilBoss && !this.bossDefeated
+    return false
   }
 
   private get collected(): number {
-    return this.memories.filter((memory) => memory.got).length
+    return 0
   }
 
   private loadChapter(index: number): void {
@@ -884,23 +833,7 @@ class Game {
     const impact = weapon === 'spear' ? 'spear' : weapon === 'stomp' ? 'hit' : 'blade'
     this.effects.burst(cx, cy, killed ? 'death' : impact, killed ? 14 : 8, killed ? 66 : 44)
     if (weapon === 'stomp') this.effects.burst(cx, enemy.y + enemy.h, 'dust', 7, 34)
-    if (killed) {
-      this.killFlash = 1
-      this.effects.burst(cx, enemy.y + enemy.h, 'dust', 11, 46)
-      if (enemy.isUrsa) {
-        // A queda do boss é um acontecimento: poeira, faíscas e tremor.
-        for (let i = 0; i < 5; i += 1) {
-          this.effects.burst(
-            cx + (i - 2) * 9,
-            enemy.y + enemy.h - 2,
-            i % 2 === 0 ? 'death' : 'dust',
-            10,
-            58,
-          )
-        }
-        this.effects.addShake(7.5)
-      }
-    }
+    if (killed) this.killFlash = 1
     this.effects.addShake(killed ? 2.4 : 1.2)
     // Pequena pausa no impacto, maior quando o golpe derruba o inimigo.
     if (!stomp) this.hitStop = Math.max(this.hitStop, killed ? 0.065 : 0.04)
@@ -917,22 +850,12 @@ class Game {
       enemy.y - 3,
       stomp
         ? 'PISÃO!'
-        : enemy.isUrsa
-          ? 'O URSO CAIU!'
-          : enemy.isBoss
-            ? `${enemy.label.toUpperCase()} CAIU!`
-            : 'ABATIDO!',
+        : enemy.isBoss
+          ? `${enemy.label.toUpperCase()} CAIU!`
+          : 'ABATIDO!',
       enemy.isBoss ? '#ffd166' : '#ffe9a8',
     )
 
-    if (enemy.isBoss) {
-      this.bossDefeated = true
-      this.bossBarVisible = false
-      this.hud.hideBoss()
-      this.effects.addShake(6)
-      this.effects.text(this.goalX + TILE / 2, this.goalBaseY - 56, 'O caminho está livre.', '#ffd166')
-      sfx.win()
-    }
   }
 
   // A mordida do zumbi mata Sand na hora: não é dano, é fim de fase.
@@ -975,12 +898,7 @@ class Game {
     }
   }
 
-  private hurtPlayer(
-    fromX: number,
-    kind: 'bullet' | 'blade' = 'bullet',
-    damage: number = 1,
-  ): boolean {
-    const diff = this.difficulty as 'facil' | 'normal' | 'dificil'
+  private hurtPlayer(fromX: number, kind: 'bullet' | 'blade' = 'bullet', damage: number = 1): boolean {    const diff = this.difficulty as 'facil' | 'normal' | 'dificil'
     const finalDamage = Math.max(1, Math.round(damage * DELTAS.damage[diff]))
     const before = this.player.hp
     this.player.hit(fromX, finalDamage)
@@ -1052,53 +970,6 @@ class Game {
     }
   }
 
-  // Machado arremessado do urso: projétil mirado no jogador, no mesmo estilo
-  // do arremesso de lança do índio, mas com arco e rotação próprios.
-  private spawnAxe(enemy: Enemy): void {
-    const origin = enemy.shotOrigin
-    const targetX = this.player.x + this.player.w / 2
-    const targetY = this.player.y + this.player.h * 0.42
-    const dx = targetX - origin.x
-    const dy = targetY - origin.y
-    const length = Math.max(1, Math.hypot(dx, dy))
-    const speed = enemy.isEnraged ? 250 : 210
-    this.axes.push({
-      x: origin.x,
-      y: origin.y,
-      vx: (dx / length) * speed,
-      vy: (dy / length) * speed - 35,
-      life: 1.5,
-      boss: true,
-      kind: 'axe',
-      rotation: 0,
-    })
-    sfx.shot()
-    this.effects.addShake(1.4)
-    this.effects.burst(origin.x, origin.y, 'spark', 9, 50)
-  }
-
-  private updateAxes(dt: number): void {
-    for (let i = this.axes.length - 1; i >= 0; i -= 1) {
-      const axe = this.axes[i]
-      axe.life -= dt
-      axe.vy += 260 * dt
-      axe.x += axe.vx * dt
-      axe.y += axe.vy * dt
-      axe.rotation = (axe.rotation ?? 0) + dt * 15
-      const rect = { x: axe.x - 6, y: axe.y - 6, w: 12, h: 12 }
-      const hitWall = this.map.solidsIn(rect).length > 0
-      const hitPlayer = overlaps(this.player.hurtbox, rect) && this.player.invuln <= 0
-      if (axe.life <= 0 || hitWall || hitPlayer) {
-        if (hitPlayer) {
-          this.hurtPlayer(axe.x, 'blade', 2)
-          this.effects.addShake(2.6)
-        }
-        this.effects.burst(axe.x, axe.y, hitPlayer ? 'hit' : 'dust', 9, 44)
-        this.axes.splice(i, 1)
-      }
-    }
-  }
-
   private spawnSpear(): void {
     const player = this.player
     const dir = player.facing
@@ -1150,92 +1021,6 @@ class Game {
         this.damageEnemy(hitEnemy, hitEnemy.isBoss ? 1 : 2, spear.x, false, 'spear')
         this.spears.splice(i, 1)
       }
-    }
-  }
-
-  private spawnShockwaves(enemy: Enemy): void {
-    const cx = enemy.x + enemy.w / 2
-    const groundY = enemy.y + enemy.h
-    const speed = enemy.isEnraged ? 128 : 104
-
-    for (const dir of [-1, 1]) {
-      this.shockwaves.push({
-        x: cx + dir * 18,
-        y: groundY,
-        vx: dir * speed,
-        life: 1.15,
-        max: 1.15,
-        phase: Math.random() * Math.PI * 2,
-      })
-    }
-
-    this.effects.addShake(enemy.isEnraged ? 6 : 4.5)
-    this.effects.burst(cx, groundY, 'dust', 18, 64)
-    this.effects.burst(cx, groundY - 3, 'spark', 9, 42)
-    sfx.slam()
-  }
-
-  private updateShockwaves(dt: number): void {
-    const player = this.player
-    for (let i = this.shockwaves.length - 1; i >= 0; i -= 1) {
-      const wave = this.shockwaves[i]
-      wave.life -= dt
-      wave.x += wave.vx * dt
-
-      if (Math.random() < 0.5) {
-        this.effects.trail(wave.x, wave.y - 3, 'dust')
-      }
-
-      // A onda corre junto ao chão. A caixa fica acima dele para não bater
-      // no próprio tile de terreno.
-      const rect = { x: wave.x - 4, y: wave.y - 16, w: 8, h: 16 }
-      const hitWall = this.map.solidsIn(rect).length > 0
-
-      if (wave.life <= 0 || hitWall) {
-        if (hitWall) {
-          this.effects.burst(wave.x, wave.y - 4, 'dust', 8, 34)
-          this.effects.addShake(0.6)
-        }
-        this.shockwaves.splice(i, 1)
-        continue
-      }
-
-      if (player.invuln <= 0 && overlaps(player.hurtbox, rect)) {
-        if (this.hurtPlayer(wave.x, 'blade', 1)) {
-          this.effects.burst(wave.x, wave.y - 6, 'hit', 9, 46)
-          this.effects.addShake(2.4)
-        }
-      }
-    }
-  }
-
-  private paintShockwaves(time: number): void {
-    for (const wave of this.shockwaves) {
-      const x = Math.round(wave.x - this.camera.px)
-      const y = Math.round(wave.y - this.camera.py)
-      if (x < -24 || x > VIEW_W + 24) continue
-
-      const left = wave.life / wave.max
-      const alpha = Math.max(0, left)
-      const dir = Math.sign(wave.vx) || 1
-
-      const glow = ctx.createRadialGradient(x, y - 3, 1, x, y - 3, 18)
-      glow.addColorStop(0, `rgba(255, 209, 102, ${(0.3 * alpha).toFixed(3)})`)
-      glow.addColorStop(1, 'rgba(255, 139, 115, 0)')
-      ctx.fillStyle = glow
-      ctx.fillRect(x - 18, y - 21, 36, 24)
-
-      for (let i = 0; i < 4; i += 1) {
-        const lift = 2 + i * 3 + Math.sin(time * 18 + wave.phase + i) * 1.5
-        ctx.globalAlpha = alpha * (0.72 - i * 0.13)
-        ctx.fillStyle = i % 2 === 0 ? '#e0cfa8' : '#ffd166'
-        ctx.fillRect(x - dir * (2 + i * 2), Math.round(y - lift), 3, 2)
-      }
-
-      ctx.globalAlpha = alpha * 0.55
-      ctx.fillStyle = '#ff8b73'
-      ctx.fillRect(x - dir * 5, y - 1, 12, 1)
-      ctx.globalAlpha = 1
     }
   }
 
@@ -1293,7 +1078,6 @@ class Game {
     }
     this.player.respawn()
     this.shots = []
-    this.shockwaves = []
     this.animator.reset()
     this.camera.snapTo(this.player.hurtbox, this.map.width, this.map.height)
     this.syncHud(true)
@@ -1308,7 +1092,6 @@ class Game {
     this.player.throw = 0
     this.spears = []
     this.shots = []
-    this.shockwaves = []
     this.effects.clear()
     this.effects.text(Math.max(80, this.player.x + this.player.w / 2), Math.max(60, this.player.y - 12), message, '#ffd166')
     this.camera.snapTo(this.player.hurtbox, this.map.width, this.map.height)
@@ -1321,61 +1104,11 @@ class Game {
     this.player.hp = MAX_HP
     this.player.respawn()
     this.shots = []
-    this.shockwaves = []
     this.animator.reset()
     this.effects.clear()
     this.effects.text(Math.max(60, x), Math.max(40, y), message, '#ffd166')
     this.camera.snapTo(this.player.hurtbox, this.map.width, this.map.height)
     this.syncHud(true)
-  }
-
-  private updateBossBar(): void {
-    const boss = this.enemies.find((enemy) => enemy.isBoss)
-    if (!boss || !boss.alive) {
-      if (this.bossBarVisible) {
-        this.bossBarVisible = false
-        this.hud.hideBoss()
-      }
-      return
-    }
-
-    const near =
-      boss.x + boss.w > this.camera.px - 32 &&
-      boss.x < this.camera.px + VIEW_W + 32
-
-    if (near) {
-      if (!this.bossBarVisible) {
-        this.bossBarVisible = true
-        this.hud.showBoss(boss.label, boss.hp, boss.maxHp)
-        if (boss.isUrsa && !this.bossIntroShown) {
-          this.bossIntroShown = true
-          this.hud.showChapterCard(
-            'Guardião da trilha',
-            boss.label,
-            'O caminho só abre quando o machado cair.',
-          )
-          this.effects.addShake(3.2)
-          sfx.roar()
-        }
-      } else {
-        this.hud.renderBoss(boss.hp, boss.maxHp)
-      }
-
-      if (boss.isEnraged && !this.bossEnrageAnnounced) {
-        this.bossEnrageAnnounced = true
-        this.effects.addShake(4.4)
-        this.effects.text(
-          boss.x + boss.w / 2,
-          boss.y - 10,
-          'FÚRIA!',
-          '#ff6b5c',
-        )
-        sfx.roar()
-      }
-    } else if (this.bossBarVisible) {
-      this.bossBarVisible = false
-      this.hud.hideBoss()
-    }
   }
 
   private win(): void {
@@ -1409,123 +1142,38 @@ class Game {
   }
 
   private syncHud(force = false): void {
-    const total = this.memories.length
+    const total = 0
     const key = `${this.player.hp}:${this.collected}:${total}`
     if (!force && key === this.hudKey) return
     this.hudKey = key
-    this.hud.render(this.player.hp, this.collected, total)
-  }
-
-  private paintCheckpoint(checkpoint: Checkpoint, time: number): void {
-    const x = Math.round(checkpoint.x + TILE / 2 - this.camera.px)
-    const baseY = Math.round(checkpoint.baseY - this.camera.py)
-    if (x < -30 || x > VIEW_W + 30) return
-
-    const color = checkpoint.active ? '#ffd166' : '#7b8a7a'
-
-    ctx.fillStyle = 'rgba(0, 0, 0, 0.28)'
-    ctx.fillRect(x - 6, baseY - 2, 12, 2)
-
-    ctx.fillStyle = '#4a3220'
-    ctx.fillRect(x - 2, baseY - 22, 4, 22)
-    ctx.fillStyle = '#6b4a2d'
-    ctx.fillRect(x - 1, baseY - 21, 2, 20)
-
-    ctx.fillStyle = color
-    ctx.fillRect(x + 1, baseY - 21, 7, 5)
-    ctx.fillStyle = checkpoint.active ? '#fff0b8' : '#39443d'
-    ctx.fillRect(x + 2, baseY - 20, 5, 1)
-
-    if (checkpoint.active) {
-      const flicker = 0.7 + Math.sin(time * 5.2 + checkpoint.phase) * 0.2
-      const glow = ctx.createRadialGradient(x, baseY - 20, 1, x, baseY - 20, 24)
-      glow.addColorStop(0, `rgba(255, 209, 102, ${0.22 * flicker})`)
-      glow.addColorStop(1, 'rgba(255, 209, 102, 0)')
-      ctx.fillStyle = glow
-      ctx.fillRect(x - 26, baseY - 46, 52, 52)
-
-      ctx.globalAlpha = flicker
-      ctx.fillStyle = '#ffb84d'
-      ctx.fillRect(x - 1, baseY - 27, 2, 5)
-      ctx.fillStyle = '#fff0b8'
-      ctx.fillRect(x, baseY - 28, 1, 2)
-      ctx.globalAlpha = 1
-    }
-  }
-
-  private paintMemory(memory: Memory, time: number): void {
-    const cx = Math.round(memory.x + TILE / 2 - this.camera.px)
-    const cy = Math.round(memory.y + TILE / 2 - this.camera.py)
-    const bob = Math.sin(time * 2.4 + memory.phase) * 2
-    const y = cy + bob
-    const pulse = 0.55 + Math.sin(time * 2.1 + memory.phase) * 0.2
-
-    const glow = ctx.createRadialGradient(cx, y, 1, cx, y, 14)
-    glow.addColorStop(0, `rgba(255, 229, 150, ${0.28 * pulse + 0.1})`)
-    glow.addColorStop(1, 'rgba(255, 229, 150, 0)')
-    ctx.fillStyle = glow
-    ctx.fillRect(cx - 14, y - 14, 28, 28)
-
-    ctx.globalAlpha = 0.18
-    ctx.fillStyle = '#ffd166'
-    ctx.fillRect(cx - 3, y - 2, 7, 5)
-    ctx.globalAlpha = 1
-
-    ctx.fillStyle = '#ffd166'
-    ctx.beginPath()
-    ctx.moveTo(cx, y - 6)
-    ctx.lineTo(cx + 5, y)
-    ctx.lineTo(cx, y + 6)
-    ctx.lineTo(cx - 5, y)
-    ctx.closePath()
-    ctx.fill()
-
-    ctx.fillStyle = '#fff6d0'
-    ctx.fillRect(cx - 1, y - 2, 2, 2)
-    ctx.fillStyle = '#b97d24'
-    ctx.fillRect(cx - 3, y + 2, 6, 1)
-
-    for (let i = 0; i < 2; i += 1) {
-      const angle = time * 1.4 + memory.phase + i * Math.PI
-      const sx = cx + Math.cos(angle) * 8
-      const sy = y + Math.sin(angle) * 5
-      ctx.globalAlpha = 0.6
-      ctx.fillStyle = '#fff3c4'
-      ctx.fillRect(Math.round(sx), Math.round(sy), 1, 1)
-    }
-    ctx.globalAlpha = 1
+    this.hud.render(this.player.hp)
   }
 
   private paintEnemy(enemy: Enemy, time: number): void {
     const sprite = enemy.animator.frame
     const scale = enemy.visualScale
+    const walking = enemy.alive && Math.abs(enemy.vx) > 4
+    // Andar balança o corpo; parado, o colono só respira.
+    const bob = enemy.alive
+      ? walking
+        ? Math.round(Math.sin(time * 10 + enemy.x * 0.25))
+        : Math.round(Math.sin(time * 2.1 + enemy.x * 0.07) * 0.6)
+      : 0
+    // Quem avança inclina o corpo para a frente.
+    const lean = walking ? (enemy.vx > 0 ? 1 : -1) : 0
     const feetX = Math.round(enemy.x + enemy.w / 2 - this.camera.px)
-    const feetY = Math.round(enemy.y + enemy.h - this.camera.py)
-    const dying = !enemy.alive
-    const progress = dying ? Math.min(1, enemy.deathProgress) : 0
+    const shadowY = Math.round(enemy.y + enemy.h - this.camera.py)
+    const feetY = shadowY - bob
 
-    // A sombra encolhe junto com a queda do corpo.
-    const shadowWidth = enemy.isUrsa ? 42 : 14
-    ctx.globalAlpha = 0.32 * (1 - progress * 0.8)
-    ctx.fillStyle = '#000'
-    ctx.fillRect(feetX - shadowWidth / 2, feetY - 2, shadowWidth, 2)
-    ctx.globalAlpha = 1
+    ctx.fillStyle = 'rgba(0, 0, 0, 0.32)'
+    ctx.fillRect(feetX - 7, shadowY - 2, 14, 2)
 
     if (enemy.isBoss && enemy.alive) {
-      const radius = enemy.isUrsa ? 78 : 34
-      const strength = enemy.isEnraged ? 0.28 : 0.16
-      const aura = ctx.createRadialGradient(
-        feetX,
-        feetY - 18,
-        2,
-        feetX,
-        feetY - 18,
-        radius,
-      )
-      aura.addColorStop(0, `rgba(196, 71, 58, ${strength})`)
+      const aura = ctx.createRadialGradient(feetX, feetY - 18, 2, feetX, feetY - 18, 34)
+      aura.addColorStop(0, 'rgba(196, 71, 58, 0.16)')
       aura.addColorStop(1, 'rgba(196, 71, 58, 0)')
       ctx.fillStyle = aura
-      ctx.fillRect(feetX - radius - 2, feetY - radius - 36, radius * 2 + 4, radius + 42)
+      ctx.fillRect(feetX - 36, feetY - 54, 72, 58)
     }
 
     // Aura doentia ao redor dos zumbis vivos.
@@ -1538,42 +1186,30 @@ class Game {
       ctx.fillRect(feetX - 28, feetY - 44, 56, 48)
     }
 
-    // Aviso no chão: o jogador vê onde o machado vai cair e por onde a
-    // investida vai passar antes de qualquer dano.
-    if (enemy.alive && enemy.telegraph > 0) {
-      this.paintTelegraph(enemy, feetX, feetY, time)
-    }
-
     const flash = enemy.invuln > 0 && Math.floor(enemy.invuln * 28) % 2 === 0
     if (flash) ctx.globalAlpha = 0.55
 
     if (sprite) {
-      if (dying) {
+      if (!enemy.alive) {
         // Queda: solavanco no impacto, giro suave e pausa com o corpo no chão.
-        // O urso cai mais devagar e pisca em branco no primeiro impacto.
+        const progress = Math.min(1, enemy.deathProgress)
         const t = progress * progress * (3 - 2 * progress)
-        const w = Math.max(1, Math.round(sprite.w * scale))
-        const h = Math.max(1, Math.round(sprite.h * scale))
         ctx.save()
         ctx.translate(feetX, feetY)
-        // Pequeno recuo no início (corpo é empurrado para trás) e rotação.
         const kick = Math.sin(Math.min(1, progress * 3.2) * Math.PI) * 3
         ctx.translate(-enemy.facing * kick, 0)
-        ctx.rotate((enemy.facing > 0 ? 1 : -1) * (Math.PI / (enemy.isUrsa ? 2.25 : 2.05)) * t)
+        ctx.rotate((enemy.facing > 0 ? 1 : -1) * (Math.PI / 2.05) * t)
         ctx.imageSmoothingEnabled = false
-
         if (progress < 0.18) {
           ctx.globalAlpha = (1 - progress / 0.18) * 0.85
-          ctx.drawImage(sprite.white, Math.round(-sprite.ax * scale), Math.round(-sprite.ay * scale), w, h)
+          ctx.drawImage(sprite.white, Math.round(-sprite.ax * scale), Math.round(-sprite.ay * scale), Math.max(1, Math.round(sprite.w * scale)), Math.max(1, Math.round(sprite.h * scale)))
         }
-
-        // Fica deitado um instante antes de desvanecer.
         ctx.globalAlpha = progress < 0.72 ? 1 : Math.max(0, 1 - (progress - 0.72) / 0.28)
-        ctx.drawImage(sprite.img, Math.round(-sprite.ax * scale), Math.round(-sprite.ay * scale), w, h)
+        this.drawSprite(sprite, -sprite.ax * scale, -sprite.ay * scale, scale, 0)
         ctx.restore()
         ctx.globalAlpha = 1
-        // Puff de poeira no instante em que o corpo bate no chão.
-        if (!enemy.isUrsa && progress >= 0.42 && progress < 0.52 && !this.deathDust.has(enemy)) {
+        // Puff de poeira quando o corpo bate no chão.
+        if (progress >= 0.42 && progress < 0.52 && !this.deathDust.has(enemy)) {
           this.deathDust.add(enemy)
           this.effects.burst(feetX, feetY, 'dust', 8, 30)
         }
@@ -1581,10 +1217,10 @@ class Game {
         ctx.save()
         ctx.translate(feetX, 0)
         ctx.scale(-1, 1)
-        this.drawSprite(sprite, -sprite.ax * scale, feetY - sprite.ay * scale, scale, 0.2)
+        this.drawSprite(sprite, -sprite.ax * scale + lean, feetY - sprite.ay * scale, scale, 0.2)
         ctx.restore()
       } else {
-        const dx = feetX - sprite.ax * scale
+        const dx = feetX - sprite.ax * scale + lean
         const dy = feetY - sprite.ay * scale
         this.drawSprite(sprite, dx, dy, scale, 0.2)
       }
@@ -1594,78 +1230,43 @@ class Game {
 
     ctx.globalAlpha = 1
 
-    // Tontura da investida que bateu na parede.
-    if (enemy.isStunned && enemy.alive) {
-      const top = feetY - (enemy.isUrsa ? 78 : 36)
-      for (let i = 0; i < 3; i += 1) {
-        const angle = time * 4.2 + (i * Math.PI * 2) / 3
-        ctx.globalAlpha = 0.55 + Math.sin(angle) * 0.35
-        ctx.fillStyle = i % 2 === 0 ? '#ffd166' : '#fff6d0'
-        ctx.fillRect(
-          Math.round(feetX + Math.cos(angle) * 10),
-          Math.round(top + Math.sin(angle) * 3),
-          2,
-          2,
-        )
-      }
+    // Olho do zumbi: um brilho doente que acompanha a cabeça.
+    if (enemy.isZombie && enemy.alive && sprite) {
+      const headY = feetY - sprite.ay * scale + 6
+      const headX = feetX + enemy.facing * 3
+      const glow = ctx.createRadialGradient(headX, headY, 0.5, headX, headY, 6)
+      const pulse = 0.55 + Math.sin(time * 4.4 + enemy.x * 0.11) * 0.25
+      glow.addColorStop(0, `rgba(168, 224, 99, ${0.3 * pulse})`)
+      glow.addColorStop(1, 'rgba(168, 224, 99, 0)')
+      ctx.fillStyle = glow
+      ctx.fillRect(headX - 6, headY - 6, 12, 12)
+      ctx.globalAlpha = 0.7 + pulse * 0.3
+      ctx.fillStyle = '#d8f79a'
+      ctx.fillRect(headX + enemy.facing, headY - 1, 1, 1)
+      ctx.fillRect(headX + enemy.facing * 3, headY - 1, 1, 1)
       ctx.globalAlpha = 1
+    }
+
+    // Fagulha da arma no instante do disparo.
+    if (enemy.justShot) {
+      const origin = enemy.shotOrigin
+      const flashX = Math.round(origin.x - this.camera.px)
+      const flashY = Math.round(origin.y - this.camera.py)
+      const muzzle = ctx.createRadialGradient(flashX, flashY, 0.5, flashX, flashY, 12)
+      muzzle.addColorStop(0, 'rgba(255, 244, 198, 0.85)')
+      muzzle.addColorStop(0.4, 'rgba(255, 186, 84, 0.5)')
+      muzzle.addColorStop(1, 'rgba(255, 159, 67, 0)')
+      ctx.fillStyle = muzzle
+      ctx.fillRect(flashX - 12, flashY - 12, 24, 24)
     }
 
     if (enemy.isBoss && enemy.alive) {
       const pulse = 0.4 + Math.sin(time * 3) * 0.2
       ctx.globalAlpha = pulse
-      ctx.fillStyle = enemy.isEnraged ? '#ff6b5c' : '#ffd166'
-      ctx.fillRect(feetX - 1, feetY - (enemy.isUrsa ? 74 : 46), 2, 2)
+      ctx.fillStyle = '#ffd166'
+      ctx.fillRect(feetX - 1, feetY - 46, 2, 2)
       ctx.globalAlpha = 1
     }
-  }
-
-  private paintTelegraph(
-    enemy: Enemy,
-    feetX: number,
-    feetY: number,
-    time: number,
-  ): void {
-    const mode = enemy.attackMode
-    if (!mode) return
-    const strength = enemy.telegraph
-    const pulse = 0.5 + Math.sin(time * 24) * 0.5
-    const dir = enemy.facing
-
-    if (mode === 'slam') {
-      const width = enemy.isUrsa ? 64 : 54
-      const x = dir > 0 ? feetX : feetX - width
-      ctx.globalAlpha = 0.12 + strength * 0.28
-      ctx.fillStyle = '#ff6b5c'
-      ctx.fillRect(x - 4, feetY - 4, width + 8, 7)
-      ctx.globalAlpha = 0.22 + strength * 0.4 + pulse * 0.12
-      ctx.fillStyle = '#ffd166'
-      ctx.fillRect(x, feetY - 3, width, 2)
-      // Pequenas marcas no chão mostram o alcance exato.
-      for (let i = 0; i < 4; i += 1) {
-        ctx.fillRect(x + 6 + i * 12, feetY - 7, 2, 2)
-      }
-    } else if (mode === 'throw') {
-      // Aviso do arremesso: ponto luminoso no ombro que cresce até o lançamento.
-      const glow = ctx.createRadialGradient(feetX + dir * 8, feetY - 28, 1, feetX + dir * 8, feetY - 28, 12)
-      glow.addColorStop(0, `rgba(255, 209, 102, ${0.3 + strength * 0.5})`)
-      glow.addColorStop(1, 'rgba(255, 139, 115, 0)')
-      ctx.fillStyle = glow
-      ctx.fillRect(feetX + dir * 8 - 12, feetY - 40, 24, 24)
-    } else {
-      const length = enemy.isUrsa ? 200 : 184
-      const x = dir > 0 ? feetX : feetX - length
-      ctx.globalAlpha = 0.1 + strength * 0.2
-      ctx.fillStyle = '#ff8b73'
-      ctx.fillRect(x, feetY - 4, length, 8)
-      ctx.globalAlpha = 0.3 + strength * 0.4 + pulse * 0.15
-      ctx.fillStyle = '#ffd166'
-      for (let i = 0; i < 7; i += 1) {
-        const px = dir > 0 ? x + i * 26 : x + length - i * 26
-        ctx.fillRect(px, feetY - 2, 12, 2)
-      }
-    }
-    ctx.globalAlpha = 1
   }
 
   private paintShots(time: number): void {
@@ -1705,34 +1306,6 @@ class Game {
       ctx.fillRect(x - 2, y + 1, 1, 1)
       ctx.fillRect(x + 4, y + 1, 1, 1)
       ctx.globalAlpha = 1
-    }
-  }
-
-  // Machado girando: cabo marrom, lâmina cinza e brilho quente.
-  private paintAxes(time: number): void {
-    for (const axe of this.axes) {
-      const x = Math.round(axe.x - this.camera.px)
-      const y = Math.round(axe.y - this.camera.py)
-      if (x < -20 || x > VIEW_W + 20 || y < -20 || y > VIEW_H + 20) continue
-      const angle = axe.rotation ?? 0
-      ctx.save()
-      ctx.translate(x, y)
-      ctx.rotate(angle)
-      const glow = ctx.createRadialGradient(0, 0, 1, 0, 0, 12)
-      glow.addColorStop(0, 'rgba(255, 180, 120, 0.4)')
-      glow.addColorStop(1, 'rgba(255, 140, 90, 0)')
-      ctx.fillStyle = glow
-      ctx.fillRect(-12, -12, 24, 24)
-      ctx.fillStyle = '#7a4a26'
-      ctx.fillRect(-1, -9, 2, 12)
-      ctx.fillStyle = '#c9d1d6'
-      ctx.fillRect(-6, -10, 12, 5)
-      ctx.fillStyle = '#8f9aa3'
-      ctx.fillRect(-6, -5, 12, 2)
-      ctx.fillStyle = '#fff1d0'
-      ctx.fillRect(-4, -9, 3, 1)
-      ctx.restore()
-      void time
     }
   }
 
@@ -1785,8 +1358,18 @@ class Game {
 
     if (blink) ctx.globalAlpha = 0.5
 
+    // Espremer e esticar: Sand afunda ao aterrissar e se estica na subida.
+    const squash = this.landSquash > 0 ? this.landSquash / LAND_SQUASH_TIME : 0
+    const rising = !player.onGround && player.vy < -50
+    const scaleY = 1 + squash * 0.2 - (rising ? 0.07 : 0)
+    const scaleX = 1 - squash * 0.16 + (rising ? 0.05 : 0)
+
     if (sprite) {
       const dy = feetY - sprite.ay * SPRITE_SCALE
+      ctx.save()
+      ctx.translate(feetX, feetY)
+      ctx.scale(scaleX, scaleY)
+      ctx.translate(-feetX, -feetY)
       if (player.facing < 0) {
         ctx.save()
         ctx.translate(feetX, 0)
@@ -1794,13 +1377,9 @@ class Game {
         this.drawSprite(sprite, -sprite.ax * SPRITE_SCALE, dy, SPRITE_SCALE)
         ctx.restore()
       } else {
-        this.drawSprite(
-          sprite,
-          feetX - sprite.ax * SPRITE_SCALE,
-          dy,
-          SPRITE_SCALE,
-        )
+        this.drawSprite(sprite, feetX - sprite.ax * SPRITE_SCALE, dy, SPRITE_SCALE)
       }
+      ctx.restore()
     } else {
       this.paintFallbackPlayer(feetX, feetY)
     }
@@ -1954,6 +1533,7 @@ const screens = new Screens({
     sfx.unlock()
     sfx.click()
     game.setDifficulty(difficulty)
+    screens.setDifficultySelection(difficulty)
   },
   onRestart: () => {
     sfx.unlock()
@@ -1978,7 +1558,8 @@ screens.setChapters(
   })),
 )
 
-screens.setDifficultySelection(game.getDifficulty())
+// Reflete no menu a dificuldade salva da última partida.
+screens.setDifficultySelection(readDifficulty())
 
 game.onWin = (stats) => {
   screens.showEnd(stats)

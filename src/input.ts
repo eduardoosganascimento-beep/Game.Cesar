@@ -72,6 +72,10 @@ export class Input {
     return this.pressed('KeyL', 'KeyX')
   }
 
+  get parryPressed(): boolean {
+    return this.pressed('KeyF')
+  }
+
   get pausePressed(): boolean {
     return this.pressed('Escape')
   }

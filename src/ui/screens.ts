@@ -18,7 +18,6 @@ export type ChapterOption = {
 }
 
 import type { Difficulty } from '../difficulty'
-import { DIFFICULTY_LABELS } from '../difficulty'
 
 export type ScreenHandlers = {
   onChapter: (index: number) => void
@@ -30,7 +29,7 @@ export type ScreenHandlers = {
   onDifficulty: (difficulty: Difficulty) => void
 }
 
-type ScreenName = 'main' | 'chapters' | 'difficulty' | 'how' | 'credits'
+type ScreenName = 'main' | 'chapters' | 'how' | 'credits'
 type Visible = 'menu' | 'pause' | 'end' | 'none'
 
 export class Screens {
@@ -44,14 +43,14 @@ export class Screens {
   private readonly endNext = document.querySelector<HTMLButtonElement>('#end-next')
   private readonly chapterList = document.querySelector<HTMLElement>('#chapter-list')
   private readonly difficultyList = document.querySelector<HTMLElement>('#difficulty-list')
-  private readonly chaptersDifficulty = document.querySelector<HTMLElement>('#chapters-difficulty')
+  private readonly chapterDetail = document.querySelector<HTMLElement>('#chapter-detail')
 
+  private chapters: ChapterOption[] = []
   private buttons: HTMLButtonElement[] = []
   private readonly bound = new WeakSet<HTMLButtonElement>()
   private visible: Visible = 'menu'
   private screen: ScreenName = 'main'
   private selected = 0
-  private difficulty: Difficulty = 'normal'
 
   constructor(private readonly handlers: ScreenHandlers) {
     this.bindButtons()
@@ -62,6 +61,7 @@ export class Screens {
   setChapters(chapters: ChapterOption[]): void {
     const list = this.chapterList
     if (!list) return
+    this.chapters = chapters
     list.textContent = ''
 
     chapters.forEach((chapter, index) => {
@@ -95,6 +95,12 @@ export class Screens {
     if (this.visible === 'menu' && this.screen === 'chapters') this.select(0)
   }
 
+  setDifficultySelection(difficulty: Difficulty): void {
+    this.difficultyList
+      ?.querySelectorAll<HTMLButtonElement>('.difficulty-item')
+      .forEach((item) => item.classList.toggle('is-selected', item.dataset.difficulty === difficulty))
+  }
+
   showMenu(): void {
     this.visible = 'menu'
     this.menu?.classList.remove('is-hidden')
@@ -109,15 +115,6 @@ export class Screens {
     this.pause?.classList.add('is-hidden')
     this.end?.classList.add('is-hidden')
     this.setScreen('chapters')
-    this.setDifficultySelection(this.difficulty)
-  }
-
-  showDifficulty(): void {
-    this.visible = 'menu'
-    this.menu?.classList.remove('is-hidden')
-    this.pause?.classList.add('is-hidden')
-    this.end?.classList.add('is-hidden')
-    this.setScreen('difficulty')
   }
 
   showPause(): void {
@@ -163,12 +160,6 @@ export class Screens {
 
   back(): boolean {
     if (this.visible !== 'menu' || this.screen === 'main') return false
-    if (this.screen === 'chapters') {
-      // A dificuldade vem antes da trilha: trocar de capítulo pela mesma
-      // dificuldade é um clique, mas voltar é para o menu de dificuldade.
-      this.setScreen('difficulty')
-      return true
-    }
     this.setScreen('main')
     return true
   }
@@ -209,17 +200,8 @@ export class Screens {
     this.select(0)
   }
 
-  setDifficultySelection(difficulty: Difficulty): void {
-    this.difficulty = difficulty
-    if (this.chaptersDifficulty) {
-      this.chaptersDifficulty.textContent = DIFFICULTY_LABELS[difficulty]
-    }
-    this.difficultyList
-      ?.querySelectorAll<HTMLButtonElement>('.difficulty-item')
-      .forEach((item) => item.classList.toggle('is-selected', item.dataset.difficulty === difficulty))
-  }
-
-  private activeButtons(): HTMLButtonElement[] {    if (this.visible === 'pause') {
+  private activeButtons(): HTMLButtonElement[] {
+    if (this.visible === 'pause') {
       return Array.from(this.pause?.querySelectorAll<HTMLButtonElement>('.menu-item') ?? [])
     }
     if (this.visible === 'end') {
@@ -244,7 +226,25 @@ export class Screens {
     if (!active.length) return
     const normalized = ((index % active.length) + active.length) % active.length
     this.selected = normalized
-    active[normalized]?.classList.add('is-selected')
+    const button = active[normalized]
+    button?.classList.add('is-selected')
+    // Mantém o item escolhido visível quando a lista é maior que a tela.
+    button?.scrollIntoView({ block: 'nearest' })
+    this.updateChapterDetail(button)
+  }
+
+  // A linha de detalhes mostra a história do capítulo em foco.
+  private updateChapterDetail(button?: HTMLButtonElement): void {
+    if (!this.chapterDetail) return
+    const index = button?.dataset.chapter
+    if (index === undefined) {
+      this.chapterDetail.textContent = ''
+      return
+    }
+    const chapter = this.chapters[Number(index)]
+    this.chapterDetail.textContent = chapter
+      ? `${chapter.tag} · ${chapter.shortTitle} — ${chapter.subtitle}`
+      : ''
   }
 
   private clearSelection(): void {
@@ -257,10 +257,7 @@ export class Screens {
 
     switch (action) {
       case 'chapters':
-        this.showDifficulty()
-        break
-      case 'difficulty-screen':
-        this.showDifficulty()
+        this.showChapters()
         break
       case 'chapter': {
         const index = Number(button.dataset.chapter ?? 0)
@@ -283,13 +280,16 @@ export class Screens {
         const difficulty = button.dataset.difficulty
         if (difficulty === 'facil' || difficulty === 'normal' || difficulty === 'dificil') {
           this.handlers.onDifficulty(difficulty)
-          this.setDifficultySelection(difficulty)
-          this.showChapters()
+          this.difficultyList
+            ?.querySelectorAll<HTMLButtonElement>('.difficulty-item')
+            .forEach((item) =>
+              item.classList.toggle('is-selected', item.dataset.difficulty === difficulty),
+            )
         }
         break
       }
       case 'back':
-        this.back()
+        this.setScreen('main')
         break
       case 'resume':
         this.handlers.onResume()
@@ -320,7 +320,6 @@ export class Screens {
       this.visible === 'menu' &&
       this.screen !== 'main' &&
       this.screen !== 'chapters' &&
-      this.screen !== 'difficulty' &&
       (isMoveUp || isMoveDown)
     ) {
       event.preventDefault()

@@ -357,36 +357,22 @@ body {
   text-shadow: 0 1px 0 #000;
 }
 
-.boss-track {
-  position: relative;
-  width: clamp(70px, 11vw, 120px);
-  height: 9px;
-  border: 1px solid rgba(255, 196, 150, 0.35);
-  border-radius: 999px;
-  background: rgba(8, 5, 4, 0.72);
-  overflow: hidden;
-  box-shadow: inset 0 2px 6px rgba(0, 0, 0, 0.7);
+.boss-pips {
+  display: flex;
+  gap: 3px;
 }
 
-.boss-fill {
-  height: 100%;
-  border-radius: 999px;
+.boss-pip {
+  width: clamp(6px, 0.8vw, 9px);
+  height: clamp(7px, 1vw, 11px);
+  clip-path: polygon(50% 0%, 100% 24%, 82% 100%, 18% 100%, 0% 24%);
   background: linear-gradient(180deg, #ff8b73, #a83228);
-  box-shadow: 0 0 10px rgba(255, 107, 92, 0.45);
-  transition: width 0.25s ease;
+  box-shadow: 0 0 7px rgba(255, 107, 92, 0.32);
 }
 
-.boss-hp {
-  font-family: "Courier New", monospace;
-  font-size: clamp(8px, 0.85vw, 10px);
-  font-weight: 700;
-  letter-spacing: 0.08em;
-  color: #f0cbbd;
-  text-shadow: 0 1px 0 #000;
-}
-
-.boss.is-enraged .boss-fill {
-  background: linear-gradient(180deg, #ffc46b, #d9534f);
+.boss-pip.empty {
+  background: #2b2521;
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.06);
 }
 
 .boss.is-enraged {
@@ -698,135 +684,48 @@ body {
 
 .chapter-list {
   display: grid;
-  gap: 5px;
-  width: min(560px, 100%);
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 6px;
+  width: min(720px, 100%);
   text-align: left;
 }
 
-.chapter-meta {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  margin-top: 14px;
+/* Em três colunas o subtítulo fica fora do cartão (aparece na linha de
+   detalhes logo abaixo da grade). */
+.chapter-copy small {
+  display: none;
 }
 
-.chapter-meta-label {
-  font-size: 8px;
-  font-weight: 700;
-  letter-spacing: 0.26em;
-  text-transform: uppercase;
-  color: rgba(220, 213, 193, 0.45);
+.chapter-list .chapter-tag {
+  display: none;
 }
 
-.difficulty-chip {
-  padding: 6px 14px;
-  border: 1px solid rgba(232, 163, 61, 0.6);
-  border-radius: 999px;
-  background: rgba(51, 36, 16, 0.5);
-  color: #ffd166;
-  font: inherit;
-  font-size: 8px;
-  font-weight: 700;
-  letter-spacing: 0.2em;
-  text-transform: uppercase;
-  cursor: pointer;
-  transition: background 0.15s ease, color 0.15s ease, box-shadow 0.15s ease;
+[data-screen="chapters"] .menu-title {
+  font-size: clamp(24px, 3.4vw, 36px);
 }
 
-.difficulty-chip:hover,
-.difficulty-chip.is-selected {
-  background: var(--accent);
-  color: #17130b;
-  box-shadow: 0 0 18px rgba(232, 163, 61, 0.28);
+[data-screen="chapters"] .menu-lead {
+  margin-bottom: clamp(8px, 1.4vw, 14px);
 }
 
-.difficulty-list {
-  display: grid;
-  gap: 8px;
-  width: min(520px, 100%);
-  margin-top: 14px;
+.chapter-detail {
+  max-width: 62ch;
+  min-height: 1.6em;
+  margin: 8px 0 0;
+  font-size: clamp(9px, 1.1vw, 11px);
+  line-height: 1.5;
+  color: #93a08f;
+  text-align: center;
 }
-
-.difficulty-item {
-  display: grid;
-  grid-template-columns: 34px 1fr auto;
-  align-items: center;
-  gap: 12px;
-  padding: 10px 14px;
-  border: 1px solid rgba(232, 203, 150, 0.13);
-  border-radius: 8px;
-  background: linear-gradient(90deg, rgba(21, 33, 27, 0.82), rgba(9, 15, 12, 0.64));
-  color: #ddd3be;
-  font: inherit;
-  text-align: left;
-  cursor: pointer;
-  transition:
-    transform 0.16s ease,
-    border-color 0.16s ease,
-    background 0.16s ease,
-    box-shadow 0.16s ease;
-}
-
-.difficulty-item:hover,
-.difficulty-item.is-selected {
-  border-color: rgba(232, 163, 61, 0.58);
-  background: linear-gradient(90deg, rgba(77, 55, 28, 0.64), rgba(16, 26, 21, 0.76));
-  color: #fff4dc;
-  transform: translateX(3px);
-  box-shadow: 0 0 26px rgba(232, 163, 61, 0.12);
-}
-
-.difficulty-glyph {
-  font-size: 14px;
-  line-height: 1;
-}
-
-.difficulty-copy {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-}
-
-.difficulty-copy b {
-  font-family: var(--serif);
-  font-size: clamp(13px, 1.6vw, 16px);
-  font-weight: 500;
-  letter-spacing: 0.08em;
-  color: #f1e3c5;
-}
-
-.difficulty-copy small {
-  font-size: 8px;
-  letter-spacing: 0.03em;
-  color: #8f9b8c;
-}
-
-.difficulty-mods {
-  font-size: 7px;
-  font-weight: 700;
-  letter-spacing: 0.18em;
-  text-transform: uppercase;
-  color: #7f8b7e;
-}
-
-.difficulty-item.is-selected .difficulty-mods {
-  color: #c9a36a;
-}
-
-.difficulty-item:focus-visible {
-  outline: 1px solid rgba(255, 209, 102, 0.7);
-  outline-offset: 2px;
-}
-
 
 .chapter-item {
   position: relative;
   display: grid;
-  grid-template-columns: 38px 1fr auto;
+  grid-template-columns: 30px 1fr auto;
   align-items: center;
-  gap: 13px;
+  gap: 10px;
   width: 100%;
-  padding: 7px 13px;
+  padding: 7px 11px;
   border: 1px solid rgba(232, 203, 150, 0.13);
   border-radius: 8px;
   background:
@@ -881,7 +780,7 @@ body {
 .chapter-number {
   display: grid;
   place-items: center;
-  width: 31px;
+  width: 27px;
   aspect-ratio: 1;
   border: 1px solid rgba(232, 203, 150, 0.18);
   border-radius: 50%;
@@ -906,11 +805,14 @@ body {
 }
 
 .chapter-copy b {
+  overflow: hidden;
   font-family: var(--serif);
-  font-size: clamp(14px, 1.8vw, 19px);
+  font-size: clamp(13px, 1.55vw, 17px);
   font-weight: 500;
-  letter-spacing: 0.09em;
+  letter-spacing: 0.07em;
   color: #f1e3c5;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .chapter-copy small {
@@ -937,6 +839,76 @@ body {
 .chapter-item.is-selected .chapter-tag {
   border-color: rgba(232, 163, 61, 0.4);
   color: #ffd166;
+}
+
+/* ---------- dificuldade ---------- */
+
+.difficulty-panel {
+  display: grid;
+  gap: 6px;
+  width: min(720px, 100%);
+  margin: 10px 0 12px;
+  text-align: left;
+}
+
+.difficulty-label {
+  font-size: 7px;
+  font-weight: 700;
+  letter-spacing: 0.28em;
+  text-transform: uppercase;
+  color: rgba(220, 213, 193, 0.42);
+}
+
+.difficulty-list {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 5px;
+}
+
+.difficulty-item {
+  display: grid;
+  gap: 1px;
+  padding: 6px 9px;
+  border: 1px solid rgba(232, 203, 150, 0.13);
+  border-radius: 7px;
+  background: rgba(8, 14, 11, 0.56);
+  color: #bdb29c;
+  font: inherit;
+  font-size: clamp(9px, 1.1vw, 11px);
+  text-align: left;
+  cursor: pointer;
+  transition:
+    border-color 0.16s ease,
+    background 0.16s ease,
+    color 0.16s ease;
+}
+
+.difficulty-item b {
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  color: #e4d6b8;
+}
+
+.difficulty-item small {
+  font-size: 7px;
+  letter-spacing: 0.13em;
+  text-transform: uppercase;
+  color: rgba(220, 213, 193, 0.36);
+}
+
+.difficulty-item:hover,
+.difficulty-item.is-selected {
+  border-color: rgba(232, 163, 61, 0.55);
+  background: rgba(77, 55, 28, 0.46);
+  color: #ffd166;
+}
+
+.difficulty-item.is-selected b {
+  color: #ffd166;
+}
+
+.difficulty-item.is-selected small {
+  color: rgba(255, 218, 150, 0.6);
 }
 
 .menu-item {
@@ -1046,6 +1018,13 @@ body {
   letter-spacing: 0.24em;
   text-transform: uppercase;
   color: rgba(220, 213, 193, 0.3);
+  transition: opacity 0.3s ease, visibility 0.3s ease;
+}
+
+/* O rodapé é parte do menu: some assim que a floresta começa. */
+.menu-overlay.is-hidden ~ .menu-footer {
+  visibility: hidden;
+  opacity: 0;
 }
 
 .menu-title {
@@ -1113,6 +1092,14 @@ kbd {
   font-size: clamp(9px, 1.1vw, 11px);
   line-height: 1.55;
   color: #8a9689;
+}
+
+.menu-footnote-warn {
+  padding: 8px 11px;
+  border-left: 2px solid rgba(132, 186, 74, 0.55);
+  border-radius: 0 6px 6px 0;
+  background: rgba(132, 186, 74, 0.07);
+  color: #a8b79a;
 }
 
 .menu-back {
@@ -1262,6 +1249,20 @@ kbd {
 
   .key-row {
     grid-template-columns: 150px 1fr;
+  }
+}
+
+@media (max-width: 720px) {
+  .chapter-list {
+    grid-template-columns: 1fr;
+  }
+
+  .chapter-copy small {
+    display: block;
+  }
+
+  .chapter-list .chapter-tag {
+    display: inline-block;
   }
 }
 

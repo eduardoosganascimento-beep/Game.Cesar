@@ -4,15 +4,7 @@
 // Cada linha da nova folha usa apenas os quadros coerentes de um mesmo movimento,
 // então o personagem nunca troca de lado no meio do ciclo.
 
-import {
-  type Sprite,
-  getFrame,
-  getColonistFrame,
-  getIndioFrame,
-  getWolfFrame,
-  getZombieFrame,
-  getUrsaFrame,
-} from './sprites'
+import { type Sprite, getFrame, getColonistFrame, getIndioFrame, getWolfFrame, getZombieFrame } from './sprites'
 
 export type Clip = {
   frames: readonly string[]
@@ -87,9 +79,10 @@ export const INDIO_CLIPS: Record<EnemyClipName, Clip> = {
   // O importante é que o height dos quadros de "run" seja idêntico ao do índio,
   // para evitar tiling/visualmente errado.
   walk: { frames: ['run-1', 'run-2', 'run-3', 'run-4', 'run-5', 'run-6', 'run-7'], fps: 12, loop: true },
-  // Ataque à distância (lança): usa os mesmos quatro quadros de arremesso
-  // de Sand (throw-5/throw-6 não existem na folha atual e quebravam o clipe).
-  shoot: { frames: ['throw-1', 'throw-2', 'throw-3', 'throw-4'], fps: 12, loop: false },
+  // Ataque à distância (lança): usa frames de "throw" da folha, adaptados.
+  // A seqüência throw-1..throw-5+throw-6 foi ajustada para que o quadro de
+  // soltura da lança esteja no lugar correto (mesma lógica do jogador).
+  shoot: { frames: ['throw-1', 'throw-2', 'throw-3', 'throw-5', 'throw-6'], fps: 12, loop: false },
   // Golpe corpo a corpo (machado/lâmina): usa a seqüência melee-1..5.
   slash: { frames: ['melee-1', 'melee-2', 'melee-3', 'melee-4', 'melee-5'], fps: 18, loop: false },
   // Hurt: 3 quadros, fps 10.
@@ -138,32 +131,6 @@ export const ZOMBIE_CLIPS: Record<EnemyClipName, Clip> = {
   // Morte: usa as poses inclinadas do ataque (zumbi perdendo o equilíbrio),
   // combinadas com a queda procedural. Os frames de bite eram todos em pé.
   death: { frames: ['attack-4', 'attack-5', 'attack-6', 'attack-7', 'attack-8'], fps: 9, loop: false },
-}
-
-// ============================================================
-// ANIMATION CLIPS DO URSO (boss do Capítulo 1)
-// ============================================================
-// Quadros recortados da folha original em raw/ursa-sheet.avif pelo script
-// scripts/build-ursa-sprites.mjs. O ataque tem 7 quadros a 10 fps; o impacto
-// do machado no chão acontece no quinto quadro (0,4 s).
-export type UrsaClipName = 'idle' | 'walk' | 'attack' | 'hurt' | 'death'
-
-export const URSA_CLIPS: Record<UrsaClipName, Clip> = {
-  idle: { frames: ['idle-1', 'idle-2'], fps: 2.4, loop: true },
-  walk: {
-    frames: ['walk-1', 'walk-2', 'walk-3', 'walk-4', 'walk-5', 'walk-6'],
-    fps: 10,
-    loop: true,
-  },
-  attack: {
-    frames: ['attack-1', 'attack-2', 'attack-3', 'attack-4', 'attack-5', 'attack-6', 'attack-7'],
-    fps: 10,
-    loop: false,
-  },
-  hurt: { frames: ['hurt-1', 'hurt-2', 'hurt-3'], fps: 12, loop: false },
-  // A folha tem quatro poses finais: queda do urso, sem precisar de efeito
-  // procedural além do desvanecimento feito em main.ts.
-  death: { frames: ['death-1', 'death-2', 'death-3', 'death-4'], fps: 7, loop: false },
 }
 
 // ============================================================
@@ -286,13 +253,5 @@ export class WolfAnimator extends SpriteClipAnimator {
 export class ZombieAnimator extends SpriteClipAnimator {
   constructor() {
     super(ZOMBIE_CLIPS, getZombieFrame, 'idle', 'idle-1')
-  }
-}
-
-// Urso de guerra: o boss do primeiro capítulo. O corpo é grande e pesado,
-// então os clipes mantêm o ritmo lento mesmo durante a investida.
-export class UrsaAnimator extends SpriteClipAnimator {
-  constructor() {
-    super(URSA_CLIPS, getUrsaFrame, 'idle', 'idle-1')
   }
 }

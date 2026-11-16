@@ -25,12 +25,6 @@
 
             <span class="hud-divider" aria-hidden="true"></span>
 
-            <div class="hud-group">
-              <span class="memory-icon" aria-hidden="true"></span>
-              <span class="memory-count"><b id="memories">0</b><span id="memory-total">/ 0</span></span>
-              <span class="hud-caption">memórias</span>
-            </div>
-
             <span class="hud-spacer"></span>
 
             <span id="chapter" class="chapter">Capítulo 1</span>
@@ -39,14 +33,6 @@
             </button>
           </div>
 
-          <div id="boss" class="boss is-hidden" aria-live="polite">
-            <span class="boss-crest" aria-hidden="true">✦</span>
-            <span id="boss-label" class="boss-label">Capitão</span>
-            <div id="boss-track" class="boss-track" role="progressbar" aria-label="Vida do chefe">
-              <div id="boss-fill" class="boss-fill"></div>
-            </div>
-            <span id="boss-hp" class="boss-hp"><b>0</b>/<b>0</b></span>
-          </div>
         </div>
 
         <div id="chapter-card" class="chapter-card is-hidden" aria-live="polite">
@@ -99,67 +85,25 @@
             <p class="eyebrow">Nove travessias</p>
             <h2 class="menu-title">Escolha o capítulo</h2>
             <p class="menu-lead">
-              A história pode ser jogada em sequência ou revisitada. Cada capítulo guarda memórias
-              próprias e um pedaço da família de Sandman.
+              Nove travessias, nove pedaços da família de Sandman. Jogue em sequência ou revisite
+              quando quiser.
             </p>
-            <div class="chapter-meta">
-              <span class="chapter-meta-label">Dificuldade</span>
-              <button class="difficulty-chip" type="button" data-action="difficulty-screen">
-                <span id="chapters-difficulty">Normal</span>
-              </button>
-            </div>
             <nav id="chapter-list" class="chapter-list" aria-label="Capítulos"></nav>
-            <button class="menu-back" type="button" data-action="back">Voltar</button>
-          </div>
-
-          <div class="menu-screen is-hidden" data-screen="difficulty">
-            <p class="eyebrow">Antes da floresta</p>
-            <h2 class="menu-title">Escolha a dificuldade</h2>
-            <p class="menu-lead">
-              Cada partida escala a floresta inteira: perseguidores, velocidade e o peso das suas
-              perdas. A escolha vale para a trilha que você for jogar.
-            </p>
-            <nav id="difficulty-list" class="difficulty-list" aria-label="Dificuldades">
-              <button
-                class="difficulty-item is-selected"
-                type="button"
-                data-action="difficulty"
-                data-difficulty="facil"
-              >
-                <span class="difficulty-glyph" aria-hidden="true">🍂</span>
-                <span class="difficulty-copy">
-                  <b>Fácil</b>
-                  <small>Trilha gentil — inimigos deixam respirar</small>
-                </span>
-                <span class="difficulty-mods">0,8× velocidade</span>
-              </button>
-              <button
-                class="difficulty-item"
-                type="button"
-                data-action="difficulty"
-                data-difficulty="normal"
-              >
-                <span class="difficulty-glyph" aria-hidden="true">🌲</span>
-                <span class="difficulty-copy">
-                  <b>Normal</b>
-                  <small>A trilha clássica do Sandman</small>
-                </span>
-                <span class="difficulty-mods">padrão</span>
-              </button>
-              <button
-                class="difficulty-item"
-                type="button"
-                data-action="difficulty"
-                data-difficulty="dificil"
-              >
-                <span class="difficulty-glyph" aria-hidden="true">🌋</span>
-                <span class="difficulty-copy">
-                  <b>Difícil</b>
-                  <small>Caminho de pedra — cada escolha pesa</small>
-                </span>
-                <span class="difficulty-mods">1,25× velocidade</span>
-              </button>
-            </nav>
+            <p id="chapter-detail" class="chapter-detail" aria-live="polite"></p>
+            <div class="difficulty-panel">
+              <span class="difficulty-label">Dificuldade</span>
+              <div id="difficulty-list" class="difficulty-list" role="group" aria-label="Dificuldade">
+                <button class="difficulty-item" type="button" data-action="difficulty" data-difficulty="facil">
+                  <b>Fácil</b><small>para respirar</small>
+                </button>
+                <button class="difficulty-item is-selected" type="button" data-action="difficulty" data-difficulty="normal">
+                  <b>Normal</b><small>a lenda</small>
+                </button>
+                <button class="difficulty-item" type="button" data-action="difficulty" data-difficulty="dificil">
+                  <b>Difícil</b><small>sem perdão</small>
+                </button>
+              </div>
+            </div>
             <button class="menu-back" type="button" data-action="back">Voltar</button>
           </div>
 
@@ -205,6 +149,10 @@
               capitães avançam de espada. A água é funda e as estacas ferem: use os marcos de
               fogueira como renascimento.
             </p>
+            <p class="menu-footnote menu-footnote-warn">
+              Os zumbis não precisam de lanca: a mordida acaba com Sand na hora. Eles vagam pela
+              trilha sozinhos e transformam qualquer colono armado que encontra em mais um zumbi.
+            </p>
             <button class="menu-back" type="button" data-action="back">Voltar</button>
           </div>
 
@@ -226,8 +174,9 @@
         </div>
 
         <div class="menu-footer">
-          <span>Sandman</span>
-          <span>v1.4 · nove capítulos, boss Urso e tutorial</span>
+            <span>Sandman</span>
+            <span>v1.3 · nove capítulos, zumbis e tutorial</span>
+          </div>
         </div>
 
         <div id="pause" class="overlay pause is-hidden">

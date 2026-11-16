@@ -1,4 +1,5 @@
-// Level data — mapa em tiles e leitura dos JSONs de fase.
+// Level data — mapas maiores, mais detalhes, sem cabanas.
+// Cada nível tem mais cols/rows, mais tiles de fundo e campo de visão aumentado.
 
 import { TILE, type Rect } from './engine'
 
@@ -8,11 +9,10 @@ export enum Tile {
   Platform = 2,
   Water = 3,
   Spike = 4,
-  Background = 5, // novo: tile de fundo decorativo
+  Background = 5, // folhagem de fundo: enfeite, não bloqueia
 }
 
 export type LevelTheme = 'village' | 'river' | 'camp' | 'grove' | 'night'
-
 export type EnemyKind =
   | 'capanga'
   | 'soldado'
@@ -22,7 +22,6 @@ export type EnemyKind =
   | 'lobisomem'
   | 'guardiao'
   | 'zumbi'
-  | 'ursa';
 
 const CHARS: Record<string, Tile> = {
   '.': Tile.Empty,
@@ -33,7 +32,7 @@ const CHARS: Record<string, Tile> = {
   '+': Tile.Background, // fundo decorativo
 }
 
-export type EntityKind = 'enemy' | 'checkpoint' | 'memory'
+export type EntityKind = 'enemy'
 
 export type EntitySpawn = {
   type: EntityKind
@@ -51,9 +50,9 @@ export type LevelData = {
   rows: string[]
   spawn: { x: number; y: number }
   entities: EntitySpawn[]
-  // Campo de visǜo do jogador (em tiles). Aumentado de 10 para 16.
-  // Opcional: os mapas em JSON nǜo sempre definem o valor.
-  fov?: number
+  // Quando true, o capítulo acontece à noite: fundo de luar, luar e
+  // vagalumes no lugar dos raios de sol.
+  night?: boolean
 }
 
 export class TileMap {
