@@ -543,12 +543,6 @@ class Game {
       return
     }
 
-    if (player.hp <= 0) {
-      this.beginDeath('Sand caiu — a floresta o chama de volta.')
-      this.input.endFrame()
-      return
-    }
-
     const locked = this.goalLocked
     if (locked && player.x + player.w >= this.goalX) {
       player.x = this.goalX - player.w
@@ -899,7 +893,12 @@ class Game {
     }
   }
 
-  private hurtPlayer(fromX: number, kind: 'bullet' | 'blade' = 'bullet', damage: number = 1): boolean {    const diff = this.difficulty as 'facil' | 'normal' | 'dificil'
+  private hurtPlayer(
+    fromX: number,
+    kind: 'bullet' | 'blade' = 'bullet',
+    damage: number = 1,
+  ): boolean {
+    const diff = this.difficulty as 'facil' | 'normal' | 'dificil'
     const finalDamage = Math.max(1, Math.round(damage * DELTAS.damage[diff]))
     const before = this.player.hp
     this.player.hit(fromX, finalDamage)

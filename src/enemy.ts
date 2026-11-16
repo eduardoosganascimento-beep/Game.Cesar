@@ -461,10 +461,12 @@ export class Enemy {
       const maxRange = this.stats.rangedRange ?? this.stats.chase + 10
       // Aguaceiro: atira quando o alvo está a uma distância útil — longe o
       // suficiente para dar abertura, perto o suficiente para o disparo pegar.
-      return range > 24 && range < maxRange
+      if (range > 24 && range < maxRange) return true
     }
     if (this.stats.melee) {
       const meleeRange = this.isBoss ? 42 : this.kind === 'feitor' ? 30 : 34
+      // Soldados e capitães também golpeiam de perto; antes o return do
+      // bloco ranged impedia qualquer ataque corpo a corpo.
       return range > 0 && range < meleeRange
     }
     return false
@@ -551,7 +553,10 @@ export class Enemy {
       }
     }
 
-    // Gravidade e movimento vertical
+    // Gravidade e movimento vertical. onGround é recalculado a cada quadro:
+    // sem isso o inimigo continuava "no chão" depois de sair de uma
+    // plataforma e a checagem de borda disparava no ar.
+    this.onGround = false
     this.vy = Math.min(this.vy + GRAVITY * dt, MAX_FALL)
     this.y += this.vy * dt
 

@@ -77,10 +77,9 @@ export const INDIO_CLIPS: Record<EnemyClipName, Clip> = {
   // O importante é que o height dos quadros de "run" seja idêntico ao do índio,
   // para evitar tiling/visualmente errado.
   walk: { frames: ['run-1', 'run-2', 'run-3', 'run-4', 'run-5', 'run-6', 'run-7'], fps: 12, loop: true },
-  // Ataque à distância (lança): usa frames de "throw" da folha, adaptados.
-  // A seqüência throw-1..throw-5+throw-6 foi ajustada para que o quadro de
-  // soltura da lança esteja no lugar correto (mesma lógica do jogador).
-  shoot: { frames: ['throw-1', 'throw-2', 'throw-3', 'throw-5', 'throw-6'], fps: 12, loop: false },
+  // Ataque à distância (lança): usa os mesmos quatro quadros de arremesso
+  // de Sand (throw-5/throw-6 não existem na folha atual e quebravam o clipe).
+  shoot: { frames: ['throw-1', 'throw-2', 'throw-3', 'throw-4'], fps: 12, loop: false },
   // Golpe corpo a corpo (machado/lâmina): usa a seqüência melee-1..5.
   slash: { frames: ['melee-1', 'melee-2', 'melee-3', 'melee-4', 'melee-5'], fps: 18, loop: false },
   // Hurt: 3 quadros, fps 10.

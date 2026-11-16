@@ -1,13 +1,13 @@
-# Sandman
+# Sandman — A Lenda da Floresta
 
-Jogo indie 2D em pixel art, feito para rodar no navegador com **TypeScript + Canvas 2D + CSS**.
+Jogo indie 2D em pixel art feito para rodar no navegador com **TypeScript + Canvas 2D + CSS**.
 
 > A aldeia caiu. A família de Sandman foi levada por colonos portugueses.
 > Anos de preparo depois, ele volta para resgatar quem ama — e acertar as contas.
 
-**Versão atual:** `1.1` — quatro capítulos jogáveis em mapa aberto, com checkpoints, e um tutorial jogável.
+**Versão atual:** `1.3` — nove capítulos, tutorial jogável, zumbis e três níveis de dificuldade.
 
-## 🎮 Jogar agora no navegador
+## 🎮 Jogar agora
 
 **[https://eduardoosganascimento-beep.github.io/Game.Cesar/](https://eduardoosganascimento-beep.github.io/Game.Cesar/)**
 
@@ -15,40 +15,41 @@ O site é publicado pelo **GitHub Pages** a partir do workflow `.github/workflow
 todo `push` na branch `main` roda o build e atualiza o site. Funciona em qualquer
 computador com navegador — não precisa instalar nada.
 
+## Capítulos
+
+| # | Capítulo | Cenário | Mapa |
+| --- | --- | --- | --- |
+| — | Tutorial — A Trilha | Bosque | 96 colunas |
+| 1 | A Aldeia | Aldeia | 132 colunas |
+| 2 | O Rio Escuro | Rio | 156 colunas |
+| 3 | O Acampamento | Acampamento | 176 colunas |
+| 4 | O Reencontro | Noite | 196 colunas |
+| 5 | O Portal | Bosque | 120 colunas |
+| 6 | A Caverna | Caverna | 128 colunas |
+| 7 | O Castelo | Ruínas | 136 colunas |
+| 8 | O Futuro | Noite | 144 colunas |
+| 9 | O Fim | Noite | 152 colunas |
+
+Cada capítulo é um mapa aberto contínuo, com **checkpoints**, **memórias**
+coletáveis e um portal de objetivo no final.
+
 ## O que tem no jogo
 
-- **Sandman (índio)** com a folha de sprites: idle, corrida, salto, arremesso
-  de lança, ataque corpo a corpo, dano e morte — todos os quadros com a mesma
-  altura e as mesmas cores da arte original.
-- **Mapa aberto** em cada capítulo, sem interiores: a trilha é contínua e o
-  progresso é salvo em **checkpoints** (marcas de renascimento).
-- **Noite** no capítulo 4, com o fundo de luar e estrelas.
-- Mapas grandes (100, 124, 140 e 152 colunas) com plataformas, espinhos,
-  colonos, memórias e marcos.
-- Tiro de mosquete com projétil visível, pisão que machuca o colono (nunca o
-  jogador) e pixels de impacto diferentes para cada arma (daca, bala, lança).
-- **Tutorial jogável** no menu principal: uma fase curta que ensina a andar,
-  pular, atacar, arremessar a lança, coletar memórias e ativar checkpoints,
-  passo a passo.
-
-## Rodar localmente
-
-```bash
-npm install
-npm run dev
-```
-
-Abra o endereço mostrado no terminal (por padrão `http://localhost:5173`).
-
-Para gerar a versão de produção (site com sprites embutidos em poucos arquivos):
-
-```bash
-npm run build     # roda `tsc --noEmit` e depois o vite build em dist/
-npm run preview   # serve o build local em http://localhost:4173
-```
-
-> `npm run build` **falha se houver erro de tipo**. O typecheck (`tsc --noEmit`)
-> faz parte do build justamente para não subir site quebrado.
+- **Sandman** com sprites próprios de idle, corrida, salto, arremesso de lança,
+  ataque corpo a corpo, dano e morte.
+- **Combate**: golpe de lança, arremesso com projétil, avanço rápido (dash) e
+  pisão em inimigos.
+- **Inimigos**: capangas, soldados, feitores, capitães, índios, lobisomens,
+  guardiões e zumbis — cada um com alcance e comportamento próprios.
+- **Chefão guardião** com barra de vida no HUD.
+- **Três dificuldades** (Fácil, Normal, Difícil) que escalam velocidade e dano
+  dos inimigos. A escolha fica salva no navegador.
+- **Memórias e checkpoints** com progresso salvo durante a fase.
+- **Cenários** de dia, noite e caverna, com parallax em camadas, água, espinhos
+  e fogo.
+- **Efeitos** de impacto, poeira, faíscas e rastro de dash; áudio gerado por
+  Web Audio (com botão de mudo no HUD).
+- **Tutorial jogável** no menu principal, ensinando os controles passo a passo.
 
 ## Controles
 
@@ -58,57 +59,69 @@ npm run preview   # serve o build local em http://localhost:4173
 | Pular | `Espaço`, `↑` ou `W` |
 | Atacar (corpo a corpo) | `J` ou `Z` |
 | Arremessar a lança | `L` ou `X` |
-| Avançar (impulso) | `Shift` ou `K` |
+| Avançar (dash) | `Shift` ou `K` |
 | Reiniciar capítulo | `R` |
-| Pausar | `Esc` |
+| Pausar / voltar | `Esc` |
 
-## O que já funciona
+## Rodar localmente
 
-- Quatro capítulos com mapas grandes (100, 124, 140 e 152 colunas)
-- Sprites em pixel art: Sandman (índio), colonos, índios e o lobisomem
-- Animações próprias de idle, corrida, salto, arremesso, ataque, dano e morte
-- Arremesso de lança com projétil, e dano por arma com pixels distintos
-- Pisão que machuca o colono (nunca o jogador)
-- Colonos que atiram de mosquete com bala visível e dano por impacto
-- Guardião (o chefão do acampamento) com 9 de vida
-- Fundo de dia (floresta) e de noite (lua e estrelas) no capítulo 4
-- Fogo de artillery, água, espinhos, marcos de renascimento e memórias
-- Câmera com suavização, pausa, reinício e fim de capítulo
-- Parallax de floresta em duas camadas
+Requisitos: **Node.js 18+** (recomendado 20+) e npm.
+
+```bash
+npm install
+npm run dev
+```
+
+Abra o endereço mostrado no terminal (por padrão `http://localhost:5173`).
+
+Para gerar e conferir a versão de produção:
+
+```bash
+npm run build       # typecheck + vite build em dist/
+npm run preview     # serve dist/ em http://localhost:4173
+npm run typecheck   # só o tsc --noEmit
+npm run levels:check # valida os JSONs de fase
+```
+
+O build embute os arquivos de `public/` no bundle como data URI (plugin
+`virtual:sandman-assets` em `vite.config.ts`), então o site publicado funciona
+em qualquer hospedagem, inclusive em subpasta do GitHub Pages.
 
 ## Estrutura
 
 ```
 Game.Cesar/
-├── index.html
-├── styles/main.css
+├── index.html              # menu, HUD, pausa e tela de fim
+├── styles/main.css         # layout, molduras, overlays e menu
 ├── src/
-│   ├── main.ts           # loop, regras do capítulo e renderização
-│   ├── engine.ts         # constantes, câmera, loop, colisão AABB
-│   ├── input.ts          # teclado
-│   ├── level.ts          # tilemap e dados de fase
-│   ├── player.ts         # movimento, colisão, ataque e arremesso
-│   ├── enemy.ts          # IA dos colonos, índios e do lobo
-│   ├── scenery.ts        # cenário, água, construções e objetivo
-│   ├── animator.ts       # clipes de animação
-│   ├── sprites.ts        # atlas, brilho e recortes
-│   ├── ui/hud.ts         # corações, memórias, boss e prompts
-│   └── data/levels/      # fases em JSON
-├── public/assets/        # sprites e fundo (embutidos no build)
-├── scripts/              # geradores de sprites e de fases
-├── docs/                 # plano do jogo e guia de arte
-└── .github/workflows/    # deploy automático no GitHub Pages
+│   ├── main.ts             # loop, regras da fase e renderização
+│   ├── engine.ts           # constantes, câmera, colisão AABB
+│   ├── input.ts            # teclado
+│   ├── player.ts           # movimento, colisão, ataque, arremesso e dash
+│   ├── enemy.ts            # IA dos inimigos e do chefão
+│   ├── level.ts            # tilemap e leitura dos JSONs de fase
+│   ├── chapters.ts         # ordem dos capítulos e textos de transição
+│   ├── difficulty.ts       # dificuldades e persistência
+│   ├── animator.ts         # clipes de animação
+│   ├── sprites.ts          # atlas, brilho e recortes
+│   ├── scenery.ts          # cenário, água, construções e objetivo
+│   ├── background.ts       # parallax de floresta e noite
+│   ├── effects.ts          # partículas, tremor e rastro
+│   ├── audio.ts            # efeitos sonoros via Web Audio
+│   ├── ui/hud.ts           # corações, memórias, chefão e prompts
+│   ├── ui/screens.ts       # menu, capítulos, pausa e fim
+│   └── data/levels/        # fases em JSON (cap1..cap9 + tutorial)
+├── public/assets/          # sprites e fundos (embutidos no build)
+├── source-art/             # arte-fonte versionada (folha de zumbi e referências)
+├── scripts/                # geradores de sprites/fases e validadores
+├── docs/                   # plano do jogo e guia de arte
+└── .github/workflows/      # deploy automático no GitHub Pages
 ```
 
 ## Como as fases funcionam
 
-Cada fase é um JSON em `src/data/levels/`, gerado por `scripts/build-levels.mjs`:
-
-```bash
-node scripts/build-levels.mjs
-```
-
-Legenda dos tiles:
+Cada fase é um JSON em `src/data/levels/`. O mapa é uma lista de strings, uma
+por linha, e cada caractere é um tile de 16×16:
 
 | Char | Significado |
 | --- | --- |
@@ -116,20 +129,52 @@ Legenda dos tiles:
 | `#` | bloco sólido |
 | `-` | plataforma atravessável de cima |
 | `~` | água (dano) |
-| `^` | espinhos |
+| `^` | espinhos (dano) |
 | `+` | tile decorativo de fundo (não colide) |
 
-## Scripts de arte
+Além dos tiles, o JSON define `spawn` e uma lista de `entities` (`enemy`,
+`checkpoint` e `memory`). O validador confere spawn, chão sob inimigos e
+checkpoints, limites do mapa e largura consistente das linhas:
 
 ```bash
-node scripts/build-player-sprites.mjs   # recorte do Sandman (folha nova)
-node scripts/build-colonist-sprites.mjs  # recorte dos colonos
-node scripts/build-wolf-sprites.mjs      # recorte do lobisomem Kennedy
+npm run levels:check
 ```
 
-Esses scripts leem as folhas originais da pasta `raw/`, que **não é versionada**
-(uns 12 MB de material de trabalho). O resultado vai para `public/assets/`, que
-é versionado e entra no build.
+Para gerar/regenerar as fases a partir do gerador:
+
+```bash
+node scripts/build-levels.mjs
+```
+
+## Arte e sprites
+
+Os sprites finais ficam em `public/assets/sprites/` e são versionados. Os
+geradores leem as folhas originais:
+
+```bash
+node scripts/build-player-sprites.mjs    # Sandman
+node scripts/build-colonist-sprites.mjs  # colonos
+node scripts/build-wolf-sprites.mjs      # lobisomem Kennedy
+node scripts/build-zombie-sprites.mjs    # zumbis (lê source-art/)
+node scripts/crop-sheet.mjs              # recorte genérico de uma folha
+```
+
+As folhas de Sandman, colonos e lobo ficam em `raw/`, que **não é versionada**
+(~12 MB de material de trabalho). A folha de zumbi e as referências visuais
+ficam em `source-art/`, que é versionada — veja `source-art/README.md`.
+
+Cada pasta de sprite tem um `atlas.json` com a lista de quadros, o tamanho e a
+**âncora** (ponto dos pés usado para posicionar o personagem no chão).
+
+## Estado do desenvolvimento
+
+- O **índio** ainda não tem folha própria recortada: o atlas em
+  `public/assets/sprites/indio/` está vazio e o jogo usa os quadros de Sandman
+  como placeholder.
+- O **urso** (boss do Capítulo 1) tem estatísticas e clipes definidos em
+  `src/enemy.ts` e `src/animator.ts`, mas ainda não tem sprite nem spawn nas
+  fases — não é jogável no momento.
+- O jogo não tem controles por toque; foi pensado para teclado em desktop.
 
 ## Créditos
 

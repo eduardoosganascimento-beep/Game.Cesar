@@ -67,6 +67,9 @@ export default defineConfig({
     outDir: 'dist',
     assetsDir: '',
     target: 'es2020',
+    // O bundle passa de 500 kB porque carrega os sprites como data URI
+    // (publicDir desligado). O aviso padrão do Vite não se aplica aqui.
+    chunkSizeWarningLimit: 900,
     // Nome com hash: cada build gera arquivos novos (e o navegador do
     // repositório nunca reaproveita um upload antigo).
     rollupOptions: {

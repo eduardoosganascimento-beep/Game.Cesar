@@ -45,7 +45,10 @@ export function getColonistFrame(name: string): Sprite | undefined {
 }
 
 export function getIndioFrame(name: string): Sprite | undefined {
-  return indioCache.get(name)
+  // A folha própria do índio ainda não tem quadros recortados (o atlas em
+  // public/assets/sprites/indio está vazio). Até a arte existir, o índio usa
+  // os quadros de Sand: os clipes de INDIO_CLIPS referenciam os mesmos nomes.
+  return indioCache.get(name) ?? playerCache.get(name)
 }
 
 export function getWolfFrame(name: string): Sprite | undefined {

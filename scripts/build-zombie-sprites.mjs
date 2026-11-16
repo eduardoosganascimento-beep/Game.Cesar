@@ -13,11 +13,29 @@ const ROWS = 4
 const TARGET_BODY = 34
 const PAD = 3
 
-const sourceName = fs.readdirSync('.').find((name) => name.startsWith('Spritesheet de zumbi'))
-if (!sourceName) throw new Error('Spritesheet de zumbi não encontrada na raiz do projeto')
+// A folha mora em source-art/ (versionada). O fallback aceita o nome antigo
+// na raiz para não quebrar clones anteriores à organização.
+function findSource() {
+  const candidates = [path.join('source-art', 'zombie-spritesheet.png')]
+  for (const dir of ['source-art', '.']) {
+    if (!fs.existsSync(dir)) continue
+    for (const name of fs.readdirSync(dir)) {
+      if (name.startsWith('Spritesheet de zumbi')) candidates.push(path.join(dir, name))
+    }
+  }
+  return candidates.find((file) => fs.existsSync(file))
+}
+
+const sourceFile = findSource()
+if (!sourceFile) {
+  throw new Error(
+    'Folha de zumbi não encontrada. Coloque o arquivo em source-art/zombie-spritesheet.png',
+  )
+}
+const sourceName = sourceFile.split(path.sep).join('/')
 const outDir = path.join('public', 'assets', 'sprites', 'zombie')
 
-const png = PNG.sync.read(fs.readFileSync(sourceName))
+const png = PNG.sync.read(fs.readFileSync(sourceFile))
 const { width, height, data } = png
 const cellW = width / COLS
 const cellH = height / ROWS
