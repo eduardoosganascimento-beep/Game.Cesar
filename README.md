@@ -15,6 +15,10 @@ O site é publicado pelo **GitHub Pages** a partir do workflow `.github/workflow
 todo `push` na branch `main` roda o build e atualiza o site. Funciona em qualquer
 computador com navegador — não precisa instalar nada.
 
+> **Configuração obrigatória:** em *Settings → Pages → Source*, escolha
+> **GitHub Actions**. Se ficar em "Deploy from a branch", o GitHub publica o
+> `index.html` da raiz (que aponta para `src/main.ts`) e o jogo não carrega.
+
 ## Capítulos
 
 | # | Capítulo | Cenário | Mapa |
