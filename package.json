@@ -10,7 +10,8 @@
     "typecheck": "tsc --noEmit",
     "levels:check": "node scripts/validate-levels.mjs",
     "preview": "vite preview",
-    "sprites": "node scripts/crop-sheet.mjs"
+    "sprites": "node scripts/crop-sheet.mjs",
+    "ursa:sprites": "node scripts/build-ursa-sprites.mjs"
   },
   "devDependencies": {
     "pngjs": "^7.0.0",

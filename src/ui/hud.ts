@@ -15,10 +15,11 @@ export class Hud {
   private readonly tutorialPrompt = document.querySelector<HTMLDivElement>('#tutorial-prompt')
   private readonly boss = document.querySelector<HTMLDivElement>('#boss')
   private readonly bossLabel = document.querySelector<HTMLElement>('#boss-label')
-  private readonly bossPips = document.querySelector<HTMLDivElement>('#boss-pips')
+  private readonly bossTrack = document.querySelector<HTMLDivElement>('#boss-track')
+  private readonly bossFill = document.querySelector<HTMLDivElement>('#boss-fill')
+  private readonly bossHp = document.querySelector<HTMLElement>('#boss-hp')
 
   private readonly heartElements: HTMLSpanElement[] = []
-  private readonly bossElements: HTMLSpanElement[] = []
   private lastHp = HEART_COUNT
   private lastCollected = 0
   private chapterTimer = 0
@@ -57,30 +58,29 @@ export class Hud {
 
   showBoss(label: string, hp: number, max: number): void {
     if (this.bossLabel) this.bossLabel.textContent = label
-    this.bossElements.length = 0
-    if (this.bossPips) {
-      this.bossPips.textContent = ''
-      for (let i = 0; i < max; i += 1) {
-        const pip = document.createElement('span')
-        pip.className = 'boss-pip'
-        this.bossPips.append(pip)
-        this.bossElements.push(pip)
-      }
-    }
-    this.renderBoss(hp, max)
     this.boss?.classList.remove('is-hidden')
+    if (this.bossTrack) {
+      this.bossTrack.setAttribute('aria-valuemin', '0')
+      this.bossTrack.setAttribute('aria-valuemax', String(max))
+      this.bossTrack.setAttribute('aria-valuenow', String(hp))
+    }
+    if (this.bossFill) {
+      this.bossFill.style.width = `${Math.max(0, Math.min(100, (hp / Math.max(1, max)) * 100))}%`
+    }
+    if (this.bossHp) this.bossHp.textContent = `${hp}/${max}`
+    this.renderBoss(hp, max)
   }
 
   renderBoss(hp: number, max: number): void {
-    this.bossElements.forEach((pip, index) => {
-      pip.classList.toggle('empty', index >= hp)
-    })
+    if (this.bossFill) {
+      this.bossFill.style.width = `${Math.max(0, Math.min(100, (hp / Math.max(1, max)) * 100))}%`
+    }
+    if (this.bossHp) this.bossHp.textContent = `${hp}/${max}`
     this.boss?.classList.toggle('is-enraged', hp <= Math.ceil(max / 3))
   }
 
   hideBoss(): void {
     this.boss?.classList.add('is-hidden')
-    this.bossElements.length = 0
   }
 
   show(): void {

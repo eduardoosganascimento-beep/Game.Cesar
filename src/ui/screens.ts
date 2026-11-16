@@ -18,6 +18,7 @@ export type ChapterOption = {
 }
 
 import type { Difficulty } from '../difficulty'
+import { DIFFICULTY_LABELS } from '../difficulty'
 
 export type ScreenHandlers = {
   onChapter: (index: number) => void
@@ -29,7 +30,7 @@ export type ScreenHandlers = {
   onDifficulty: (difficulty: Difficulty) => void
 }
 
-type ScreenName = 'main' | 'chapters' | 'how' | 'credits'
+type ScreenName = 'main' | 'chapters' | 'difficulty' | 'how' | 'credits'
 type Visible = 'menu' | 'pause' | 'end' | 'none'
 
 export class Screens {
@@ -43,12 +44,14 @@ export class Screens {
   private readonly endNext = document.querySelector<HTMLButtonElement>('#end-next')
   private readonly chapterList = document.querySelector<HTMLElement>('#chapter-list')
   private readonly difficultyList = document.querySelector<HTMLElement>('#difficulty-list')
+  private readonly chaptersDifficulty = document.querySelector<HTMLElement>('#chapters-difficulty')
 
   private buttons: HTMLButtonElement[] = []
   private readonly bound = new WeakSet<HTMLButtonElement>()
   private visible: Visible = 'menu'
   private screen: ScreenName = 'main'
   private selected = 0
+  private difficulty: Difficulty = 'normal'
 
   constructor(private readonly handlers: ScreenHandlers) {
     this.bindButtons()
@@ -92,12 +95,6 @@ export class Screens {
     if (this.visible === 'menu' && this.screen === 'chapters') this.select(0)
   }
 
-  setDifficultySelection(difficulty: Difficulty): void {
-    this.difficultyList
-      ?.querySelectorAll<HTMLButtonElement>('.difficulty-item')
-      .forEach((item) => item.classList.toggle('is-selected', item.dataset.difficulty === difficulty))
-  }
-
   showMenu(): void {
     this.visible = 'menu'
     this.menu?.classList.remove('is-hidden')
@@ -112,6 +109,15 @@ export class Screens {
     this.pause?.classList.add('is-hidden')
     this.end?.classList.add('is-hidden')
     this.setScreen('chapters')
+    this.setDifficultySelection(this.difficulty)
+  }
+
+  showDifficulty(): void {
+    this.visible = 'menu'
+    this.menu?.classList.remove('is-hidden')
+    this.pause?.classList.add('is-hidden')
+    this.end?.classList.add('is-hidden')
+    this.setScreen('difficulty')
   }
 
   showPause(): void {
@@ -157,6 +163,12 @@ export class Screens {
 
   back(): boolean {
     if (this.visible !== 'menu' || this.screen === 'main') return false
+    if (this.screen === 'chapters') {
+      // A dificuldade vem antes da trilha: trocar de capítulo pela mesma
+      // dificuldade é um clique, mas voltar é para o menu de dificuldade.
+      this.setScreen('difficulty')
+      return true
+    }
     this.setScreen('main')
     return true
   }
@@ -197,8 +209,17 @@ export class Screens {
     this.select(0)
   }
 
-  private activeButtons(): HTMLButtonElement[] {
-    if (this.visible === 'pause') {
+  setDifficultySelection(difficulty: Difficulty): void {
+    this.difficulty = difficulty
+    if (this.chaptersDifficulty) {
+      this.chaptersDifficulty.textContent = DIFFICULTY_LABELS[difficulty]
+    }
+    this.difficultyList
+      ?.querySelectorAll<HTMLButtonElement>('.difficulty-item')
+      .forEach((item) => item.classList.toggle('is-selected', item.dataset.difficulty === difficulty))
+  }
+
+  private activeButtons(): HTMLButtonElement[] {    if (this.visible === 'pause') {
       return Array.from(this.pause?.querySelectorAll<HTMLButtonElement>('.menu-item') ?? [])
     }
     if (this.visible === 'end') {
@@ -236,7 +257,10 @@ export class Screens {
 
     switch (action) {
       case 'chapters':
-        this.showChapters()
+        this.showDifficulty()
+        break
+      case 'difficulty-screen':
+        this.showDifficulty()
         break
       case 'chapter': {
         const index = Number(button.dataset.chapter ?? 0)
@@ -259,16 +283,13 @@ export class Screens {
         const difficulty = button.dataset.difficulty
         if (difficulty === 'facil' || difficulty === 'normal' || difficulty === 'dificil') {
           this.handlers.onDifficulty(difficulty)
-          this.difficultyList
-            ?.querySelectorAll<HTMLButtonElement>('.difficulty-item')
-            .forEach((item) =>
-              item.classList.toggle('is-selected', item.dataset.difficulty === difficulty),
-            )
+          this.setDifficultySelection(difficulty)
+          this.showChapters()
         }
         break
       }
       case 'back':
-        this.setScreen('main')
+        this.back()
         break
       case 'resume':
         this.handlers.onResume()
@@ -299,6 +320,7 @@ export class Screens {
       this.visible === 'menu' &&
       this.screen !== 'main' &&
       this.screen !== 'chapters' &&
+      this.screen !== 'difficulty' &&
       (isMoveUp || isMoveDown)
     ) {
       event.preventDefault()

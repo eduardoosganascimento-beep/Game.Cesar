@@ -7,6 +7,7 @@ import {
   COLONIST_CLIPS,
   ColonistAnimator,
   IndioAnimator,
+  UrsaAnimator,
   WolfAnimator,
   ZombieAnimator,
   type EnemyClipName,
@@ -136,32 +137,41 @@ const STATS: Record<EnemyKind, Stats> = {
     label: 'Zumbi',
   },
 
-  // Urso: boss do Capítulo 1 - lento mas muito resistente, ataques poderosos
-  // e mecânica de defesa. O urso patrulha o capítulo 1 e deve ser derrotado
-  // para avançar para o próximo capítulo.
+  // Urso: boss do Capítulo 1. O corpo é grande, mas a hitbox acompanha os
+  // pés do sprite (30x44), então os golpes continuam justos.
   ursa: {
-    w: 48,
-    h: 48,
-    hp: 8,
-    speed: 15,
-    chase: 60,
+    w: 30,
+    h: 44,
+    hp: 18,
+    speed: 26,
+    chase: 210,
     melee: true,
     ranged: false,
-    cooldown: 2.5,
-    visualScale: 1.5,
+    cooldown: 1.55,
+    visualScale: 0.4,
     label: 'Urso',
   },
 }
 
-type AttackKind = 'shoot' | 'slash'
+type AttackKind = 'shoot' | 'slash' | 'slam' | 'charge'
 
 const SHOOT_FIRE_AT = 0.12
 const SLASH_HIT_AT = 0.18
 const HURT_TIME = 0.24
 const DEATH_TIME = 0.72
 
+// O machado do urso toca o chão no quinto quadro do clipe de ataque.
+// A investida tem um aviso longo antes de acelerar, para o jogador ler a
+// ameaça e pular ou correr para o lado.
+const URSA_SLAM_IMPACT = 0.4
+const URSA_SLAM_DURATION = 0.78
+const URSA_CHARGE_WINDUP = 0.45
+const URSA_CHARGE_ACTIVE = 0.52
+const URSA_CHARGE_DURATION = 1.2
+const URSA_CHARGE_SPEED = 150
+
 function clipDuration(kind: AttackKind): number {
-  const clip = COLONIST_CLIPS[kind]
+  const clip = COLONIST_CLIPS[kind as 'shoot' | 'slash']
   return clip.frames.length / clip.fps
 }
 
@@ -171,7 +181,12 @@ function clipDuration(kind: AttackKind): number {
 export class Enemy {
   kind: EnemyKind
   label: string
-  animator: ColonistAnimator | IndioAnimator | WolfAnimator | ZombieAnimator
+  animator:
+    | ColonistAnimator
+    | IndioAnimator
+    | WolfAnimator
+    | ZombieAnimator
+    | UrsaAnimator
 
   x: number
   y: number
@@ -188,6 +203,9 @@ export class Enemy {
   onGround = false
   justShot = false
   justStruck = false
+  justSlammed = false
+  justCharged = false
+  justCrashed = false
 
   private stats: Stats
   public speed: number
@@ -202,7 +220,9 @@ export class Enemy {
   private attackCooldown = 0
   private fired = false
   private struck = false
+  private stunTimer = 0
   private deathTimer = 0
+  private deathDuration = DEATH_TIME
 
   constructor(spawn: EntitySpawn, tileSize: number, level: number = 1) {
     this.kind = spawn.kind ?? 'capanga'
@@ -217,7 +237,9 @@ export class Enemy {
           ? new WolfAnimator()
           : this.kind === 'zumbi'
             ? new ZombieAnimator()
-            : new ColonistAnimator()
+            : this.kind === 'ursa'
+              ? new UrsaAnimator()
+              : new ColonistAnimator()
     this.w = this.stats.w
     this.h = this.stats.h
     this.hp = this.stats.hp
@@ -249,11 +271,59 @@ export class Enemy {
   }
 
   get isBoss(): boolean {
-    return this.kind === 'capitao' || this.kind === 'lobisomem' || this.kind === 'guardiao'
+    return (
+      this.kind === 'capitao' ||
+      this.kind === 'lobisomem' ||
+      this.kind === 'guardiao' ||
+      this.kind === 'ursa'
+    )
   }
 
   get isZombie(): boolean {
     return this.kind === 'zumbi'
+  }
+
+  get isUrsa(): boolean {
+    return this.kind === 'ursa'
+  }
+
+  // Abaixo da metade da vida o urso entra em fúria: anda mais rápido,
+  // ataca mais vezes e a aura vermelha denuncia o novo estado.
+  get isEnraged(): boolean {
+    return this.isUrsa && this.alive && this.hp <= Math.ceil(this.maxHp / 2)
+  }
+
+  get isCharging(): boolean {
+    return (
+      this.attackKind === 'charge' &&
+      this.attackElapsed >= URSA_CHARGE_WINDUP &&
+      this.attackElapsed < URSA_CHARGE_WINDUP + URSA_CHARGE_ACTIVE
+    )
+  }
+
+  get isStunned(): boolean {
+    return this.stunTimer > 0
+  }
+
+  get attackMode(): 'slam' | 'charge' | null {
+    return this.attackKind === 'slam' || this.attackKind === 'charge'
+      ? this.attackKind
+      : null
+  }
+
+  // 0 → acabou de começar o aviso; 1 → golpe/ investida prestes a sair.
+  get telegraph(): number {
+    if (!this.isUrsa || !this.attackKind) return 0
+    if (this.attackKind === 'slam') {
+      return Math.min(1, this.attackElapsed / URSA_SLAM_IMPACT)
+    }
+    if (this.attackKind === 'charge') {
+      if (this.attackElapsed < URSA_CHARGE_WINDUP) {
+        return Math.min(1, this.attackElapsed / URSA_CHARGE_WINDUP)
+      }
+      return this.isCharging ? 1 : 0
+    }
+    return 0
   }
 
   // Um zumbi que encosta em um colono armado o infecta: o colono vira
@@ -278,6 +348,9 @@ export class Enemy {
     this.attackCooldown = 0.45
     this.hurt = 0
     this.invuln = 0.6
+    this.stunTimer = 0
+    this.deathTimer = 0
+    this.deathDuration = DEATH_TIME
     this.animator.reset()
     return true
   }
@@ -293,7 +366,7 @@ export class Enemy {
   // 0 → acabou de morrer; 1 → animação de queda terminou.
   get deathProgress(): number {
     if (this.alive) return 0
-    return 1 - Math.max(0, Math.min(1, this.deathTimer / DEATH_TIME))
+    return 1 - Math.max(0, Math.min(1, this.deathTimer / this.deathDuration))
   }
 
   get up(): boolean {
@@ -301,12 +374,40 @@ export class Enemy {
   }
 
   get attackBox(): Rect {
-    const reach = this.isBoss ? 34 : this.kind === 'feitor' ? 30 : 25
+    // O urso golpeia com o machado à frente dos pés: a caixa fica baixa e
+    // larga, acompanhando o arco do quadro de impacto.
+    if (this.isUrsa) {
+      if (this.attackKind === 'slam') {
+        const reach = 48
+        return {
+          x: this.facing > 0 ? this.x + this.w - 10 : this.x - reach + 10,
+          y: this.y + this.h - 36,
+          w: reach,
+          h: 36,
+        }
+      }
+      return { x: this.x + 4, y: this.y + 8, w: this.w - 8, h: this.h - 8 }
+    }
+
+    const reach =
+      this.kind === 'feitor'
+        ? 28
+        : this.kind === 'capitao'
+          ? 30
+          : this.kind === 'lobisomem'
+            ? 26
+            : this.kind === 'guardiao'
+              ? 28
+              : this.kind === 'soldado' || this.kind === 'indio'
+                ? 24
+                : 22
+    // A janela vertical acompanha o corpo do inimigo. Antes a caixa ia do
+    // topo aos pés, então um golpe no ar ainda acertava quem estava abaixo.
     return {
       x: this.facing > 0 ? this.x + this.w - 2 : this.x - reach + 2,
-      y: this.y + 2,
+      y: this.y + this.h * 0.3,
       w: reach,
-      h: Math.max(14, this.h - 4),
+      h: Math.max(12, this.h * 0.52),
     }
   }
 
@@ -326,6 +427,13 @@ export class Enemy {
     return this.isBoss || this.kind === 'feitor' ? 2 : 1
   }
 
+  // Encostar no urso machuca menos que levar o machado: o dano grande fica
+  // reservado para o golpe telegrafado.
+  get contactDamage(): number {
+    if (this.isUrsa) return 1
+    return this.attackDamage
+  }
+
   reset(): void {
     this.x = this.spawnX
     this.y = this.spawnY
@@ -341,15 +449,26 @@ export class Enemy {
     this.attackCooldown = 0
     this.fired = false
     this.struck = false
+    this.stunTimer = 0
     this.deathTimer = 0
+    this.deathDuration = DEATH_TIME
+    this.justShot = false
+    this.justStruck = false
+    this.justSlammed = false
+    this.justCharged = false
+    this.justCrashed = false
     this.animator.reset()
   }
 
   update(dt: number, map: TileMap, player?: Rect): void {
     this.justShot = false
     this.justStruck = false
+    this.justSlammed = false
+    this.justCharged = false
+    this.justCrashed = false
     this.hurt = Math.max(0, this.hurt - dt)
     this.invuln = Math.max(0, this.invuln - dt)
+    this.stunTimer = Math.max(0, this.stunTimer - dt)
 
     if (!this.alive) {
       this.deathTimer = Math.max(0, this.deathTimer - dt)
@@ -360,9 +479,18 @@ export class Enemy {
     this.animator.update(dt)
     this.attackCooldown = Math.max(0, this.attackCooldown - dt)
 
+    if (this.stunTimer > 0) {
+      // Depois de bater na parede na investida, o urso fica atordoado e vira
+      // uma janela de dano para o jogador.
+      this.vx = 0
+      this.updateAnimation()
+      this.moveAndCollide(dt, map)
+      return
+    }
+
     if (this.attackKind) {
       this.updateAttack(dt)
-      this.vx = 0
+      if (!this.isCharging) this.vx = 0
     } else if (this.hurt <= 0) {
       this.think(player)
     } else {
@@ -377,23 +505,31 @@ export class Enemy {
     if (!this.alive || this.invuln > 0) return false
 
     this.hp = Math.max(0, this.hp - amount)
-    this.invuln = 0.3
-    this.hurt = HURT_TIME
-    this.attackKind = null
-    this.attackElapsed = 0
+    this.invuln = this.isUrsa ? 0.18 : 0.3
+    this.hurt = this.isUrsa ? 0.1 : HURT_TIME
+    // O urso é pesado: o golpe não interrompe a investida nem o machado.
+    // Os outros inimigos perdem o ataque quando são atingidos.
+    if (!this.isUrsa || this.hp <= 0) {
+      this.attackKind = null
+      this.attackElapsed = 0
+    }
     this.vx = 0
 
     if (this.hp <= 0) {
       this.alive = false
-      this.deathTimer = DEATH_TIME
+      this.deathDuration = this.isUrsa ? 1.8 : this.isBoss ? 1.05 : DEATH_TIME
+      this.deathTimer = this.deathDuration
       this.animator.play('death')
       return true
     }
 
     const push = fromX < this.x + this.w / 2 ? 1 : -1
     this.facing = fromX < this.x + this.w / 2 ? 1 : -1
-    this.x = Math.max(this.left, Math.min(this.right - this.w, this.x + push * 2))
-    this.animator.play('hurt')
+    this.x = Math.max(
+      this.left,
+      Math.min(this.right - this.w, this.x + push * (this.isUrsa ? 1 : 2)),
+    )
+    if (!this.isUrsa || !this.attackKind) this.animator.play('hurt')
     return false
   }
 
@@ -406,6 +542,11 @@ export class Enemy {
   // ============================================================
   private think(player?: Rect): void {
     this.facing = this.vx >= 0 ? 1 : -1
+
+    if (this.isUrsa) {
+      this.thinkUrsa(player)
+      return
+    }
 
     if (player) {
       const playerCenterX = player.x + player.w / 2
@@ -437,6 +578,48 @@ export class Enemy {
       }
     } else {
       this.patrol()
+    }
+  }
+
+  // O urso tem duas ferramentas: o golpe de machado quando o alvo está perto
+  // e a investida quando está no meio da arena. A escolha é sempre precedida
+  // por um aviso visual (telegraph), para não haver dano "do nada".
+  private thinkUrsa(player?: Rect): void {
+    if (!player) {
+      this.patrol()
+      return
+    }
+
+    const playerCenterX = player.x + player.w / 2
+    const enemyCenterX = this.x + this.w / 2
+    const distance = playerCenterX - enemyCenterX
+    const vertical = Math.abs(player.y + player.h / 2 - (this.y + this.h / 2))
+    const inSight = vertical < 64 && Math.abs(distance) < this.stats.chase
+
+    if (!inSight) {
+      this.patrol()
+      return
+    }
+
+    this.facing = distance >= 0 ? 1 : -1
+    const range = Math.abs(distance)
+
+    if (this.attackCooldown <= 0) {
+      if (range <= 62) {
+        this.startAttack('slam', distance)
+        return
+      }
+      if (range <= 190) {
+        this.startAttack('charge', distance)
+        return
+      }
+    }
+
+    const stopDistance = 34
+    if (range > stopDistance) {
+      this.vx = Math.sign(distance) * this.speed * (this.isEnraged ? 1.3 : 1)
+    } else {
+      this.vx = 0
     }
   }
 
@@ -479,12 +662,26 @@ export class Enemy {
     this.struck = false
     this.vx = 0
     this.facing = distance >= 0 ? 1 : -1
-    this.animator.play(kind)
+
+    if (this.isUrsa) {
+      // A investida usa o ciclo de caminhada em ritmo acelerado; o golpe de
+      // machado usa o clipe de ataque completo.
+      this.animator.play(kind === 'slam' ? 'attack' : 'walk')
+      this.animator.setTimeScale(kind === 'slam' ? 1 : 0.55)
+      return
+    }
+
+    this.animator.play(kind as 'shoot' | 'slash')
   }
 
   private updateAttack(dt: number): void {
     if (!this.attackKind) return
     this.attackElapsed += dt
+
+    if (this.isUrsa) {
+      this.updateUrsaAttack()
+      return
+    }
 
     if (!this.fired && this.attackKind === 'shoot' && this.attackElapsed >= SHOOT_FIRE_AT) {
       this.fired = true
@@ -497,22 +694,74 @@ export class Enemy {
     }
 
     if (this.attackElapsed >= this.attackDuration(this.attackKind) + 0.04) {
-      this.attackKind = null
-      this.fired = false
-      this.struck = false
-      this.attackCooldown = this.stats.cooldown
+      this.finishAttack()
     }
+  }
+
+  private updateUrsaAttack(): void {
+    if (this.attackKind === 'slam') {
+      if (!this.struck && this.attackElapsed >= URSA_SLAM_IMPACT) {
+        this.struck = true
+        this.justStruck = true
+        this.justSlammed = true
+      }
+      if (this.attackElapsed >= URSA_SLAM_DURATION) this.finishAttack()
+      return
+    }
+
+    if (this.attackKind !== 'charge') return
+
+    if (!this.fired && this.attackElapsed >= URSA_CHARGE_WINDUP) {
+      this.fired = true
+      this.justCharged = true
+    }
+
+    if (this.isCharging) {
+      this.vx = this.facing * URSA_CHARGE_SPEED * (this.isEnraged ? 1.28 : 1)
+      this.animator.setTimeScale(1.6)
+    } else if (this.attackElapsed >= URSA_CHARGE_WINDUP + URSA_CHARGE_ACTIVE) {
+      this.vx = 0
+      this.animator.setTimeScale(1)
+    }
+
+    if (this.attackElapsed >= URSA_CHARGE_DURATION) this.finishAttack()
+  }
+
+  private finishAttack(): void {
+    this.attackKind = null
+    this.attackElapsed = 0
+    this.fired = false
+    this.struck = false
+    this.attackCooldown =
+      this.isUrsa && this.isEnraged ? 1.05 : this.stats.cooldown
+    this.animator.setTimeScale(1)
+  }
+
+  private crashCharge(): void {
+    if (!this.isCharging) return
+    this.attackKind = null
+    this.attackElapsed = 0
+    this.fired = false
+    this.struck = false
+    this.vx = 0
+    this.stunTimer = 1.05
+    this.attackCooldown = 1.25
+    this.justCrashed = true
+    this.animator.play('hurt')
+    this.animator.setTimeScale(1)
   }
 
   private attackDuration(kind: AttackKind): number {
     if (this.isZombie) return kind === 'slash' ? 6 / 11 : 0.35
-    return clipDuration(kind)
+    return clipDuration(kind as 'shoot' | 'slash')
   }
 
   // ============================================================
   // ATUALIZAÇÃO DE ANIMAÇÃO
   // ============================================================
   private updateAnimation(): void {
+    // Atordoado: mantém o quadro de dano até a tontura passar.
+    if (this.stunTimer > 0) return
     // Se estiver attacking ou com hurt, não muda de estado (fica no clip atual).
     if (this.attackKind || this.hurt > 0) return
 
@@ -530,6 +779,13 @@ export class Enemy {
     this.x += this.vx * dt
 
     for (const solid of map.solidsIn(this.rect)) {
+      if (this.isCharging) {
+        // Investida contra parede: o urso para, fica atordoado e perde o
+        // ataque. É a punição por errar a carga.
+        this.x = this.vx > 0 ? solid.x - this.w : solid.x + solid.w
+        this.crashCharge()
+        break
+      }
       if (this.vx > 0) {
         this.x = solid.x - this.w
         this.vx = -Math.abs(this.speed)
@@ -545,11 +801,13 @@ export class Enemy {
     if (!this.isZombie) {
       if (this.x < this.left) {
         this.x = this.left
-        this.vx = Math.abs(this.vx)
+        if (this.isCharging) this.crashCharge()
+        else this.vx = Math.abs(this.vx)
       }
       if (this.x + this.w > this.right) {
         this.x = this.right - this.w
-        this.vx = -Math.abs(this.vx)
+        if (this.isCharging) this.crashCharge()
+        else this.vx = -Math.abs(this.vx)
       }
     }
 

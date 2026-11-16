@@ -134,6 +134,25 @@ class Sfx {
     this.tone({ freq: 240, endFreq: 80, duration: 0.22, type: 'sine', volume: 0.1 })
   }
 
+  // Urso: rugido grave para a entrada e para a fúria.
+  roar(): void {
+    this.tone({ freq: 120, endFreq: 54, duration: 0.7, type: 'sawtooth', volume: 0.2 })
+    this.tone({ freq: 74, endFreq: 40, duration: 0.8, type: 'triangle', volume: 0.16 })
+    this.noise(0.45, 0.16, 520)
+  }
+
+  // Machado no chão: impacto seco seguido de poeira.
+  slam(): void {
+    this.noise(0.34, 0.26, 480)
+    this.tone({ freq: 90, endFreq: 34, duration: 0.42, type: 'sawtooth', volume: 0.22 })
+  }
+
+  // Investida: vento curto antes do trovão dos passos.
+  charge(): void {
+    this.noise(0.3, 0.15, 1500)
+    this.tone({ freq: 210, endFreq: 120, duration: 0.24, type: 'sawtooth', volume: 0.1 })
+  }
+
   // Tiro dos colonos: estalo curto de pólvora, distinto do ruído do golpe.
   shot(): void {
     this.noise(0.09, 0.13, 3200)

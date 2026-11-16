@@ -27,6 +27,7 @@ const COLONIST_DIR = 'assets/sprites/colonist/'
 const INDIO_DIR = 'assets/sprites/indio/'
 const WOLF_DIR = 'assets/sprites/wolf/'
 const ZOMBIE_DIR = 'assets/sprites/zombie/'
+const URSA_DIR = 'assets/sprites/ursa/'
 const PROJECTILE_DIR = 'assets/sprites/projectile/'
 
 const playerCache = new Map<string, Sprite>()
@@ -34,6 +35,7 @@ const colonistCache = new Map<string, Sprite>()
 const indioCache = new Map<string, Sprite>()
 const wolfCache = new Map<string, Sprite>()
 const zombieCache = new Map<string, Sprite>()
+const ursaCache = new Map<string, Sprite>()
 let spearSprite: Sprite | undefined
 
 export function getFrame(name: string): Sprite | undefined {
@@ -59,6 +61,10 @@ export function getZombieFrame(name: string): Sprite | undefined {
   return zombieCache.get(name)
 }
 
+export function getUrsaFrame(name: string): Sprite | undefined {
+  return ursaCache.get(name)
+}
+
 export function getSpearSprite(): Sprite | undefined {
   return spearSprite
 }
@@ -69,7 +75,8 @@ export function loadedFrameCount(): number {
     colonistCache.size +
     indioCache.size +
     wolfCache.size +
-    zombieCache.size
+    zombieCache.size +
+    ursaCache.size
   )
 }
 
@@ -229,10 +236,13 @@ export async function loadSprites(): Promise<void> {
       // Zumbi: contorno esverdeado e um leve ganho de luz para o corpo
       // pálido não sumir no fundo escuro.
       loadAtlas(ZOMBIE_DIR, zombieCache, '#0d1a0b', 1.16, 1.12),
+      // O urso já vem com paleta forte da folha original: só um contorno
+      // escuro separa o pelo do fundo verde.
+      loadAtlas(URSA_DIR, ursaCache, '#140d08', 1.02, 1.04),
       loadSpear(),
     ])
     console.info(
-      `[sandman] ${playerCache.size} quadros de Sand · ${colonistCache.size} de colono · ${indioCache.size} de indio · ${wolfCache.size} de lobo · ${zombieCache.size} de zumbi`,
+      `[sandman] ${playerCache.size} quadros de Sand · ${colonistCache.size} de colono · ${indioCache.size} de indio · ${wolfCache.size} de lobo · ${zombieCache.size} de zumbi · ${ursaCache.size} de urso`,
     )
   } catch {
     // sem sprites: o jogo segue com a arte provisória

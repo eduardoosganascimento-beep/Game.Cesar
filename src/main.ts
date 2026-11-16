@@ -57,6 +57,17 @@ type Spear = {
   life: number
 }
 
+// Onda de choque do golpe de machado do urso: viaja pelo chão para os dois
+// lados e obriga o jogador a pular mesmo estando longe do corpo do boss.
+type Shockwave = {
+  x: number
+  y: number
+  vx: number
+  life: number
+  max: number
+  phase: number
+}
+
 // Rastro do dash: cópias de Sand que se apagam atrás dele.
 type DashGhost = {
   x: number
@@ -105,6 +116,7 @@ class Game {
   private checkpoints: Checkpoint[] = []
   private shots: Shot[] = []
   private spears: Spear[] = []
+  private shockwaves: Shockwave[] = []
   private dashGhosts: DashGhost[] = []
   private dashGhostTimer = 0
   private hitStop = 0
@@ -118,6 +130,8 @@ class Game {
   private goalBaseY = 9 * TILE
   private bossDefeated = false
   private bossBarVisible = false
+  private bossIntroShown = false
+  private bossEnrageAnnounced = false
   private running = false
   private paused = false
   private won = false
@@ -316,6 +330,7 @@ class Game {
 
     this.shots = []
     this.spears = []
+    this.shockwaves = []
     this.dashGhosts.length = 0
     this.dashGhostTimer = 0
     this.hitStop = 0
@@ -324,6 +339,8 @@ class Game {
     this.won = false
     this.bossDefeated = false
     this.bossBarVisible = false
+    this.bossIntroShown = false
+    this.bossEnrageAnnounced = false
     this.goalHintCooldown = 0
     this.runTime = 0
     this.effects.clear()
@@ -451,6 +468,42 @@ class Game {
       if (!enemy.alive) continue
 
       if (enemy.justShot) this.spawnShot(enemy)
+      if (enemy.justSlammed) this.spawnShockwaves(enemy)
+      if (enemy.justCharged) {
+        sfx.charge()
+        this.effects.addShake(1.6)
+        this.effects.burst(enemy.x + enemy.w / 2, enemy.y + enemy.h, 'dust', 10, 42)
+      }
+      if (enemy.justCrashed) {
+        sfx.slam()
+        this.effects.addShake(4)
+        this.effects.burst(enemy.x + enemy.w / 2, enemy.y + enemy.h, 'dust', 16, 58)
+        this.effects.text(
+          enemy.x + enemy.w / 2,
+          enemy.y - 6,
+          'ATORDOADO!',
+          '#ffd166',
+        )
+      }
+
+      // A investida machuca no contato. O invuln do jogador impede que ele
+      // perca as três vidas num único encostão.
+      if (
+        enemy.isCharging &&
+        !enemy.isStunned &&
+        overlaps(enemy.rect, player.hurtbox)
+      ) {
+        if (this.hurtPlayer(enemy.x, 'blade', enemy.attackDamage)) {
+          this.effects.addShake(3.4)
+          this.effects.burst(
+            player.x + player.w / 2,
+            player.y + player.h / 2,
+            'hit',
+            10,
+            52,
+          )
+        }
+      }
 
       if (enemy.justStruck && overlaps(enemy.attackBox, player.hurtbox)) {
         if (enemy.isZombie) {
@@ -491,13 +544,13 @@ class Game {
         continue
       }
 
-      if (overlaps(player.hurtbox, enemy.rect)) {
+      if (!enemy.isStunned && overlaps(player.hurtbox, enemy.rect)) {
         if (enemy.isZombie) {
           this.zombieBite(enemy)
           this.input.endFrame()
           return
         }
-        this.hurtPlayer(enemy.x, 'blade', enemy.attackDamage)
+        this.hurtPlayer(enemy.x, 'blade', enemy.contactDamage)
       }
     }
 
@@ -505,6 +558,7 @@ class Game {
 
     this.updateShots(safeDt)
     this.updateSpears(safeDt)
+    this.updateShockwaves(safeDt)
 
     for (const memory of this.memories) {
       if (memory.got) continue
@@ -650,6 +704,7 @@ class Game {
 
     this.paintShots(time)
     this.paintSpears(time)
+    this.paintShockwaves(time)
     this.paintDashGhosts()
     this.paintPlayer(time)
 
@@ -820,7 +875,23 @@ class Game {
     const impact = weapon === 'spear' ? 'spear' : weapon === 'stomp' ? 'hit' : 'blade'
     this.effects.burst(cx, cy, killed ? 'death' : impact, killed ? 14 : 8, killed ? 66 : 44)
     if (weapon === 'stomp') this.effects.burst(cx, enemy.y + enemy.h, 'dust', 7, 34)
-    if (killed) this.killFlash = 1
+    if (killed) {
+      this.killFlash = 1
+      this.effects.burst(cx, enemy.y + enemy.h, 'dust', 11, 46)
+      if (enemy.isUrsa) {
+        // A queda do boss é um acontecimento: poeira, faíscas e tremor.
+        for (let i = 0; i < 5; i += 1) {
+          this.effects.burst(
+            cx + (i - 2) * 9,
+            enemy.y + enemy.h - 2,
+            i % 2 === 0 ? 'death' : 'dust',
+            10,
+            58,
+          )
+        }
+        this.effects.addShake(7.5)
+      }
+    }
     this.effects.addShake(killed ? 2.4 : 1.2)
     // Pequena pausa no impacto, maior quando o golpe derruba o inimigo.
     if (!stomp) this.hitStop = Math.max(this.hitStop, killed ? 0.065 : 0.04)
@@ -837,9 +908,11 @@ class Game {
       enemy.y - 3,
       stomp
         ? 'PISÃO!'
-        : enemy.isBoss
-          ? `${enemy.label.toUpperCase()} CAIU!`
-          : 'ABATIDO!',
+        : enemy.isUrsa
+          ? 'O URSO CAIU!'
+          : enemy.isBoss
+            ? `${enemy.label.toUpperCase()} CAIU!`
+            : 'ABATIDO!',
       enemy.isBoss ? '#ffd166' : '#ffe9a8',
     )
 
@@ -1024,6 +1097,92 @@ class Game {
     }
   }
 
+  private spawnShockwaves(enemy: Enemy): void {
+    const cx = enemy.x + enemy.w / 2
+    const groundY = enemy.y + enemy.h
+    const speed = enemy.isEnraged ? 112 : 92
+
+    for (const dir of [-1, 1]) {
+      this.shockwaves.push({
+        x: cx + dir * 12,
+        y: groundY,
+        vx: dir * speed,
+        life: 1.15,
+        max: 1.15,
+        phase: Math.random() * Math.PI * 2,
+      })
+    }
+
+    this.effects.addShake(enemy.isEnraged ? 6 : 4.5)
+    this.effects.burst(cx, groundY, 'dust', 18, 64)
+    this.effects.burst(cx, groundY - 3, 'spark', 9, 42)
+    sfx.slam()
+  }
+
+  private updateShockwaves(dt: number): void {
+    const player = this.player
+    for (let i = this.shockwaves.length - 1; i >= 0; i -= 1) {
+      const wave = this.shockwaves[i]
+      wave.life -= dt
+      wave.x += wave.vx * dt
+
+      if (Math.random() < 0.5) {
+        this.effects.trail(wave.x, wave.y - 3, 'dust')
+      }
+
+      // A onda corre junto ao chão. A caixa fica acima dele para não bater
+      // no próprio tile de terreno.
+      const rect = { x: wave.x - 4, y: wave.y - 16, w: 8, h: 16 }
+      const hitWall = this.map.solidsIn(rect).length > 0
+
+      if (wave.life <= 0 || hitWall) {
+        if (hitWall) {
+          this.effects.burst(wave.x, wave.y - 4, 'dust', 8, 34)
+          this.effects.addShake(0.6)
+        }
+        this.shockwaves.splice(i, 1)
+        continue
+      }
+
+      if (player.invuln <= 0 && overlaps(player.hurtbox, rect)) {
+        if (this.hurtPlayer(wave.x, 'blade', 1)) {
+          this.effects.burst(wave.x, wave.y - 6, 'hit', 9, 46)
+          this.effects.addShake(2.4)
+        }
+      }
+    }
+  }
+
+  private paintShockwaves(time: number): void {
+    for (const wave of this.shockwaves) {
+      const x = Math.round(wave.x - this.camera.px)
+      const y = Math.round(wave.y - this.camera.py)
+      if (x < -24 || x > VIEW_W + 24) continue
+
+      const left = wave.life / wave.max
+      const alpha = Math.max(0, left)
+      const dir = Math.sign(wave.vx) || 1
+
+      const glow = ctx.createRadialGradient(x, y - 3, 1, x, y - 3, 18)
+      glow.addColorStop(0, `rgba(255, 209, 102, ${(0.3 * alpha).toFixed(3)})`)
+      glow.addColorStop(1, 'rgba(255, 139, 115, 0)')
+      ctx.fillStyle = glow
+      ctx.fillRect(x - 18, y - 21, 36, 24)
+
+      for (let i = 0; i < 4; i += 1) {
+        const lift = 2 + i * 3 + Math.sin(time * 18 + wave.phase + i) * 1.5
+        ctx.globalAlpha = alpha * (0.72 - i * 0.13)
+        ctx.fillStyle = i % 2 === 0 ? '#e0cfa8' : '#ffd166'
+        ctx.fillRect(x - dir * (2 + i * 2), Math.round(y - lift), 3, 2)
+      }
+
+      ctx.globalAlpha = alpha * 0.55
+      ctx.fillStyle = '#ff8b73'
+      ctx.fillRect(x - dir * 5, y - 1, 12, 1)
+      ctx.globalAlpha = 1
+    }
+  }
+
   private paintSpears(time: number): void {
     for (const spear of this.spears) {
       const x = Math.round(spear.x - this.camera.px)
@@ -1078,6 +1237,7 @@ class Game {
     }
     this.player.respawn()
     this.shots = []
+    this.shockwaves = []
     this.animator.reset()
     this.camera.snapTo(this.player.hurtbox, this.map.width, this.map.height)
     this.syncHud(true)
@@ -1092,6 +1252,7 @@ class Game {
     this.player.throw = 0
     this.spears = []
     this.shots = []
+    this.shockwaves = []
     this.effects.clear()
     this.effects.text(Math.max(80, this.player.x + this.player.w / 2), Math.max(60, this.player.y - 12), message, '#ffd166')
     this.camera.snapTo(this.player.hurtbox, this.map.width, this.map.height)
@@ -1104,6 +1265,7 @@ class Game {
     this.player.hp = MAX_HP
     this.player.respawn()
     this.shots = []
+    this.shockwaves = []
     this.animator.reset()
     this.effects.clear()
     this.effects.text(Math.max(60, x), Math.max(40, y), message, '#ffd166')
@@ -1129,8 +1291,30 @@ class Game {
       if (!this.bossBarVisible) {
         this.bossBarVisible = true
         this.hud.showBoss(boss.label, boss.hp, boss.maxHp)
+        if (boss.isUrsa && !this.bossIntroShown) {
+          this.bossIntroShown = true
+          this.hud.showChapterCard(
+            'Guardião da trilha',
+            boss.label,
+            'O caminho só abre quando o machado cair.',
+          )
+          this.effects.addShake(3.2)
+          sfx.roar()
+        }
       } else {
         this.hud.renderBoss(boss.hp, boss.maxHp)
+      }
+
+      if (boss.isEnraged && !this.bossEnrageAnnounced) {
+        this.bossEnrageAnnounced = true
+        this.effects.addShake(4.4)
+        this.effects.text(
+          boss.x + boss.w / 2,
+          boss.y - 10,
+          'FÚRIA!',
+          '#ff6b5c',
+        )
+        sfx.roar()
       }
     } else if (this.bossBarVisible) {
       this.bossBarVisible = false
@@ -1261,16 +1445,31 @@ class Game {
     const scale = enemy.visualScale
     const feetX = Math.round(enemy.x + enemy.w / 2 - this.camera.px)
     const feetY = Math.round(enemy.y + enemy.h - this.camera.py)
+    const dying = !enemy.alive
+    const progress = dying ? Math.min(1, enemy.deathProgress) : 0
 
-    ctx.fillStyle = 'rgba(0, 0, 0, 0.32)'
-    ctx.fillRect(feetX - 7, feetY - 2, 14, 2)
+    // A sombra encolhe junto com a queda do corpo.
+    const shadowWidth = enemy.isUrsa ? 28 : 14
+    ctx.globalAlpha = 0.32 * (1 - progress * 0.8)
+    ctx.fillStyle = '#000'
+    ctx.fillRect(feetX - shadowWidth / 2, feetY - 2, shadowWidth, 2)
+    ctx.globalAlpha = 1
 
     if (enemy.isBoss && enemy.alive) {
-      const aura = ctx.createRadialGradient(feetX, feetY - 18, 2, feetX, feetY - 18, 34)
-      aura.addColorStop(0, 'rgba(196, 71, 58, 0.16)')
+      const radius = enemy.isUrsa ? 58 : 34
+      const strength = enemy.isEnraged ? 0.28 : 0.16
+      const aura = ctx.createRadialGradient(
+        feetX,
+        feetY - 18,
+        2,
+        feetX,
+        feetY - 18,
+        radius,
+      )
+      aura.addColorStop(0, `rgba(196, 71, 58, ${strength})`)
       aura.addColorStop(1, 'rgba(196, 71, 58, 0)')
       ctx.fillStyle = aura
-      ctx.fillRect(feetX - 36, feetY - 54, 72, 58)
+      ctx.fillRect(feetX - radius - 2, feetY - radius - 36, radius * 2 + 4, radius + 42)
     }
 
     // Aura doentia ao redor dos zumbis vivos.
@@ -1283,20 +1482,53 @@ class Game {
       ctx.fillRect(feetX - 28, feetY - 44, 56, 48)
     }
 
+    // Aviso no chão: o jogador vê onde o machado vai cair e por onde a
+    // investida vai passar antes de qualquer dano.
+    if (enemy.alive && enemy.telegraph > 0) {
+      this.paintTelegraph(enemy, feetX, feetY, time)
+    }
+
     const flash = enemy.invuln > 0 && Math.floor(enemy.invuln * 28) % 2 === 0
     if (flash) ctx.globalAlpha = 0.55
 
     if (sprite) {
-      if (enemy.isZombie && !enemy.alive) {
-        // Zumbi tomba para trás e some: não existe quadro de morte na
-        // folha, então a queda é feita girando o corpo ao redor dos pés.
-        const progress = Math.min(1, enemy.deathProgress * 1.5)
+      if (dying) {
+        // Queda procedural: o sprite gira ao redor dos pés e some devagar.
+        // O urso cai mais lentamente e pisca em branco no primeiro impacto.
+        const eased = progress * progress * (3 - 2 * progress)
+        const w = Math.max(1, Math.round(sprite.w * scale))
+        const h = Math.max(1, Math.round(sprite.h * scale))
         ctx.save()
         ctx.translate(feetX, feetY)
-        ctx.rotate((enemy.facing > 0 ? 1 : -1) * (Math.PI / 2) * progress)
-        ctx.globalAlpha = 1 - progress * 0.7
-        this.drawSprite(sprite, -sprite.ax * scale, -sprite.ay * scale, scale, 0)
+        ctx.rotate(
+          (enemy.facing > 0 ? 1 : -1) *
+            (Math.PI / (enemy.isUrsa ? 2.25 : 2.05)) *
+            eased,
+        )
+        ctx.imageSmoothingEnabled = false
+
+        if (progress < 0.22) {
+          ctx.globalAlpha = (1 - progress / 0.22) * 0.85
+          ctx.drawImage(
+            sprite.white,
+            Math.round(-sprite.ax * scale),
+            Math.round(-sprite.ay * scale),
+            w,
+            h,
+          )
+        }
+
+        ctx.globalAlpha =
+          progress < 0.64 ? 1 : Math.max(0, 1 - (progress - 0.64) / 0.36)
+        ctx.drawImage(
+          sprite.img,
+          Math.round(-sprite.ax * scale),
+          Math.round(-sprite.ay * scale),
+          w,
+          h,
+        )
         ctx.restore()
+        ctx.globalAlpha = 1
       } else if (enemy.facing < 0) {
         ctx.save()
         ctx.translate(feetX, 0)
@@ -1314,13 +1546,71 @@ class Game {
 
     ctx.globalAlpha = 1
 
+    // Tontura da investida que bateu na parede.
+    if (enemy.isStunned && enemy.alive) {
+      const top = feetY - (enemy.isUrsa ? 62 : 36)
+      for (let i = 0; i < 3; i += 1) {
+        const angle = time * 4.2 + (i * Math.PI * 2) / 3
+        ctx.globalAlpha = 0.55 + Math.sin(angle) * 0.35
+        ctx.fillStyle = i % 2 === 0 ? '#ffd166' : '#fff6d0'
+        ctx.fillRect(
+          Math.round(feetX + Math.cos(angle) * 10),
+          Math.round(top + Math.sin(angle) * 3),
+          2,
+          2,
+        )
+      }
+      ctx.globalAlpha = 1
+    }
+
     if (enemy.isBoss && enemy.alive) {
       const pulse = 0.4 + Math.sin(time * 3) * 0.2
       ctx.globalAlpha = pulse
-      ctx.fillStyle = '#ffd166'
-      ctx.fillRect(feetX - 1, feetY - 46, 2, 2)
+      ctx.fillStyle = enemy.isEnraged ? '#ff6b5c' : '#ffd166'
+      ctx.fillRect(feetX - 1, feetY - (enemy.isUrsa ? 58 : 46), 2, 2)
       ctx.globalAlpha = 1
     }
+  }
+
+  private paintTelegraph(
+    enemy: Enemy,
+    feetX: number,
+    feetY: number,
+    time: number,
+  ): void {
+    const mode = enemy.attackMode
+    if (!mode) return
+    const strength = enemy.telegraph
+    const pulse = 0.5 + Math.sin(time * 24) * 0.5
+    const dir = enemy.facing
+
+    if (mode === 'slam') {
+      const width = 54
+      const x = dir > 0 ? feetX : feetX - width
+      ctx.globalAlpha = 0.12 + strength * 0.28
+      ctx.fillStyle = '#ff6b5c'
+      ctx.fillRect(x - 4, feetY - 4, width + 8, 7)
+      ctx.globalAlpha = 0.22 + strength * 0.4 + pulse * 0.12
+      ctx.fillStyle = '#ffd166'
+      ctx.fillRect(x, feetY - 3, width, 2)
+      // Pequenas marcas no chão mostram o alcance exato.
+      for (let i = 0; i < 4; i += 1) {
+        ctx.fillRect(x + 6 + i * 12, feetY - 7, 2, 2)
+      }
+    } else {
+      const length = 184
+      const x = dir > 0 ? feetX : feetX - length
+      ctx.globalAlpha = 0.1 + strength * 0.2
+      ctx.fillStyle = '#ff8b73'
+      ctx.fillRect(x, feetY - 4, length, 8)
+      ctx.globalAlpha = 0.3 + strength * 0.4 + pulse * 0.15
+      ctx.fillStyle = '#ffd166'
+      for (let i = 0; i < 7; i += 1) {
+        const px = dir > 0 ? x + i * 26 : x + length - i * 26
+        ctx.fillRect(px, feetY - 2, 12, 2)
+      }
+    }
+    ctx.globalAlpha = 1
   }
 
   private paintShots(time: number): void {
@@ -1581,7 +1871,6 @@ const screens = new Screens({
     sfx.unlock()
     sfx.click()
     game.setDifficulty(difficulty)
-    screens.setDifficultySelection(difficulty)
   },
   onRestart: () => {
     sfx.unlock()
@@ -1605,6 +1894,8 @@ screens.setChapters(
     subtitle: chapter.data.subtitle ?? '',
   })),
 )
+
+screens.setDifficultySelection(game.getDifficulty())
 
 game.onWin = (stats) => {
   screens.showEnd(stats)

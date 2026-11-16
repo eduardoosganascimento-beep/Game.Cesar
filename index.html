@@ -42,7 +42,10 @@
           <div id="boss" class="boss is-hidden" aria-live="polite">
             <span class="boss-crest" aria-hidden="true">✦</span>
             <span id="boss-label" class="boss-label">Capitão</span>
-            <div id="boss-pips" class="boss-pips" aria-label="Vida do capitão"></div>
+            <div id="boss-track" class="boss-track" role="progressbar" aria-label="Vida do chefe">
+              <div id="boss-fill" class="boss-fill"></div>
+            </div>
+            <span id="boss-hp" class="boss-hp"><b>0</b>/<b>0</b></span>
           </div>
         </div>
 
@@ -99,7 +102,64 @@
               A história pode ser jogada em sequência ou revisitada. Cada capítulo guarda memórias
               próprias e um pedaço da família de Sandman.
             </p>
+            <div class="chapter-meta">
+              <span class="chapter-meta-label">Dificuldade</span>
+              <button class="difficulty-chip" type="button" data-action="difficulty-screen">
+                <span id="chapters-difficulty">Normal</span>
+              </button>
+            </div>
             <nav id="chapter-list" class="chapter-list" aria-label="Capítulos"></nav>
+            <button class="menu-back" type="button" data-action="back">Voltar</button>
+          </div>
+
+          <div class="menu-screen is-hidden" data-screen="difficulty">
+            <p class="eyebrow">Antes da floresta</p>
+            <h2 class="menu-title">Escolha a dificuldade</h2>
+            <p class="menu-lead">
+              Cada partida escala a floresta inteira: perseguidores, velocidade e o peso das suas
+              perdas. A escolha vale para a trilha que você for jogar.
+            </p>
+            <nav id="difficulty-list" class="difficulty-list" aria-label="Dificuldades">
+              <button
+                class="difficulty-item is-selected"
+                type="button"
+                data-action="difficulty"
+                data-difficulty="facil"
+              >
+                <span class="difficulty-glyph" aria-hidden="true">🍂</span>
+                <span class="difficulty-copy">
+                  <b>Fácil</b>
+                  <small>Trilha gentil — inimigos deixam respirar</small>
+                </span>
+                <span class="difficulty-mods">0,8× velocidade</span>
+              </button>
+              <button
+                class="difficulty-item"
+                type="button"
+                data-action="difficulty"
+                data-difficulty="normal"
+              >
+                <span class="difficulty-glyph" aria-hidden="true">🌲</span>
+                <span class="difficulty-copy">
+                  <b>Normal</b>
+                  <small>A trilha clássica do Sandman</small>
+                </span>
+                <span class="difficulty-mods">padrão</span>
+              </button>
+              <button
+                class="difficulty-item"
+                type="button"
+                data-action="difficulty"
+                data-difficulty="dificil"
+              >
+                <span class="difficulty-glyph" aria-hidden="true">🌋</span>
+                <span class="difficulty-copy">
+                  <b>Difícil</b>
+                  <small>Caminho de pedra — cada escolha pesa</small>
+                </span>
+                <span class="difficulty-mods">1,25× velocidade</span>
+              </button>
+            </nav>
             <button class="menu-back" type="button" data-action="back">Voltar</button>
           </div>
 

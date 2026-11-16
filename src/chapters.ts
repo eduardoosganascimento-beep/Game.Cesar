@@ -36,9 +36,9 @@ export const CHAPTERS: ChapterDef[] = [
     data: cap1 as unknown as LevelData,
     kicker: 'Capítulo um',
     endText:
-      'A trilha segue para o rio. Se a família foi levada rio abaixo, é por lá que Sand vai.',
+      'O guardião da aldeia caiu. A trilha segue para o rio. Se a família foi levada rio abaixo, é por lá que Sand vai.',
     tint: 'rgba(255, 172, 86, 0.05)',
-    lockGoalUntilBoss: false,
+    lockGoalUntilBoss: true,
     tag: 'Aldeia',
   },
   {
