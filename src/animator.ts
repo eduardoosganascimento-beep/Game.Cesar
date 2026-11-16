@@ -144,21 +144,11 @@ export const ZOMBIE_CLIPS: Record<EnemyClipName, Clip> = {
 export type UrsaClipName = 'idle' | 'walk' | 'attack' | 'hurt' | 'death'
 
 export const URSA_CLIPS: Record<UrsaClipName, Clip> = {
-  idle: { frames: ['idle-1', 'idle-2'], fps: 2.4, loop: true },
-  walk: {
-    frames: ['walk-1', 'walk-2', 'walk-3', 'walk-4', 'walk-5', 'walk-6'],
-    fps: 10,
-    loop: true,
-  },
-  attack: {
-    frames: ['attack-1', 'attack-2', 'attack-3', 'attack-4', 'attack-5', 'attack-6', 'attack-7'],
-    fps: 10,
-    loop: false,
-  },
-  hurt: { frames: ['hurt-1', 'hurt-2', 'hurt-3'], fps: 12, loop: false },
-  // A folha não tem uma queda desenhada: a morte usa o último quadro de dano
-  // e a queda/desvanecimento são feitos no desenho (main.ts).
-  death: { frames: ['hurt-1', 'hurt-2', 'hurt-3'], fps: 6, loop: false },
+  idle: { frames: ['ursa-boss'], fps: 2.4, loop: true },
+  walk: { frames: ['ursa-boss'], fps: 10, loop: true },
+  attack: { frames: ['ursa-boss'], fps: 10, loop: false },
+  hurt: { frames: ['ursa-boss'], fps: 12, loop: false },
+  death: { frames: ['ursa-boss'], fps: 6, loop: false },
 }
 
 // ============================================================
