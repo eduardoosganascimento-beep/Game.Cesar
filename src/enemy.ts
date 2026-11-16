@@ -137,18 +137,18 @@ const STATS: Record<EnemyKind, Stats> = {
     label: 'Zumbi',
   },
 
-  // Urso: boss do Capítulo 1. O corpo é grande, mas a hitbox acompanha os
-  // pés do sprite (30x44), então os golpes continuam justos.
+  // Urso: boss do Capítulo 1. Sprite bem maior que Sand (1.15x) e hitbox
+  // larga (34x52), mantendo os pés alinhados ao chão para golpes justos.
   ursa: {
-    w: 30,
-    h: 44,
-    hp: 18,
+    w: 34,
+    h: 52,
+    hp: 22,
     speed: 26,
     chase: 210,
     melee: true,
     ranged: false,
     cooldown: 1.55,
-    visualScale: 0.4,
+    visualScale: 1.15,
     label: 'Urso',
   },
 }
@@ -163,16 +163,17 @@ const DEATH_TIME = 0.72
 // O machado do urso toca o chão no quinto quadro do clipe de ataque.
 // A investida tem um aviso longo antes de acelerar, para o jogador ler a
 // ameaça e pular ou correr para o lado.
-const URSA_SLAM_IMPACT = 0.4
-const URSA_SLAM_DURATION = 0.78
-const URSA_CHARGE_WINDUP = 0.45
-const URSA_CHARGE_ACTIVE = 0.52
-const URSA_CHARGE_DURATION = 1.2
-const URSA_CHARGE_SPEED = 150
-// O machado do urso toca o chão na horizontal do swing: a caixa de dano acompanha
-// o arco, então ela nasce um pouco antes do corpo e chega no impacto.
-const URSA_SLAM_REACH = 54
-const URSA_SLAM_BOX_H = 38
+const URSA_SLAM_IMPACT = 0.42
+const URSA_SLAM_DURATION = 0.82
+const URSA_CHARGE_WINDUP = 0.55
+const URSA_CHARGE_ACTIVE = 0.56
+const URSA_CHARGE_DURATION = 1.34
+const URSA_CHARGE_SPEED = 168
+// Recuperação do machado: depois do impacto o urso fica aberto por um instante.
+const URSA_SLAM_RECOVERY = 0.32
+// O machado do urso toca o chão na horizontal do swing.
+const URSA_SLAM_REACH = 64
+const URSA_SLAM_BOX_H = 48
 
 function clipDuration(kind: AttackKind): number {
   const clip = COLONIST_CLIPS[kind as 'shoot' | 'slash']
@@ -384,7 +385,7 @@ export class Enemy {
       if (this.attackKind === 'slam') {
         const reach = URSA_SLAM_REACH
         return {
-          x: this.facing > 0 ? this.x + this.w - 14 : this.x - reach + 14,
+          x: this.facing > 0 ? this.x + this.w - 18 : this.x - reach + 18,
           y: this.y + this.h - URSA_SLAM_BOX_H,
           w: reach,
           h: URSA_SLAM_BOX_H,
@@ -709,7 +710,14 @@ export class Enemy {
         this.justStruck = true
         this.justSlammed = true
       }
-      if (this.attackElapsed >= URSA_SLAM_DURATION) this.finishAttack()
+      if (this.attackElapsed >= URSA_SLAM_DURATION) {
+        const kind = this.attackKind
+        this.finishAttack()
+        // Janela de recuperação: o machado pesa e o urso fica vulnerável.
+        if (kind === 'slam' && this.alive) {
+          this.stunTimer = URSA_SLAM_RECOVERY
+        }
+      }
       return
     }
 

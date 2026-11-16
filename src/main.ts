@@ -1100,11 +1100,11 @@ class Game {
   private spawnShockwaves(enemy: Enemy): void {
     const cx = enemy.x + enemy.w / 2
     const groundY = enemy.y + enemy.h
-    const speed = enemy.isEnraged ? 112 : 92
+    const speed = enemy.isEnraged ? 128 : 104
 
     for (const dir of [-1, 1]) {
       this.shockwaves.push({
-        x: cx + dir * 12,
+        x: cx + dir * 18,
         y: groundY,
         vx: dir * speed,
         life: 1.15,
@@ -1449,14 +1449,14 @@ class Game {
     const progress = dying ? Math.min(1, enemy.deathProgress) : 0
 
     // A sombra encolhe junto com a queda do corpo.
-    const shadowWidth = enemy.isUrsa ? 28 : 14
+    const shadowWidth = enemy.isUrsa ? 42 : 14
     ctx.globalAlpha = 0.32 * (1 - progress * 0.8)
     ctx.fillStyle = '#000'
     ctx.fillRect(feetX - shadowWidth / 2, feetY - 2, shadowWidth, 2)
     ctx.globalAlpha = 1
 
     if (enemy.isBoss && enemy.alive) {
-      const radius = enemy.isUrsa ? 58 : 34
+      const radius = enemy.isUrsa ? 78 : 34
       const strength = enemy.isEnraged ? 0.28 : 0.16
       const aura = ctx.createRadialGradient(
         feetX,
@@ -1548,7 +1548,7 @@ class Game {
 
     // Tontura da investida que bateu na parede.
     if (enemy.isStunned && enemy.alive) {
-      const top = feetY - (enemy.isUrsa ? 62 : 36)
+      const top = feetY - (enemy.isUrsa ? 78 : 36)
       for (let i = 0; i < 3; i += 1) {
         const angle = time * 4.2 + (i * Math.PI * 2) / 3
         ctx.globalAlpha = 0.55 + Math.sin(angle) * 0.35
@@ -1567,7 +1567,7 @@ class Game {
       const pulse = 0.4 + Math.sin(time * 3) * 0.2
       ctx.globalAlpha = pulse
       ctx.fillStyle = enemy.isEnraged ? '#ff6b5c' : '#ffd166'
-      ctx.fillRect(feetX - 1, feetY - (enemy.isUrsa ? 58 : 46), 2, 2)
+      ctx.fillRect(feetX - 1, feetY - (enemy.isUrsa ? 74 : 46), 2, 2)
       ctx.globalAlpha = 1
     }
   }
@@ -1585,7 +1585,7 @@ class Game {
     const dir = enemy.facing
 
     if (mode === 'slam') {
-      const width = 54
+      const width = enemy.isUrsa ? 64 : 54
       const x = dir > 0 ? feetX : feetX - width
       ctx.globalAlpha = 0.12 + strength * 0.28
       ctx.fillStyle = '#ff6b5c'
@@ -1598,7 +1598,7 @@ class Game {
         ctx.fillRect(x + 6 + i * 12, feetY - 7, 2, 2)
       }
     } else {
-      const length = 184
+      const length = enemy.isUrsa ? 200 : 184
       const x = dir > 0 ? feetX : feetX - length
       ctx.globalAlpha = 0.1 + strength * 0.2
       ctx.fillStyle = '#ff8b73'
