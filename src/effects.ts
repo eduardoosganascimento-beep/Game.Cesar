@@ -11,6 +11,7 @@ export type BurstKind =
   | 'bullet'
   | 'spear'
   | 'ooze'
+  | 'blood'
 
 type Particle = {
   x: number
@@ -24,6 +25,8 @@ type Particle = {
   gravity: number
   drift: number
 }
+
+type Stain = { x: number; y: number; r: number; life: number; color: string }
 
 type FloatingText = {
   x: number
@@ -41,17 +44,18 @@ const PALETTES: Record<BurstKind, string[]> = {
   splash: ['#8fd4e2', '#c8f0f6', '#3d7f92', '#6bb5c6'],
   hit: ['#ff8b73', '#ffd7c2', '#d9534f', '#fff1dd'],
   death: ['#d7a05a', '#a4402f', '#4f3b2a', '#ffd166'],
-  // Cada arma deixa um rastro de pixels próprio.
   blade: ['#fff1dd', '#ffd7c2', '#e35d4f', '#ff8b73'],
   bullet: ['#c4473a', '#ff9f43', '#7d2820', '#ffd166'],
   spear: ['#e8c48a', '#8a5a2a', '#ffd166', '#b97d24'],
-  // Pingo doentio: o que escorre dos zumbis.
   ooze: ['#8ec96a', '#6fa04a', '#cbe58f', '#4f7a45'],
+  // Sangue: vermelho profundo com brilho, estilo combate pesado.
+  blood: ['#c0271e', '#8e1a14', '#e04b3c', '#5e100c'],
 }
 
 export class Effects {
   private particles: Particle[] = []
   private texts: FloatingText[] = []
+  private stains: Stain[] = []
   shake = 0
 
   burst(x: number, y: number, kind: BurstKind, count = 8, spread = 55): void {
@@ -71,6 +75,35 @@ export class Effects {
         color: palette[Math.floor(Math.random() * palette.length)],
         gravity: kind === 'splash' || kind === 'dust' ? 240 : 120,
         drift: (Math.random() - 0.5) * 14,
+      })
+    }
+    // Sangue mancha o chão: poça persistente que desaparece devagar.
+    if (kind === 'blood' || kind === 'death') {
+      this.stains.push({
+        x,
+        y: y + 2,
+        r: 3 + Math.random() * 5,
+        life: 6,
+        color: kind === 'blood' ? '#8e1a14' : '#6b3a24',
+      })
+    }
+  }
+
+  // Respingo direcional de sangue (golpe com peso).
+  bloodSpray(x: number, y: number, dir: number, count = 12): void {
+    this.burst(x, y, 'blood', count, 90)
+    for (let i = 0; i < count; i += 1) {
+      this.particles.push({
+        x,
+        y,
+        vx: dir * (40 + Math.random() * 120),
+        vy: -60 + Math.random() * 90,
+        life: 0.3 + Math.random() * 0.5,
+        max: 0.8,
+        size: 1 + Math.floor(Math.random() * 2),
+        color: PALETTES.blood[Math.floor(Math.random() * PALETTES.blood.length)],
+        gravity: 320,
+        drift: 0,
       })
     }
   }
@@ -101,6 +134,7 @@ export class Effects {
   clear(): void {
     this.particles.length = 0
     this.texts.length = 0
+    this.stains.length = 0
     this.shake = 0
   }
 
@@ -118,7 +152,10 @@ export class Effects {
       particle.x += (particle.vx + particle.drift) * dt
       particle.y += particle.vy * dt
     }
-
+    for (let i = this.stains.length - 1; i >= 0; i -= 1) {
+      this.stains[i].life -= dt
+      if (this.stains[i].life <= 0) this.stains.splice(i, 1)
+    }
     for (let i = this.texts.length - 1; i >= 0; i -= 1) {
       const text = this.texts[i]
       text.life -= dt
@@ -128,6 +165,14 @@ export class Effects {
   }
 
   render(ctx: CanvasRenderingContext2D, camera: Rect): void {
+    // Manchas de sangue no chão (desenha atrás dos personagens).
+    for (const stain of this.stains) {
+      ctx.globalAlpha = Math.min(0.5, stain.life / 6) * 0.5
+      ctx.fillStyle = stain.color
+      ctx.beginPath()
+      ctx.ellipse(Math.round(stain.x - camera.x), Math.round(stain.y - camera.y), stain.r, stain.r * 0.35, 0, 0, Math.PI * 2)
+      ctx.fill()
+    }
     for (const particle of this.particles) {
       const alpha = Math.min(1, particle.life / particle.max)
       ctx.globalAlpha = alpha
@@ -139,7 +184,6 @@ export class Effects {
         particle.size,
       )
     }
-
     ctx.textAlign = 'center'
     ctx.font = 'bold 7px "Courier New", monospace'
     for (const text of this.texts) {

@@ -829,14 +829,17 @@ class Game {
     const cx = enemy.x + enemy.w / 2
     const cy = enemy.y + enemy.h / 2
     const killed = enemy.damage(amount, fromX)
+    const dir = fromX < cx ? 1 : -1
     // Cada arma pinta o impacto do seu jeito.
     const impact = weapon === 'spear' ? 'spear' : weapon === 'stomp' ? 'hit' : 'blade'
-    this.effects.burst(cx, cy, killed ? 'death' : impact, killed ? 14 : 8, killed ? 66 : 44)
+    this.effects.burst(cx, cy, killed ? 'death' : impact, killed ? 16 : 10, killed ? 70 : 48)
+    // Sangue jorra na direção do golpe: combate com peso, estilo Sons of Sparta.
+    this.effects.bloodSpray(cx, cy, dir, killed ? 18 : 9)
     if (weapon === 'stomp') this.effects.burst(cx, enemy.y + enemy.h, 'dust', 7, 34)
     if (killed) this.killFlash = 1
-    this.effects.addShake(killed ? 2.4 : 1.2)
-    // Pequena pausa no impacto, maior quando o golpe derruba o inimigo.
-    if (!stomp) this.hitStop = Math.max(this.hitStop, killed ? 0.065 : 0.04)
+    this.effects.addShake(killed ? 3.6 : 1.8)
+    // Pausa no impacto: mais peso quando o golpe derruba o inimigo.
+    if (!stomp) this.hitStop = Math.max(this.hitStop, killed ? 0.085 : 0.05)
 
     if (!killed) {
       this.effects.text(cx, enemy.y - 3, stomp ? 'PISÃO!' : 'ACERTO!', '#ffb38a')
@@ -1208,10 +1211,12 @@ class Game {
         this.drawSprite(sprite, -sprite.ax * scale, -sprite.ay * scale, scale, 0)
         ctx.restore()
         ctx.globalAlpha = 1
-        // Puff de poeira quando o corpo bate no chão.
+        // Impacto no chão: poeira + respingo de sangue (estilo Sons of Sparta).
         if (progress >= 0.42 && progress < 0.52 && !this.deathDust.has(enemy)) {
           this.deathDust.add(enemy)
           this.effects.burst(feetX, feetY, 'dust', 8, 30)
+          this.effects.bloodSpray(feetX, feetY - 4, enemy.facing, 10)
+          this.effects.addShake(1.2)
         }
       } else if (enemy.facing < 0) {
         ctx.save()

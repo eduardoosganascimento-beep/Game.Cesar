@@ -217,15 +217,13 @@ async function loadSpear(): Promise<void> {
 export async function loadSprites(): Promise<void> {
   try {
     await Promise.all([
-      loadAtlas(PLAYER_DIR, playerCache, '#140f0b', 1.25, 1.18),  // mais luz e saturação
-      // Os colonos ganham um pouco mais de luz para o casaco vermelho e o
-      // chapéu branco saltarem do fundo escuro da mata.
-      loadAtlas(COLONIST_DIR, colonistCache, '#0d0907', 1.25, 1.18),
-      loadAtlas(INDIO_DIR, indioCache, '#2a1a10', 1.2, 1.1),
-      loadAtlas(WOLF_DIR, wolfCache, '#120d14', 1.1, 1.1),
-      // Zumbi: contorno esverdeado e um leve ganho de luz para o corpo
-      // pálido não sumir no fundo escuro.
-      loadAtlas(ZOMBIE_DIR, zombieCache, '#0d1a0b', 1.16, 1.12),
+      loadAtlas(PLAYER_DIR, playerCache, '#140f0b', 1.32, 1.22),
+      // Colonos mais vibrantes: casaco vermelho e chapéu branco saltam da mata.
+      loadAtlas(COLONIST_DIR, colonistCache, '#0d0907', 1.3, 1.24),
+      loadAtlas(INDIO_DIR, indioCache, '#2a1a10', 1.28, 1.18),
+      loadAtlas(WOLF_DIR, wolfCache, '#120d14', 1.18, 1.16),
+      // Zumbi: mais luz e saturação para o verde doentio aparecer no fundo.
+      loadAtlas(ZOMBIE_DIR, zombieCache, '#0d1a0b', 1.26, 1.2),
       loadSpear(),
     ])
     console.info(
