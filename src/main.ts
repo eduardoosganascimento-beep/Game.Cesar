@@ -121,6 +121,7 @@ class Game {
   private spears: Spear[] = []
   private shockwaves: Shockwave[] = []
   private dashGhosts: DashGhost[] = []
+  private deathDust = new Set<Enemy>()
   private dashGhostTimer = 0
   private hitStop = 0
   private dying = 0
@@ -336,6 +337,7 @@ class Game {
     this.spears = []
     this.shockwaves = []
     this.dashGhosts.length = 0
+    this.deathDust.clear()
     this.dashGhostTimer = 0
     this.hitStop = 0
     this.dying = 0
@@ -1547,42 +1549,34 @@ class Game {
 
     if (sprite) {
       if (dying) {
-        // Queda procedural: o sprite gira ao redor dos pés e some devagar.
-        // O urso cai mais lentamente e pisca em branco no primeiro impacto.
-        const eased = progress * progress * (3 - 2 * progress)
+        // Queda: solavanco no impacto, giro suave e pausa com o corpo no chão.
+        // O urso cai mais devagar e pisca em branco no primeiro impacto.
+        const t = progress * progress * (3 - 2 * progress)
         const w = Math.max(1, Math.round(sprite.w * scale))
         const h = Math.max(1, Math.round(sprite.h * scale))
         ctx.save()
         ctx.translate(feetX, feetY)
-        ctx.rotate(
-          (enemy.facing > 0 ? 1 : -1) *
-            (Math.PI / (enemy.isUrsa ? 2.25 : 2.05)) *
-            eased,
-        )
+        // Pequeno recuo no início (corpo é empurrado para trás) e rotação.
+        const kick = Math.sin(Math.min(1, progress * 3.2) * Math.PI) * 3
+        ctx.translate(-enemy.facing * kick, 0)
+        ctx.rotate((enemy.facing > 0 ? 1 : -1) * (Math.PI / (enemy.isUrsa ? 2.25 : 2.05)) * t)
         ctx.imageSmoothingEnabled = false
 
-        if (progress < 0.22) {
-          ctx.globalAlpha = (1 - progress / 0.22) * 0.85
-          ctx.drawImage(
-            sprite.white,
-            Math.round(-sprite.ax * scale),
-            Math.round(-sprite.ay * scale),
-            w,
-            h,
-          )
+        if (progress < 0.18) {
+          ctx.globalAlpha = (1 - progress / 0.18) * 0.85
+          ctx.drawImage(sprite.white, Math.round(-sprite.ax * scale), Math.round(-sprite.ay * scale), w, h)
         }
 
-        ctx.globalAlpha =
-          progress < 0.64 ? 1 : Math.max(0, 1 - (progress - 0.64) / 0.36)
-        ctx.drawImage(
-          sprite.img,
-          Math.round(-sprite.ax * scale),
-          Math.round(-sprite.ay * scale),
-          w,
-          h,
-        )
+        // Fica deitado um instante antes de desvanecer.
+        ctx.globalAlpha = progress < 0.72 ? 1 : Math.max(0, 1 - (progress - 0.72) / 0.28)
+        ctx.drawImage(sprite.img, Math.round(-sprite.ax * scale), Math.round(-sprite.ay * scale), w, h)
         ctx.restore()
         ctx.globalAlpha = 1
+        // Puff de poeira no instante em que o corpo bate no chão.
+        if (!enemy.isUrsa && progress >= 0.42 && progress < 0.52 && !this.deathDust.has(enemy)) {
+          this.deathDust.add(enemy)
+          this.effects.burst(feetX, feetY, 'dust', 8, 30)
+        }
       } else if (enemy.facing < 0) {
         ctx.save()
         ctx.translate(feetX, 0)

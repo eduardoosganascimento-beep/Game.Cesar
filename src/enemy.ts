@@ -529,7 +529,15 @@ export class Enemy {
 
     if (this.hp <= 0) {
       this.alive = false
-      this.deathDuration = this.isUrsa ? 1.8 : this.isBoss ? 1.05 : DEATH_TIME
+      // Tempo suficiente para o clipe de morte inteiro (4-5 quadros) mais a
+      // pausa do corpo caído antes de desaparecer.
+      this.deathDuration = this.isUrsa
+        ? 1.8
+        : this.isZombie
+          ? 0.95
+          : this.isBoss
+            ? 1.05
+            : 0.9
       this.deathTimer = this.deathDuration
       this.animator.play('death')
       return true
