@@ -53,9 +53,10 @@ while (stack.length) {
 const inkAt = (x, y) => at(x, y)[3] >= 8 && !bgMark[y * width + x]
 
 const ROWS = [
-  { name: 'attack', y0: 0, y1: 49, x0: 118, x1: 337, count: 7 },
-  { name: 'walk', y0: 49, y1: 101, x0: 118, x1: 337, count: 6 },
-  { name: 'hurt', y0: 101, y1: height, x0: 112, x1: 331, count: 8 },
+  // Limites medidos nos vales de tinta da folha (células iguais cortavam poses).
+  { name: 'attack', y0: 0, y1: 49, edges: [118, 148, 176, 197, 218, 257, 294, 337], count: 7 },
+  { name: 'walk', y0: 49, y1: 101, edges: [118, 152, 194, 230, 266, 301, 337], count: 6 },
+  { name: 'hurt', y0: 101, y1: height, edges: [112, 139, 167, 194, 222, 249, 276, 304, 331], count: 8 },
 ]
 
 const paletteSamples = []
@@ -68,10 +69,9 @@ const palette = buildPalette(paletteSamples, 110)
 
 const raw = []
 for (const row of ROWS) {
-  const step = (row.x1 - row.x0) / row.count
   for (let i = 0; i < row.count; i += 1) {
-    const xa = Math.max(0, Math.round(row.x0 + i * step))
-    const xb = Math.min(width, Math.round(row.x0 + (i + 1) * step))
+    const xa = Math.max(0, row.edges[i])
+    const xb = Math.min(width, row.edges[i + 1])
     const ya = row.y0, yb = row.y1
     const cw = xb - xa, chh = yb - ya
     const mask = new Uint8Array(cw * chh)
@@ -92,11 +92,17 @@ for (const row of ROWS) {
       .filter((c) => c.area >= 60)
       .sort((a, b) => b.area - a.area)
     if (!comps.length) throw new Error(`célula vazia: ${row.name} ${i}`)
-    const body = comps[0]
-    const px = Math.max(0, body.x - 2)
-    const py = Math.max(0, body.y - 2)
-    const pw = Math.min(cw - px, body.w + 4)
-    const ph = Math.min(chh - py, body.h + 4)
+    // Usa TODOS os componentes grandes: nas poses agachadas o urso se divide
+    // em duas metades (corpo + machado) e pegar só o maior cortava metade dele.
+    const parts = comps.slice(0, 4)
+    const minX = Math.min(...parts.map((c) => c.x))
+    const maxX = Math.max(...parts.map((c) => c.x + c.w))
+    const minY = Math.min(...parts.map((c) => c.y))
+    const maxY = Math.max(...parts.map((c) => c.y + c.h))
+    const px = Math.max(0, minX - 2)
+    const py = Math.max(0, minY - 2)
+    const pw = Math.min(cw - px, maxX - minX + 4)
+    const ph = Math.min(chh - py, maxY - minY + 4)
     const crop = { w: pw, h: ph, mask: new Uint8Array(pw * ph), data: new Uint8Array(pw * ph * 4) }
     for (let y = py; y < py + ph; y += 1) {
       for (let x = px; x < px + pw; x += 1) {
@@ -111,20 +117,21 @@ for (const row of ROWS) {
       }
     }
     const prefix = row.name === 'attack' ? 'attack' : row.name === 'walk' ? 'walk' : 'hurt'
-    const headXs = []
-    const headLimit = body.y + body.h * 0.32
-    for (const pixel of body.pixels) {
-      const cx = pixel % cw
-      const cy = (pixel - cx) / cw
-      if (cy <= headLimit) headXs.push(cx)
+    // Centro de massa de TODAS as partes: estável mesmo quando o corpo se divide.
+    let massX = 0, massN = 0
+    for (const c of parts) {
+      for (const pixel of c.pixels) {
+        massX += pixel % cw
+        massN += 1
+      }
     }
-    headXs.sort((a, b) => a - b)
+    const centerX = massN ? Math.round(massX / massN) : Math.round((minX + maxX) / 2)
     raw.push({
       name: `${prefix}-${i + 1}`,
       crop,
-      reference: body.h,
-      bodyBottom: body.y + body.h,
-      headX: headXs.length ? headXs[Math.floor(headXs.length / 2)] : body.x + body.w / 2,
+      reference: maxY - minY + 1,
+      bodyBottom: maxY + 1,
+      headX: centerX,
       cropX: px,
       cropY: py,
     })
