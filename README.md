@@ -21,7 +21,7 @@ computador com navegador — não precisa instalar nada.
 
 ## Capítulos
 
-| # | Capítulo | Cenário | Mapa |
+| # | Capítulo | Tema visual | Mapa |
 | --- | --- | --- | --- |
 | — | Tutorial — A Trilha | Bosque | 96 colunas |
 | 1 | A Aldeia | Aldeia | 132 colunas |
@@ -29,13 +29,15 @@ computador com navegador — não precisa instalar nada.
 | 3 | O Acampamento | Acampamento | 176 colunas |
 | 4 | O Reencontro | Noite | 196 colunas |
 | 5 | O Portal | Bosque | 120 colunas |
-| 6 | A Caverna | Caverna | 128 colunas |
-| 7 | O Castelo | Ruínas | 136 colunas |
+| 6 | A Caverna | Bosque | 128 colunas |
+| 7 | O Castelo | Acampamento | 136 colunas |
 | 8 | O Futuro | Noite | 144 colunas |
 | 9 | O Fim | Noite | 152 colunas |
 
 Cada capítulo é um mapa aberto contínuo, com **checkpoints**, **memórias**
-coletáveis e um portal de objetivo no final.
+coletáveis e um portal de objetivo no final. Os cinco temas visuais
+(aldeia, rio, acampamento, bosque e noite) são reaproveitados entre capítulos;
+caverna e castelo ainda não têm cenário próprio.
 
 ## O que tem no jogo
 
@@ -49,7 +51,7 @@ coletáveis e um portal de objetivo no final.
 - **Três dificuldades** (Fácil, Normal, Difícil) que escalam velocidade e dano
   dos inimigos. A escolha fica salva no navegador.
 - **Memórias e checkpoints** com progresso salvo durante a fase.
-- **Cenários** de dia, noite e caverna, com parallax em camadas, água, espinhos
+- **Cenários** de dia, noite e floresta, com parallax em camadas, água, espinhos
   e fogo.
 - **Efeitos** de impacto, poeira, faíscas e rastro de dash; áudio gerado por
   Web Audio (com botão de mudo no HUD).
