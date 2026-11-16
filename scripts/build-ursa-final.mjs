@@ -1,6 +1,6 @@
-// Gera os frames do Urso com o padrão do índio/colono: fundo removido por
-// cor exada da borda + regras, componente conectado por célula, paleta limpa,
-// escala uniforme e âncora estável (cabeça / pés).
+// Gera os frames do Urso com o padrão do índio: fundo removido por cor,
+// recorte por célula, paleta limpa, escala uniforme e âncora estável.
+// Folha: 350x143. Linha 0 = 7 ataques, linha 1 = 6 caminhadas, linha 2 = 8 dano.
 import { PNG } from 'pngjs'
 import fs from 'node:fs'
 import path from 'node:path'
@@ -9,7 +9,7 @@ import { componentList, resampleArea, buildPalette, snapPalette, padFrames } fro
 
 const INPUT = 'raw/ursa-sheet.png'
 const OUT_DIR = 'public/assets/sprites/ursa'
-const TARGET_BODY = 44
+const TARGET_BODY = 46
 
 const { data, info } = await sharp(INPUT).ensureAlpha().raw().toBuffer({ resolveWithObject: true })
 const width = info.width, height = info.height, channels = info.channels
@@ -17,25 +17,40 @@ const at = (x, y) => {
   const i = (y * width + x) * channels
   return [data[i], data[i + 1], data[i + 2], data[i + 3]]
 }
+// Fundo: moda por linha (listras horizontais) + flood-fill a partir das
+// bordas. Remove só o fundo conectado à borda, preservando detalhes do urso.
 const bg = []
 for (let y = 0; y < height; y += 1) {
-  const s = []
-  for (let x = width - 25; x < width - 1; x += 1) s.push(at(x, y))
-  s.sort((a, b) => a[0] + a[1] + a[2] - (b[0] + b[1] + b[2]))
-  bg.push(s[Math.floor(s.length / 2)])
+  const c = new Map()
+  for (let x = 112; x < width; x += 1) {
+    const [r, g, b] = at(x, y)
+    const k = (r << 16) | (g << 8) | b
+    c.set(k, (c.get(k) || 0) + 1)
+  }
+  const best = [...c.entries()].sort((a, b) => b[1] - a[1])[0]
+  bg.push([(best[0] >> 16) & 255, (best[0] >> 8) & 255, best[0] & 255])
 }
-function isBg(x, y, r, g, b) {
+const isBgColor = (x, y) => {
+  const [r, g, b] = at(x, y)
   const [br, bgc, bb] = bg[y]
-  const d = Math.sqrt((r - br) ** 2 + (g - bgc) ** 2 + (b - bb) ** 2)
-  if (d < 55) return true
-  const green = g > r + 3 && g > b + 3 && r > 60 && r < 160
-  const orange = r > 170 && g > 95 && g < 215 && b < 115
-  return green || orange
+  return Math.abs(r - br) + Math.abs(g - bgc) + Math.abs(b - bb) <= 75
 }
-const inkAt = (x, y) => {
-  const [r, g, b, a] = at(x, y)
-  return a >= 8 && !isBg(x, y, r, g, b)
+const bgMark = new Uint8Array(width * height)
+const stack = []
+for (let x = 0; x < width; x += 1) stack.push(x, (height - 1) * width + x)
+for (let y = 0; y < height; y += 1) stack.push(y * width, y * width + width - 1)
+while (stack.length) {
+  const idx = stack.pop()
+  if (bgMark[idx]) continue
+  const x = idx % width, y = (idx - x) / width
+  if (!isBgColor(x, y)) continue
+  bgMark[idx] = 1
+  if (x > 0) stack.push(idx - 1)
+  if (x < width - 1) stack.push(idx + 1)
+  if (y > 0) stack.push(idx - width)
+  if (y < height - 1) stack.push(idx + width)
 }
+const inkAt = (x, y) => at(x, y)[3] >= 8 && !bgMark[y * width + x]
 
 const ROWS = [
   { name: 'attack', y0: 0, y1: 49, x0: 118, x1: 337, count: 7 },
@@ -58,9 +73,9 @@ for (const row of ROWS) {
     const xa = Math.max(0, Math.round(row.x0 + i * step))
     const xb = Math.min(width, Math.round(row.x0 + (i + 1) * step))
     const ya = row.y0, yb = row.y1
-    const cw = xb - xa, ch = yb - ya
-    const mask = new Uint8Array(cw * ch)
-    const rgb = new Uint8Array(cw * ch * 4)
+    const cw = xb - xa, chh = yb - ya
+    const mask = new Uint8Array(cw * chh)
+    const rgb = new Uint8Array(cw * chh * 4)
     for (let y = ya; y < yb; y += 1) {
       for (let x = xa; x < xb; x += 1) {
         if (!inkAt(x, y)) continue
@@ -73,16 +88,15 @@ for (const row of ROWS) {
         rgb[idx * 4 + 3] = 255
       }
     }
-    const comps = componentList(mask, cw, ch, (idx) => mask[idx] === 1)
-      .filter((c) => c.area >= 80)
+    const comps = componentList(mask, cw, chh, (idx) => mask[idx] === 1)
+      .filter((c) => c.area >= 60)
       .sort((a, b) => b.area - a.area)
     if (!comps.length) throw new Error(`célula vazia: ${row.name} ${i}`)
     const body = comps[0]
-    // Recorte colado no componente (2px de borda), sem vizinhos.
     const px = Math.max(0, body.x - 2)
     const py = Math.max(0, body.y - 2)
     const pw = Math.min(cw - px, body.w + 4)
-    const ph = Math.min(ch - py, body.h + 4)
+    const ph = Math.min(chh - py, body.h + 4)
     const crop = { w: pw, h: ph, mask: new Uint8Array(pw * ph), data: new Uint8Array(pw * ph * 4) }
     for (let y = py; y < py + ph; y += 1) {
       for (let x = px; x < px + pw; x += 1) {
@@ -117,6 +131,7 @@ for (const row of ROWS) {
   }
 }
 
+// Idle: hurt-1 e hurt-2. Morte: hurt-5..8.
 for (const [i, name] of ['idle-1', 'idle-2'].entries()) {
   raw.push({ ...raw.find((f) => f.name === `hurt-${i + 1}`), name })
 }

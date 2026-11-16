@@ -47,6 +47,8 @@ type Shot = {
   vy: number
   life: number
   boss: boolean
+  kind?: 'bullet' | 'axe'
+  rotation?: number
 }
 
 type Spear = {
@@ -115,6 +117,7 @@ class Game {
   private memories: Memory[] = []
   private checkpoints: Checkpoint[] = []
   private shots: Shot[] = []
+  private axes: Shot[] = []
   private spears: Spear[] = []
   private shockwaves: Shockwave[] = []
   private dashGhosts: DashGhost[] = []
@@ -329,6 +332,7 @@ class Game {
       }))
 
     this.shots = []
+    this.axes = []
     this.spears = []
     this.shockwaves = []
     this.dashGhosts.length = 0
@@ -468,6 +472,7 @@ class Game {
       if (!enemy.alive) continue
 
       if (enemy.justShot) this.spawnShot(enemy)
+      if (enemy.justThrew) this.spawnAxe(enemy)
       if (enemy.justSlammed) this.spawnShockwaves(enemy)
       if (enemy.justCharged) {
         sfx.charge()
@@ -557,6 +562,7 @@ class Game {
     this.updateInfections()
 
     this.updateShots(safeDt)
+    this.updateAxes(safeDt)
     this.updateSpears(safeDt)
     this.updateShockwaves(safeDt)
 
@@ -703,6 +709,7 @@ class Game {
     }
 
     this.paintShots(time)
+    this.paintAxes(time)
     this.paintSpears(time)
     this.paintShockwaves(time)
     this.paintDashGhosts()
@@ -1039,6 +1046,53 @@ class Game {
         this.hurtPlayer(shot.x, 'bullet')
         this.effects.burst(shot.x, shot.y, 'bullet', 9, 52)
         this.shots.splice(i, 1)
+      }
+    }
+  }
+
+  // Machado arremessado do urso: projétil mirado no jogador, no mesmo estilo
+  // do arremesso de lança do índio, mas com arco e rotação próprios.
+  private spawnAxe(enemy: Enemy): void {
+    const origin = enemy.shotOrigin
+    const targetX = this.player.x + this.player.w / 2
+    const targetY = this.player.y + this.player.h * 0.42
+    const dx = targetX - origin.x
+    const dy = targetY - origin.y
+    const length = Math.max(1, Math.hypot(dx, dy))
+    const speed = enemy.isEnraged ? 250 : 210
+    this.axes.push({
+      x: origin.x,
+      y: origin.y,
+      vx: (dx / length) * speed,
+      vy: (dy / length) * speed - 35,
+      life: 1.5,
+      boss: true,
+      kind: 'axe',
+      rotation: 0,
+    })
+    sfx.shot()
+    this.effects.addShake(1.4)
+    this.effects.burst(origin.x, origin.y, 'spark', 9, 50)
+  }
+
+  private updateAxes(dt: number): void {
+    for (let i = this.axes.length - 1; i >= 0; i -= 1) {
+      const axe = this.axes[i]
+      axe.life -= dt
+      axe.vy += 260 * dt
+      axe.x += axe.vx * dt
+      axe.y += axe.vy * dt
+      axe.rotation = (axe.rotation ?? 0) + dt * 15
+      const rect = { x: axe.x - 6, y: axe.y - 6, w: 12, h: 12 }
+      const hitWall = this.map.solidsIn(rect).length > 0
+      const hitPlayer = overlaps(this.player.hurtbox, rect) && this.player.invuln <= 0
+      if (axe.life <= 0 || hitWall || hitPlayer) {
+        if (hitPlayer) {
+          this.hurtPlayer(axe.x, 'blade', 2)
+          this.effects.addShake(2.6)
+        }
+        this.effects.burst(axe.x, axe.y, hitPlayer ? 'hit' : 'dust', 9, 44)
+        this.axes.splice(i, 1)
       }
     }
   }
@@ -1597,6 +1651,13 @@ class Game {
       for (let i = 0; i < 4; i += 1) {
         ctx.fillRect(x + 6 + i * 12, feetY - 7, 2, 2)
       }
+    } else if (mode === 'throw') {
+      // Aviso do arremesso: ponto luminoso no ombro que cresce até o lançamento.
+      const glow = ctx.createRadialGradient(feetX + dir * 8, feetY - 28, 1, feetX + dir * 8, feetY - 28, 12)
+      glow.addColorStop(0, `rgba(255, 209, 102, ${0.3 + strength * 0.5})`)
+      glow.addColorStop(1, 'rgba(255, 139, 115, 0)')
+      ctx.fillStyle = glow
+      ctx.fillRect(feetX + dir * 8 - 12, feetY - 40, 24, 24)
     } else {
       const length = enemy.isUrsa ? 200 : 184
       const x = dir > 0 ? feetX : feetX - length
@@ -1650,6 +1711,34 @@ class Game {
       ctx.fillRect(x - 2, y + 1, 1, 1)
       ctx.fillRect(x + 4, y + 1, 1, 1)
       ctx.globalAlpha = 1
+    }
+  }
+
+  // Machado girando: cabo marrom, lâmina cinza e brilho quente.
+  private paintAxes(time: number): void {
+    for (const axe of this.axes) {
+      const x = Math.round(axe.x - this.camera.px)
+      const y = Math.round(axe.y - this.camera.py)
+      if (x < -20 || x > VIEW_W + 20 || y < -20 || y > VIEW_H + 20) continue
+      const angle = axe.rotation ?? 0
+      ctx.save()
+      ctx.translate(x, y)
+      ctx.rotate(angle)
+      const glow = ctx.createRadialGradient(0, 0, 1, 0, 0, 12)
+      glow.addColorStop(0, 'rgba(255, 180, 120, 0.4)')
+      glow.addColorStop(1, 'rgba(255, 140, 90, 0)')
+      ctx.fillStyle = glow
+      ctx.fillRect(-12, -12, 24, 24)
+      ctx.fillStyle = '#7a4a26'
+      ctx.fillRect(-1, -9, 2, 12)
+      ctx.fillStyle = '#c9d1d6'
+      ctx.fillRect(-6, -10, 12, 5)
+      ctx.fillStyle = '#8f9aa3'
+      ctx.fillRect(-6, -5, 12, 2)
+      ctx.fillStyle = '#fff1d0'
+      ctx.fillRect(-4, -9, 3, 1)
+      ctx.restore()
+      void time
     }
   }
 

@@ -153,10 +153,11 @@ const STATS: Record<EnemyKind, Stats> = {
   },
 }
 
-type AttackKind = 'shoot' | 'slash' | 'slam' | 'charge'
+type AttackKind = 'shoot' | 'slash' | 'slam' | 'charge' | 'throw'
 
 const SHOOT_FIRE_AT = 0.12
 const SLASH_HIT_AT = 0.18
+const URSA_THROW_FIRE_AT = 0.3
 const HURT_TIME = 0.24
 const DEATH_TIME = 0.72
 
@@ -207,6 +208,7 @@ export class Enemy {
   invuln = 0
   onGround = false
   justShot = false
+  justThrew = false
   justStruck = false
   justSlammed = false
   justCharged = false
@@ -310,8 +312,8 @@ export class Enemy {
     return this.stunTimer > 0
   }
 
-  get attackMode(): 'slam' | 'charge' | null {
-    return this.attackKind === 'slam' || this.attackKind === 'charge'
+  get attackMode(): 'slam' | 'charge' | 'throw' | null {
+    return this.attackKind === 'slam' || this.attackKind === 'charge' || this.attackKind === 'throw'
       ? this.attackKind
       : null
   }
@@ -321,6 +323,9 @@ export class Enemy {
     if (!this.isUrsa || !this.attackKind) return 0
     if (this.attackKind === 'slam') {
       return Math.min(1, this.attackElapsed / URSA_SLAM_IMPACT)
+    }
+    if (this.attackKind === 'throw') {
+      return Math.min(1, this.attackElapsed / URSA_THROW_FIRE_AT)
     }
     if (this.attackKind === 'charge') {
       if (this.attackElapsed < URSA_CHARGE_WINDUP) {
@@ -458,6 +463,7 @@ export class Enemy {
     this.deathTimer = 0
     this.deathDuration = DEATH_TIME
     this.justShot = false
+    this.justThrew = false
     this.justStruck = false
     this.justSlammed = false
     this.justCharged = false
@@ -467,6 +473,7 @@ export class Enemy {
 
   update(dt: number, map: TileMap, player?: Rect): void {
     this.justShot = false
+    this.justThrew = false
     this.justStruck = false
     this.justSlammed = false
     this.justCharged = false
@@ -614,7 +621,12 @@ export class Enemy {
         this.startAttack('slam', distance)
         return
       }
-      if (range <= 190) {
+      if (range <= 150) {
+        // Arremesso de machado: mesma ideia do índio, mas com Alcance curto.
+        this.startAttack('throw', distance)
+        return
+      }
+      if (range <= 210) {
         this.startAttack('charge', distance)
         return
       }
@@ -669,10 +681,10 @@ export class Enemy {
     this.facing = distance >= 0 ? 1 : -1
 
     if (this.isUrsa) {
-      // A investida usa o ciclo de caminhada em ritmo acelerado; o golpe de
-      // machado usa o clipe de ataque completo.
-      this.animator.play(kind === 'slam' ? 'attack' : 'walk')
-      this.animator.setTimeScale(kind === 'slam' ? 1 : 0.55)
+      // O machado e o arremesso usam o clipe de ataque; a investida usa a
+      // caminhada acelerada.
+      this.animator.play(kind === 'charge' ? 'walk' : 'attack')
+      this.animator.setTimeScale(kind === 'charge' ? 0.55 : 1)
       return
     }
 
@@ -718,6 +730,15 @@ export class Enemy {
           this.stunTimer = URSA_SLAM_RECOVERY
         }
       }
+      return
+    }
+
+    if (this.attackKind === 'throw') {
+      if (!this.fired && this.attackElapsed >= URSA_THROW_FIRE_AT) {
+        this.fired = true
+        this.justThrew = true
+      }
+      if (this.attackElapsed >= URSA_SLAM_DURATION) this.finishAttack()
       return
     }
 
