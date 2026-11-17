@@ -73,9 +73,9 @@ export function drawBackground(
   ctx.globalAlpha = 1
 
   // Vinheta leve dá profundidade sem sujar a arte.
-  const v = ctx.createRadialGradient(VIEW_W/2, VIEW_H/2, VIEW_H*0.3, VIEW_W/2, VIEW_H/2, VIEW_H*0.85)
+  const v = ctx.createRadialGradient(VIEW_W/2, VIEW_H/2, VIEW_H*0.4, VIEW_W/2, VIEW_H/2, VIEW_H*0.95)
   v.addColorStop(0, 'rgba(0,0,0,0)')
-  v.addColorStop(1, night ? 'rgba(0,0,20,0.28)' : 'rgba(0,10,5,0.22)')
+  v.addColorStop(1, night ? 'rgba(0,0,20,0.16)' : 'rgba(10,5,0,0.12)')
   ctx.fillStyle = v
   ctx.fillRect(0, 0, VIEW_W, VIEW_H)
   void VIEW_H
