@@ -4,13 +4,17 @@ import { publicAssetUrl } from './sprites'
 // Fundo: arte enviada pelo jogador + vagalumes. A imagem é desenhada com um
 // offset que alinha a grama da arte ao topo do chão do jogo (y = 9 * TILE).
 const sources = {
-  day: publicAssetUrl('assets/background/forest-kenney.png'),
-  night: publicAssetUrl('assets/background/night.jpg'),
+  'forest-kenney': publicAssetUrl('assets/background/forest-kenney.png'),
+  'forest-day': publicAssetUrl('assets/background/forest-day.png'),
+  'forest-night': publicAssetUrl('assets/background/forest-night.png'),
+  'forest-cave': publicAssetUrl('assets/background/forest-cave.png'),
 }
 
 const images = {
-  day: buildImage(sources.day),
-  night: buildImage(sources.night),
+  'forest-kenney': buildImage(sources['forest-kenney']),
+  'forest-day': buildImage(sources['forest-day']),
+  'forest-night': buildImage(sources['forest-night']),
+  'forest-cave': buildImage(sources['forest-cave']),
 }
 
 function buildImage(source: string): { image: HTMLImageElement; ready: boolean } {
@@ -32,30 +36,22 @@ const FIREFLIES = Array.from({ length: 26 }, (_, i) => ({
 export function drawBackground(
   ctx: CanvasRenderingContext2D,
   cameraX: number,
-  cameraY: number,
   time: number,
-  night = false,
+  scene: 'forest-kenney' | 'forest-day' | 'forest-night' | 'forest-cave' = 'forest-kenney',
+  _night = false,
 ): void {
   // Base escura cobre qualquer borda.
-  ctx.fillStyle = night ? '#0a1024' : '#13241a'
+  ctx.fillStyle = _night ? '#0a1024' : '#13241a'
   ctx.fillRect(0, 0, VIEW_W, VIEW_H)
 
-  const entry = night ? images.night : images.day
+  const entry = images[scene] ?? images['forest-kenney']
   if (entry.ready) {
     const image = entry.image
     const w = image.naturalWidth
     const h = image.naturalHeight
-    // Imagem 320x180 exata: desenha sem offset.
-    const y = Math.round(0 - cameraY * 0.08)
-    ctx.drawImage(image, 0, y, w, h)
-    // Se a imagem for mais estreita que a tela, repete espelhada.
-    if (w < VIEW_W) {
-      ctx.save()
-      ctx.translate(w, y)
-      ctx.scale(-1, 1)
-      ctx.drawImage(image, 0, 0, w, h)
-      ctx.restore()
-    }
+    // Imagem 320x180 exata: desenha FIXA (sem parallax vertical) para a
+    // vegetação do fundo continuar alinhada ao chão quando Sand pula.
+    ctx.drawImage(image, 0, 0, w, h)
   }
 
   // Vagalumes com brilho suave.
@@ -75,7 +71,7 @@ export function drawBackground(
   // Vinheta leve dá profundidade sem sujar a arte.
   const v = ctx.createRadialGradient(VIEW_W/2, VIEW_H/2, VIEW_H*0.4, VIEW_W/2, VIEW_H/2, VIEW_H*0.95)
   v.addColorStop(0, 'rgba(0,0,0,0)')
-  v.addColorStop(1, night ? 'rgba(0,0,20,0.16)' : 'rgba(10,5,0,0.12)')
+  v.addColorStop(1, _night ? 'rgba(0,0,20,0.16)' : 'rgba(10,5,0,0.12)')
   ctx.fillStyle = v
   ctx.fillRect(0, 0, VIEW_W, VIEW_H)
   void VIEW_H

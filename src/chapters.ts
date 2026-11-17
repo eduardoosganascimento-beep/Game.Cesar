@@ -19,6 +19,7 @@ export const TUTORIAL: ChapterDef = {
     title: 'O despertar',
     lines: ['Sandro acorda. A aldeia está em silêncio.', 'Pegue o cajado e a lança. A floresta vai te guiar.'],
   },
+  bg: 'forest-day',
 }
 
 export type Cutscene = {
@@ -34,6 +35,7 @@ export type ChapterDef = {
   lockGoalUntilBoss: boolean
   tag: string
   cutscene: Cutscene
+  bg: 'forest-kenney' | 'forest-day' | 'forest-night' | 'forest-cave'
 }
 
 export const CHAPTERS: ChapterDef[] = [
@@ -48,6 +50,7 @@ export const CHAPTERS: ChapterDef[] = [
       title: 'A aldeia em cinzas',
       lines: ['Sandro volta: a aldeia foi tomada.', 'Seu povo foi levado rio abaixo.', '— Vou trazê-los de volta —, jura o guardião.'],
     },
+  bg: 'forest-day',
   },
   {
     data: cap2 as unknown as LevelData,
@@ -60,6 +63,7 @@ export const CHAPTERS: ChapterDef[] = [
       title: 'O rio escuro',
       lines: ['A correnteza é forte, mas Sandro atravessa.', 'Do outro lado, fumaça sobe entre as árvores.', 'Os invasores acamparam ali.', 'O rastro do seu povo termina nesse caminho.'],
     },
+  bg: 'forest-kenney',
   },
   {
     data: cap3 as unknown as LevelData,
@@ -72,6 +76,7 @@ export const CHAPTERS: ChapterDef[] = [
       title: 'O acampamento',
       lines: ['Sandro se aproxima em silêncio.', 'As fogueiras queimam na madrugada.', 'Hoje a floresta cobra o preço da invasão.'],
     },
+  bg: 'forest-day',
   },
   {
     data: cap4 as unknown as LevelData,
@@ -84,6 +89,7 @@ export const CHAPTERS: ChapterDef[] = [
       title: 'O coração da mata',
       lines: ['No bosque sagrado, os ancestrais sussurram.', 'Sandro sente seu povo muito perto.', 'A última barreira está adiante.'],
     },
+  bg: 'forest-cave',
   },
   {
     data: cap5 as unknown as LevelData,
@@ -96,6 +102,7 @@ export const CHAPTERS: ChapterDef[] = [
       title: 'O regresso',
       lines: ['As algemas caem. O povo corre para Sandro.', 'A aldeia se reconstrói com suas próprias mãos.', 'A floresta respira. A lenda começa.'],
     },
+  bg: 'forest-night',
   },
 ]
 

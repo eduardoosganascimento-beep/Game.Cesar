@@ -699,8 +699,8 @@ class Game {
     drawBackground(
       ctx,
       this.camera.px,
-      this.camera.py,
       time,
+      this.chapter.bg,
       this.isNight,
     )
 
