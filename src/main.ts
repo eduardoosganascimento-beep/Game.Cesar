@@ -384,8 +384,8 @@ class Game {
     // Parry do jogador (F): janela curta de bloqueio. Se um golpe chegar nela,
     // o inimigo fica atordoado e o próximo ataque é um riposte (dano dobrado).
     if (this.input.parryPressed && this.parryTimer <= 0 && this.riposte <= 0 && player.hurt <= 0) {
-      this.parryTimer = 0.28
-      sfx.guard?.()
+      this.parryTimer = 0.34
+      sfx.guard()
       this.effects.burst(player.x + player.w/2, player.y + 10, 'spark', 5, 26)
     }
     if (this.parryTimer > 0) this.parryTimer = Math.max(0, this.parryTimer - safeDt)
@@ -451,17 +451,31 @@ class Game {
         this.effects.burst(enemy.x + enemy.w / 2, enemy.y + 5, 'ooze', 2, 14)
       }
 
-      // Parry bem-sucedido (Sons of Sparta): o golpe é desviado, o inimigo
-      // fica atordoado e o próximo ataque do Sand é um riposte (dano x2).
-      if (this.parryTimer > 0 && overlaps(enemy.attackBox, player.hurtbox)) {
-        this.parryTimer = 0
-        this.riposte = 1.2
-        enemy.stun(0.9)
-        sfx.guard()
-        this.effects.addShake(3.2)
-        this.effects.burst(enemy.x + enemy.w / 2, enemy.y + enemy.h / 2, 'spark', 12, 60)
-        this.effects.text(enemy.x + enemy.w / 2, enemy.y - 6, 'PARRY!', '#ffe9a8')
-        continue
+      // Parry (Sons of Sparta): qualquer ameaça que encoste no Sand durante a
+      // janela é desviada. Nos primeiros 0,14s é PERFECT (riposte + dano x2);
+      // depois ainda bloqueia, mas sem contra-ataque.
+      if (this.parryTimer > 0 && enemy.alive) {
+        const threat =
+          overlaps(enemy.attackBox, player.hurtbox) ||
+          overlaps(enemy.rect, player.hurtbox)
+        if (threat) {
+          const perfect = this.parryTimer > 0.14
+          this.parryTimer = 0
+          if (perfect) {
+            this.riposte = 1.5
+            enemy.stun(1.1)
+            sfx.guard()
+            this.effects.addShake(3.6)
+            this.effects.burst(enemy.x + enemy.w / 2, enemy.y + enemy.h / 2, 'spark', 16, 72)
+            this.effects.text(enemy.x + enemy.w / 2, enemy.y - 8, 'PERFECT PARRY!', '#ffe9a8')
+          } else {
+            this.effects.addShake(1.6)
+            this.effects.burst(player.x + player.w/2, player.y + 10, 'spark', 6, 30)
+            this.effects.text(player.x + player.w/2, player.y - 6, 'BLOCK', '#c9d6c9')
+          }
+          player.invuln = 0.4
+          continue
+        }
       }
 
       // Nova mecânica: Perry do índio.
@@ -862,7 +876,9 @@ class Game {
     const cy = enemy.y + enemy.h / 2
     // Riposte: golpe após parry bem-sucedido causa dano dobrado.
     const riposteHit = this.riposte > 0
-    const dealt = riposteHit ? amount * 2 : amount
+    // Combo: cada acerto aumenta o dano um pouco (até +50% no 5º golpe).
+    const comboBonus = 1 + Math.min(0.5, this.combo * 0.1)
+    const dealt = Math.round((amount * comboBonus) * (riposteHit ? 2 : 1))
     if (riposteHit) {
       this.riposte = 0
       this.effects.text(cx, cy - 8, 'RIPOSTE!', '#ff9f43')
@@ -1398,6 +1414,27 @@ class Game {
     halo.addColorStop(1, 'rgba(255, 178, 74, 0)')
     ctx.fillStyle = halo
     ctx.fillRect(feetX - 32, feetY - 48, 64, 52)
+
+    // Escudo de parry: anel dourado que aparece durante a janela de bloqueio.
+    if (this.parryTimer > 0) {
+      const t = this.parryTimer / 0.34
+      ctx.save()
+      ctx.globalAlpha = 0.35 + t * 0.5
+      ctx.strokeStyle = t > 0.45 ? '#ffe9a8' : '#9fb4c9'
+      ctx.lineWidth = 2
+      ctx.beginPath()
+      ctx.arc(feetX, feetY - 14, 15 + (1 - t) * 4, 0, Math.PI * 2)
+      ctx.stroke()
+      // Brilho interno no perfect parry.
+      if (t > 0.45) {
+        ctx.globalAlpha = (t - 0.45) * 1.2
+        ctx.fillStyle = 'rgba(255,233,168,0.18)'
+        ctx.beginPath()
+        ctx.arc(feetX, feetY - 14, 13, 0, Math.PI * 2)
+        ctx.fill()
+      }
+      ctx.restore()
+    }
 
     ctx.fillStyle = 'rgba(0, 0, 0, 0.38)'
     ctx.fillRect(feetX - 8, feetY - 2, 16, 2)
