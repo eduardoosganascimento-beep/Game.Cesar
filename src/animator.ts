@@ -12,7 +12,7 @@ export type Clip = {
   loop: boolean
 }
 
-export type ClipName = 'idle' | 'run' | 'jump' | 'fall' | 'attack' | 'throw' | 'hurt' | 'death'
+export type ClipName = 'idle' | 'run' | 'jump' | 'fall' | 'attack' | 'throw' | 'hurt' | 'death' | 'guard'
 export type EnemyClipName = 'idle' | 'walk' | 'shoot' | 'slash' | 'hurt' | 'death'
 
 // ============================================================
@@ -41,6 +41,8 @@ export const PLAYER_CLIPS: Record<ClipName, Clip> = {
   throw: { frames: ['throw-1', 'throw-2', 'throw-3', 'throw-4'], fps: 13, loop: false },
   // Dano: 4 quadros a 10 fps.
   hurt: { frames: ['hurt-1', 'hurt-2', 'hurt-3', 'hurt-4'], fps: 10, loop: false },
+  // Defesa: o Sand segura o cajado erguido na frente do corpo (frame melee-1).
+  guard: { frames: ['melee-1'], fps: 1, loop: false },
   // Morte: 5 quadros a 7 fps, não looping. A animação termina no último frame.
   death: { frames: ['death-1', 'death-2', 'death-3', 'death-4', 'death-5'], fps: 7, loop: false },
 }

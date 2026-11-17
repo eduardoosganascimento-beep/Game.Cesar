@@ -848,6 +848,7 @@ class Game {
 
     if (this.running && !this.won) {
       if (this.dying > 0 || player.hp <= 0) state = 'death'
+      else if (this.parryTimer > 0 || this.riposte > 0) state = 'guard'
       else if (player.hurt > 0) state = 'hurt'
       else if (player.throw > 0) state = 'throw'
       else if (player.attack > 0) state = 'attack'
@@ -1415,25 +1416,34 @@ class Game {
     ctx.fillStyle = halo
     ctx.fillRect(feetX - 32, feetY - 48, 64, 52)
 
-    // Escudo de parry: anel dourado que aparece durante a janela de bloqueio.
+    // Defesa com o cajado: uma haste diagonal na frente do Sand, com faíscas
+    // no perfect parry. Sem escudo mágico — é o tacape que desvia o golpe.
     if (this.parryTimer > 0) {
       const t = this.parryTimer / 0.34
+      const perfect = t > 0.45
       ctx.save()
-      ctx.globalAlpha = 0.35 + t * 0.5
-      ctx.strokeStyle = t > 0.45 ? '#ffe9a8' : '#9fb4c9'
-      ctx.lineWidth = 2
-      ctx.beginPath()
-      ctx.arc(feetX, feetY - 14, 15 + (1 - t) * 4, 0, Math.PI * 2)
-      ctx.stroke()
-      // Brilho interno no perfect parry.
-      if (t > 0.45) {
-        ctx.globalAlpha = (t - 0.45) * 1.2
-        ctx.fillStyle = 'rgba(255,233,168,0.18)'
-        ctx.beginPath()
-        ctx.arc(feetX, feetY - 14, 13, 0, Math.PI * 2)
-        ctx.fill()
-      }
+      ctx.translate(feetX, feetY - 14)
+      ctx.scale(player.facing, 1)
+      // Cajado erguido na diagonal, apoio no ombro.
+      ctx.rotate(-0.5)
+      ctx.globalAlpha = 0.75 + t * 0.25
+      ctx.fillStyle = '#6b4526'
+      ctx.fillRect(-2, -16, 4, 30)
+      ctx.fillStyle = perfect ? '#ffe9a8' : '#a8845c'
+      ctx.fillRect(-3, -18, 6, 5)
+      ctx.fillStyle = perfect ? '#fff6d0' : '#c9a36a'
+      ctx.fillRect(-2, -18, 2, 3)
       ctx.restore()
+      if (perfect) {
+        ctx.globalAlpha = (t - 0.45) * 1.4
+        ctx.fillStyle = '#fff6d0'
+        for (let i = 0; i < 3; i += 1) {
+          const sx = feetX + player.facing * (10 + i * 4)
+          const sy = feetY - 26 - i * 3
+          ctx.fillRect(Math.round(sx), Math.round(sy), 2, 2)
+        }
+        ctx.globalAlpha = 1
+      }
     }
 
     ctx.fillStyle = 'rgba(0, 0, 0, 0.38)'
