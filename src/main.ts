@@ -81,6 +81,10 @@ class Game {
 
   private chapterIndex = 0
   private chapter: ChapterDef = CHAPTERS[0]
+  private cutsceneLines: string[] = []
+  private cutsceneTitle = ''
+  private cutsceneLine = 0
+  private cutsceneTimer = 0
   private tutorialMode = false
   private tutorialStep = 0
   private tutorialStartX = 0
@@ -174,6 +178,7 @@ class Game {
       shortTitle(this.chapter.data.name),
       this.chapter.data.subtitle ?? '',
     )
+    this.showCutscene()
     if (!this.hinted) {
       this.hinted = true
       this.hud.showControlsHint()
@@ -263,6 +268,29 @@ class Game {
     this.start(this.nextChapterIndex)
   }
 
+  // Cutcines: uma cena narrativa no início de cada capítulo. O jogador avança
+  // com Espaço/Enter/J; a ação fica pausada até a última fala.
+  private showCutscene(): void {
+    const cut = this.chapter.cutscene
+    this.cutsceneTitle = cut.title
+    this.cutsceneLines = cut.lines
+    this.cutsceneLine = 0
+    this.cutsceneTimer = 0
+  }
+
+  private get inCutscene(): boolean {
+    return this.cutsceneLines.length > 0
+  }
+
+  private advanceCutscene(): void {
+    if (this.cutsceneLine < this.cutsceneLines.length - 1) {
+      this.cutsceneLine += 1
+      this.cutsceneTimer = 0
+    } else {
+      this.cutsceneLines = []
+    }
+  }
+
   pause(): void {
     if (!this.running || this.paused || this.won) return
     this.paused = true
@@ -344,6 +372,16 @@ class Game {
     }
 
     if (this.paused) {
+      this.input.endFrame()
+      return
+    }
+
+    // Cutcine: a ação fica suspensa; Espaço/Enter/J avança as falas.
+    if (this.inCutscene) {
+      this.cutsceneTimer += safeDt
+      if (this.input.jumpPressed || this.input.attackPressed) {
+        this.advanceCutscene()
+      }
       this.input.endFrame()
       return
     }
@@ -761,6 +799,70 @@ class Game {
       ctx.fillRect(0, 0, VIEW_W, VIEW_H)
       ctx.globalAlpha = 1
     }
+
+    // Cutcine: faixa escura com o título e a fala atual.
+    if (this.inCutscene) this.paintCutscene()
+  }
+
+  private paintCutscene(): void {
+    // Tela inteira escura: a cutcine é uma cena, não um letreiro no HUD.
+    ctx.fillStyle = 'rgba(5, 10, 8, 0.94)'
+    ctx.fillRect(0, 0, VIEW_W, VIEW_H)
+
+    // Moldura com motivos indígenas (losangos) nas bordas.
+    ctx.fillStyle = '#c97a3d'
+    ctx.fillRect(14, 12, VIEW_W - 28, 2)
+    ctx.fillRect(14, VIEW_H - 14, VIEW_W - 28, 2)
+    for (let x = 18; x < VIEW_W - 18; x += 14) {
+      ctx.fillStyle = 'rgba(201, 122, 61, 0.5)'
+      ctx.fillRect(x, 8, 3, 3)
+      ctx.fillRect(x, VIEW_H - 11, 3, 3)
+    }
+
+    ctx.textAlign = 'center'
+    // Título em destaque.
+    ctx.fillStyle = '#ffcf8a'
+    ctx.font = 'bold 13px "Courier New", monospace'
+    ctx.fillText(this.cutsceneTitle, VIEW_W / 2, 40)
+
+    ctx.fillStyle = '#c97a3d'
+    ctx.fillRect(VIEW_W / 2 - 40, 48, 80, 1)
+
+    // Fala atual: fonte maior, quebrada em linhas centralizadas.
+    const line = this.cutsceneLines[this.cutsceneLine] ?? ''
+    ctx.fillStyle = '#f4e8cf'
+    ctx.font = '10px "Courier New", monospace'
+    const words = line.split(' ')
+    const lines: string[] = []
+    let current = ''
+    for (const word of words) {
+      const test = current ? `${current} ${word}` : word
+      if (ctx.measureText(test).width > VIEW_W - 44 && current) {
+        lines.push(current)
+        current = word
+      } else {
+        current = test
+      }
+    }
+    if (current) lines.push(current)
+    const startY = 84
+    lines.forEach((text, i) => ctx.fillText(text, VIEW_W / 2, startY + i * 15))
+
+    // Indicador de progresso (pontinhos).
+    const total = this.cutsceneLines.length
+    for (let i = 0; i < total; i += 1) {
+      ctx.fillStyle = i === this.cutsceneLine ? '#ffd166' : 'rgba(255, 209, 102, 0.3)'
+      ctx.fillRect(VIEW_W / 2 - total * 4 + i * 8, VIEW_H - 40, 5, 2)
+    }
+
+    // Pisca para avançar.
+    const blink = Math.floor(this.cutsceneTimer * 2) % 2 === 0
+    if (blink) {
+      ctx.fillStyle = '#ffd166'
+      ctx.font = 'bold 9px "Courier New", monospace'
+      ctx.fillText('ESPAÇO PARA CONTINUAR ▸', VIEW_W / 2, VIEW_H - 24)
+    }
+    ctx.textAlign = 'left'
   }
 
   get debug(): {

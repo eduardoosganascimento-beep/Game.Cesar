@@ -3,10 +3,6 @@ import cap2 from './data/levels/cap2.json'
 import cap3 from './data/levels/cap3.json'
 import cap4 from './data/levels/cap4.json'
 import cap5 from './data/levels/cap5.json'
-import cap6 from './data/levels/cap6.json'
-import cap7 from './data/levels/cap7.json'
-import cap8 from './data/levels/cap8.json'
-import cap9 from './data/levels/cap9.json'
 import tutorial from './data/levels/tutorial.json'
 import type { LevelData } from './level'
 
@@ -19,6 +15,15 @@ export const TUTORIAL: ChapterDef = {
   tint: 'rgba(255, 209, 102, 0.06)',
   lockGoalUntilBoss: false,
   tag: 'Tutorial',
+  cutscene: {
+    title: 'O despertar',
+    lines: ['Sandro acorda. A aldeia está em silêncio.', 'Pegue o cajado e a lança. A floresta vai te guiar.'],
+  },
+}
+
+export type Cutscene = {
+  title: string
+  lines: string[]
 }
 
 export type ChapterDef = {
@@ -28,6 +33,7 @@ export type ChapterDef = {
   tint: string
   lockGoalUntilBoss: boolean
   tag: string
+  cutscene: Cutscene
 }
 
 export const CHAPTERS: ChapterDef[] = [
@@ -38,6 +44,14 @@ export const CHAPTERS: ChapterDef[] = [
     tint: 'rgba(197, 122, 61, 0.06)',
     lockGoalUntilBoss: false,
     tag: 'Aldeia',
+    cutscene: {
+      title: 'A aldeia em cinzas',
+      lines: [
+        'Sandro volta à aldeia e encontra tudo tomado pelos invasores.',
+        'O fogo ainda fumaça. Seu povo foi levado rio abaixo.',
+        '— Vou trazê-los de volta —, jura o guardião, empunhando o cajado.',
+      ],
+    },
   },
   {
     data: cap2 as unknown as LevelData,
@@ -46,6 +60,14 @@ export const CHAPTERS: ChapterDef[] = [
     tint: 'rgba(64, 168, 184, 0.08)',
     lockGoalUntilBoss: false,
     tag: 'Rio',
+    cutscene: {
+      title: 'O rio escuro',
+      lines: [
+        'A correnteza é forte, mas Sandro nada com a força do povo da floresta.',
+        'Do outro lado, o cheiro de fumaça sobe entre as árvores.',
+        'Os invasores acamparam ali — e o rastro do seu povo termina nesse caminho.',
+      ],
+    },
   },
   {
     data: cap3 as unknown as LevelData,
@@ -54,6 +76,14 @@ export const CHAPTERS: ChapterDef[] = [
     tint: 'rgba(190, 96, 48, 0.07)',
     lockGoalUntilBoss: false,
     tag: 'Acampamento',
+    cutscene: {
+      title: 'O acampamento',
+      lines: [
+        'Sandro se aproxima do acampamento em silêncio, entre as sombras.',
+        'As fogueiras queimam. Os captores dormem despreocupados.',
+        'Hoje a floresta cobra o preço da invasão.',
+      ],
+    },
   },
   {
     data: cap4 as unknown as LevelData,
@@ -62,46 +92,30 @@ export const CHAPTERS: ChapterDef[] = [
     tint: 'rgba(134, 106, 226, 0.08)',
     lockGoalUntilBoss: false,
     tag: 'Bosque',
+    cutscene: {
+      title: 'O coração da mata',
+      lines: [
+        'No bosque sagrado, os ancestrais sussurram pelo vento nas folhas.',
+        'Sandro sente a presença do seu povo — próximo, mas ainda não livre.',
+        'A lança brilha. A última barreira está adiante.',
+      ],
+    },
   },
   {
     data: cap5 as unknown as LevelData,
     kicker: 'Capítulo cinco',
-    endText: 'Um clarão entre as árvores abre passagem para o mundo dos espíritos.',
-    tint: 'rgba(255, 209, 102, 0.08)',
-    lockGoalUntilBoss: false,
-    tag: 'Portal',
-  },
-  {
-    data: cap6 as unknown as LevelData,
-    kicker: 'Capítulo seis',
-    endText: 'Uma cavidade na rocha guarda os ancestrais. A água desperta memórias antigas.',
-    tint: 'rgba(64, 168, 184, 0.08)',
-    lockGoalUntilBoss: false,
-    tag: 'Caverna',
-  },
-  {
-    data: cap7 as unknown as LevelData,
-    kicker: 'Capítulo sete',
-    endText: 'Ruínas antigas cobertas de musgo. Guardiões de pedra protegem o caminho.',
-    tint: 'rgba(190, 96, 48, 0.07)',
-    lockGoalUntilBoss: false,
-    tag: 'Castelo',
-  },
-  {
-    data: cap8 as unknown as LevelData,
-    kicker: 'Capítulo oito',
-    endText: 'Torres antigas piscam ao longe. O ar cheira a ozônio e os espíritos inquietos.',
-    tint: 'rgba(134, 106, 226, 0.08)',
-    lockGoalUntilBoss: false,
-    tag: 'Futuro',
-  },
-  {
-    data: cap9 as unknown as LevelData,
-    kicker: 'Capítulo nove',
     endText: 'O guardião retorna à aldeia. O povo está livre, e a floresta respira de novo.',
     tint: 'rgba(255, 209, 102, 0.08)',
     lockGoalUntilBoss: false,
     tag: 'Fim',
+    cutscene: {
+      title: 'O regresso',
+      lines: [
+        'As algemas caem. O povo corre para abraçar Sandro.',
+        'A aldeia se reconstrói com as mãos de quem nunca se rendeu.',
+        'A floresta respira. E a lenda do guardião começa a ser contada.',
+      ],
+    },
   },
 ]
 
