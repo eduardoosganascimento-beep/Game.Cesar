@@ -2,7 +2,7 @@ import { Animator, type ClipName } from './animator'
 import { sfx } from './audio'
 import { drawBackground } from './background'
 import { CHAPTERS, TUTORIAL, shortTitle, type ChapterDef } from './chapters'
-import { DELTAS, readDifficulty, writeDifficulty, type Difficulty } from './difficulty'
+import { DELTAS, DIFFICULTY_LABELS, readDifficulty, writeDifficulty, type Difficulty } from './difficulty'
 import { Effects } from './effects'
 import { Camera, Loop, TILE, VIEW_H, VIEW_W, overlaps } from './engine'
 import { Enemy } from './enemy'
@@ -29,6 +29,7 @@ const SPRITE_SCALE = characterScale('player')
 function enemyScale(enemy: Enemy): number {
   if (enemy.isZombie) return characterScale('zombie')
   if (enemy.kind === 'lobisomem') return characterScale('wolf')
+  if (enemy.kind === 'indio') return characterScale('indio')
   return characterScale('colonist')
 }
 
@@ -138,6 +139,7 @@ class Game {
 
   constructor() {
     this.hud.setMuted(sfx.muted)
+    this.hud.setDifficulty(DIFFICULTY_LABELS[this.difficulty])
     this.hud.onMute(() => {
       sfx.unlock()
       const muted = sfx.toggle()
@@ -171,6 +173,7 @@ class Game {
 
   setDifficulty(difficulty: Difficulty): void {
     this.difficulty = difficulty
+    this.hud.setDifficulty(DIFFICULTY_LABELS[difficulty])
     writeDifficulty(difficulty)
   }
 
@@ -338,19 +341,7 @@ class Game {
     this.input.clear()
     this.player.hp = MAX_HP
     this.player.respawn()
-
-    this.enemies = this.chapter.data.entities
-      .filter((entity) => entity.type === 'enemy')
-      .map((entity) => {
-        const enemy = new Enemy(entity, TILE, this.chapterIndex + 1)
-        // A dificuldade escolhida no menu escala velocidade e resistência
-        // uma única vez, sem repetir o fator de nível.
-        const diff = this.difficulty
-        enemy.setSpeedScale(DELTAS.speed[diff] || 1)
-        enemy.setHealthScale(DELTAS.enemies[diff] || 1)
-        return enemy
-      })
-
+    this.spawnEnemies()
     this.shots = []
     this.spears = []
     this.dashGhosts.length = 0
@@ -368,6 +359,20 @@ class Game {
     this.camera.snapTo(this.player.hurtbox, this.map.width, this.map.height)
     this.hud.resetHp()
         this.syncHud(true)
+  }
+
+  // Recria todos os inimigos da fase. Chamado no início e a cada morte:
+  // morrer devolve Sand ao começo e o campo volta ao estado original.
+  private spawnEnemies(): void {
+    this.enemies = this.chapter.data.entities
+      .filter((entity) => entity.type === 'enemy')
+      .map((entity) => {
+        const enemy = new Enemy(entity, TILE, this.chapterIndex + 1)
+        const diff = this.difficulty
+        enemy.setSpeedScale(DELTAS.speed[diff] || 1)
+        enemy.setHealthScale(DELTAS.enemies[diff] || 1)
+        return enemy
+      })
   }
 
   update = (dt: number): void => {
@@ -433,10 +438,7 @@ class Game {
     this.runTime += safeDt
     this.goalHintCooldown = Math.max(0, this.goalHintCooldown - safeDt)
     const player = this.player
-    // Velocidade vertical antes da física: é ela que diz se Sand está
-    // caindo sobre o inimigo (e não apenas encostando nele).
-    const fallVy = player.vy
-    player.update(safeDt, this.input)
+
 
     // Parry do jogador (F): janela curta de bloqueio. Se um golpe chegar nela,
     // o inimigo fica atordoado e o próximo ataque é um riposte (dano dobrado).
@@ -572,24 +574,12 @@ class Game {
         }
       }
 
-      // Pisão: cair sobre o inimigo machuca o colono, nunca o jogador.
-      const stomp = fallVy > 0 && overlaps(player.hurtbox, enemy.rect)
-
-      if (stomp) {
-        this.damageEnemy(enemy, enemy.isBoss ? 1 : 2, player.x, true, 'stomp')
-        player.vy = -258
-        player.onGround = false
-        player.attack = 0
-        player.invuln = Math.max(player.invuln, 0.2)
-        continue
-      }
-
       if (
         player.attackActive &&
         enemy.invuln <= 0 &&
         overlaps(player.attackBox, enemy.rect)
       ) {
-        this.damageEnemy(enemy, 1, player.x, false, 'blade')
+        this.damageEnemy(enemy, 1, player.x, 'blade')
         continue
       }
 
@@ -938,8 +928,7 @@ class Game {
     enemy: Enemy,
     amount: number,
     fromX: number,
-    stomp: boolean,
-    weapon: 'blade' | 'spear' | 'stomp' = 'blade',
+    weapon: 'blade' | 'spear' = 'blade',
   ): void {
     const cx = enemy.x + enemy.w / 2
     const cy = enemy.y + enemy.h / 2
@@ -958,19 +947,18 @@ class Game {
     const killed = enemy.damage(dealt, fromX)
     const dir = fromX < cx ? 1 : -1
     // Cada arma pinta o impacto do seu jeito.
-    const impact = weapon === 'spear' ? 'spear' : weapon === 'stomp' ? 'hit' : 'blade'
+    const impact = weapon === 'spear' ? 'spear' : 'blade'
     this.effects.burst(cx, cy, killed ? 'death' : impact, killed ? 16 : 10, killed ? 70 : 48)
     // Sangue jorra na direção do golpe: combate com peso, estilo Sons of Sparta.
     this.effects.bloodSpray(cx, cy, dir, killed ? 18 : 9)
-    if (weapon === 'stomp') this.effects.burst(cx, enemy.y + enemy.h, 'dust', 7, 34)
     if (killed) this.killFlash = 1
     this.effects.addShake(killed ? 3.6 : 1.8)
     // Pausa no impacto: mais peso quando o golpe derruba o inimigo.
-    if (!stomp) this.hitStop = Math.max(this.hitStop, killed ? 0.085 : 0.05)
+    this.hitStop = Math.max(this.hitStop, killed ? 0.085 : 0.05)
 
     if (!killed) {
-      this.effects.text(cx, enemy.y - 3, stomp ? 'PISÃO!' : 'ACERTO!', '#ffb38a')
-      sfx.stomp()
+      this.effects.text(cx, enemy.y - 3, 'ACERTO!', '#ffb38a')
+      sfx.hit()
       return
     }
 
@@ -978,14 +966,9 @@ class Game {
     this.effects.text(
       cx,
       enemy.y - 3,
-      stomp
-        ? 'PISÃO!'
-        : enemy.isBoss
-          ? `${enemy.label.toUpperCase()} CAIU!`
-          : 'ABATIDO!',
+      enemy.isBoss ? `${enemy.label.toUpperCase()} CAIU!` : 'ABATIDO!',
       enemy.isBoss ? '#ffd166' : '#ffe9a8',
     )
-
   }
 
   // A mordida do zumbi mata Sand na hora: não é dano, é fim de fase.
@@ -1148,7 +1131,7 @@ class Game {
 
       if (hitEnemy) {
         // Chefes aguentam mais: a lança tira 1, os capangas caem com 2.
-        this.damageEnemy(hitEnemy, hitEnemy.isBoss ? 1 : 2, spear.x, false, 'spear')
+        this.damageEnemy(hitEnemy, hitEnemy.isBoss ? 1 : 2, spear.x, 'spear')
         this.spears.splice(i, 1)
       }
     }
@@ -1233,7 +1216,9 @@ class Game {
     const y = this.player.y - 6
     this.player.hp = MAX_HP
     this.player.respawn()
+    this.spawnEnemies()
     this.shots = []
+    this.spears = []
     this.animator.reset()
     this.effects.clear()
     this.effects.text(Math.max(60, x), Math.max(40, y), message, '#ffd166')
@@ -1321,14 +1306,13 @@ class Game {
 
     if (sprite) {
       if (!enemy.alive) {
-        // Queda: solavanco no impacto, giro suave e pausa com o corpo no chão.
+        // Queda: solavanco no impacto e pausa com o corpo no chão, sem girar
+        // o sprite (os quadros de morte já carregam a queda).
         const progress = Math.min(1, enemy.deathProgress)
-        const t = progress * progress * (3 - 2 * progress)
         ctx.save()
         ctx.translate(feetX, feetY)
         const kick = Math.sin(Math.min(1, progress * 3.2) * Math.PI) * 3
         ctx.translate(-enemy.facing * kick, 0)
-        ctx.rotate((enemy.facing > 0 ? 1 : -1) * (Math.PI / 2.05) * t)
         ctx.imageSmoothingEnabled = false
         if (progress < 0.18) {
           ctx.globalAlpha = (1 - progress / 0.18) * 0.85
@@ -1358,6 +1342,24 @@ class Game {
       }
     } else {
       this.paintFallbackColonist(feetX, feetY, scale, enemy.facing)
+    }
+
+    // Rastro do golpe corpo a corpo: uma lasca clara que sai da arma no
+    // instante do impacto, para o ataque ficar legível na mata escura.
+    if (enemy.justStruck && enemy.alive) {
+      const dir = enemy.facing
+      const sx = feetX + dir * 11
+      const sy = feetY - 17
+      ctx.save()
+      ctx.globalAlpha = 0.8
+      ctx.fillStyle = '#fff0c4'
+      for (let i = 0; i < 4; i += 1) {
+        ctx.fillRect(Math.round(sx + dir * i * 2), Math.round(sy - i), 2, 1)
+      }
+      ctx.globalAlpha = 0.35
+      ctx.fillStyle = '#ffd166'
+      ctx.fillRect(Math.round(sx + dir * 6), Math.round(sy - 4), 3, 1)
+      ctx.restore()
     }
 
     ctx.globalAlpha = 1

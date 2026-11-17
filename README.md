@@ -43,8 +43,8 @@ caverna e castelo ainda não têm cenário próprio.
 
 - **Sandman** com sprites próprios de idle, corrida, salto, arremesso de lança,
   ataque corpo a corpo, dano e morte.
-- **Combate**: golpe de lança, arremesso com projétil, avanço rápido (dash) e
-  pisão em inimigos.
+- **Combate**: golpe de lança, arremesso com projétil, avanço rápido (dash),
+  bloqueio com parry e riposte.
 - **Inimigos**: capangas, soldados, feitores, capitães, índios, lobisomens,
   guardiões e zumbis — cada um com alcance e comportamento próprios.
 - **Chefão guardião** com barra de vida no HUD.

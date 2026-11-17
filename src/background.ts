@@ -570,91 +570,134 @@ function paintVillage(ctx: CanvasRenderingContext2D): void {
 }
 
 function paintWaterfall(ctx: CanvasRenderingContext2D): void {
-  sky(ctx, '#0b1a20', '#173034', '#1d3a38')
-  farCanopy(ctx, 44, 34, 16, '#12251f', 23, 24)
-  farCanopy(ctx, 68, 28, 12, '#0d1c18', 37, 20)
+  sky(ctx, '#07161b', '#132c30', '#1c3c39')
+  farCanopy(ctx, 46, 36, 18, '#10251f', 23, 24)
+  farCanopy(ctx, 72, 30, 14, '#0c1d19', 37, 20)
 
-  // Paredões de pedra em camadas, com musgo e fendas.
-  const cliff = (left: number, right: number, seed: number, tone: string, edge: string): void => {
-    for (let y = 24; y < GROUND_Y; y += 4) {
-      const biteLeft = left + Math.round((hash(seed + y * 0.7) - 0.5) * 8)
-      const biteRight = right + Math.round((hash(seed + y * 1.3 + 9) - 0.5) * 8)
-      px(ctx, biteLeft, y, biteRight - biteLeft, 4, tone)
-      if (y % 12 === 0) {
-        ctx.globalAlpha = 0.45
-        px(ctx, biteLeft, y, biteRight - biteLeft, 1, '#0b1512')
-        ctx.globalAlpha = 1
-      }
-      // Fendas.
-      const crackX = biteLeft + 6 + Math.floor(hash(seed + y * 2.9) * Math.max(1, biteRight - biteLeft - 12))
-      if (y % 16 === 4) px(ctx, crackX, y, 1, 8, '#0b1512')
-      // Musgo nas saliências.
-      if (y % 20 === 8) {
-        const mx = biteLeft + 4 + Math.floor(hash(seed + y) * Math.max(1, biteRight - biteLeft - 10))
-        ctx.globalAlpha = 0.5
-        blob(ctx, mx, y + 1, 5, 2, '#263b2a')
-        ctx.globalAlpha = 1
-      }
-    }
-    px(ctx, right - 2, 24, 2, GROUND_Y - 24, edge)
-  }
-  cliff(-6, 124, 11, '#1a2422', '#2c3a34')
-  cliff(200, W + 6, 29, '#182120', '#2a3832')
-  cliff(-6, 92, 41, '#202b27', '#314036')
-  cliff(228, W + 6, 53, '#1d2724', '#2f3d35')
-
-  // Laje de onde a água cai.
-  px(ctx, 112, 28, 100, 8, '#202b27')
-  px(ctx, 112, 28, 100, 2, '#35453c')
-  px(ctx, 116, 36, 92, 3, '#101c1a')
-
-  // Cortina d'água: três planos de colunas com alturas diferentes.
-  for (let x = 122; x < 202; x += 1) {
-    const edge = Math.min(x - 122, 201 - x) / 40
-    const top = 36 + Math.round(hash(x * 2.1) * 5)
-    const end = GROUND_Y - 14 + Math.round(hash(x * 4.7) * 5)
-    const tone = x % 9 === 0 ? '#243b3d' : x % 5 === 0 ? '#3f6264' : '#345356'
-    px(ctx, x, top, 1, end - top, tone)
-    if (x % 6 === 0) px(ctx, x, top + 4, 1, end - top - 6, '#6d8d89')
-    if (x % 11 === 0) px(ctx, x, top + 2, 1, end - top - 4, '#a9c2ba')
-    if (edge > 0.75 && x % 3 === 0) px(ctx, x, top + 2, 1, end - top - 4, '#8aa8a3')
-  }
-  // Filetes de água quebrando no caminho.
-  for (let i = 0; i < 12; i += 1) {
-    const x = 126 + Math.floor(hash(i * 3.1) * 72)
-    const y = 46 + Math.floor(hash(i * 5.7) * 70)
-    ctx.globalAlpha = 0.5
-    px(ctx, x, y, 1, 3, '#c3d6cd')
+  // Véu de névoa pendurado sobre a garganta.
+  for (let i = 0; i < 4; i += 1) {
+    ctx.globalAlpha = 0.05 + i * 0.012
+    px(ctx, 0, 34 + i * 13, W, 4, '#afc9c0')
     ctx.globalAlpha = 1
   }
 
-  // Poço e espuma na base.
-  px(ctx, 96, GROUND_Y - 14, 136, 14, '#142b2d')
-  const pool = ctx.createLinearGradient(0, GROUND_Y - 14, 0, GROUND_Y)
-  pool.addColorStop(0, '#2d5150')
-  pool.addColorStop(1, '#102224')
-  ctx.fillStyle = pool
-  ctx.fillRect(96, GROUND_Y - 14, 136, 14)
-  for (let i = 0; i < 34; i += 1) {
-    const x = 100 + Math.floor(hash(i * 3.7) * 128)
-    const y = GROUND_Y - 13 + Math.floor(hash(i * 5.1) * 12)
-    px(ctx, x, y, 2 + (i % 4), 1, i % 5 === 0 ? '#c8dbd2' : '#6f9690')
+  // Paredões: blocos sobrepostos com estratos, musgo e fendas.
+  const cliff = (
+    left: number,
+    right: number,
+    seed: number,
+    color: string,
+    light: string,
+    dark: string,
+  ): void => {
+    for (let y = 20; y < GROUND_Y; y += 5) {
+      const wobbleLeft = left + Math.round((hash(seed + y * 0.61) - 0.5) * 9)
+      const wobbleRight = right + Math.round((hash(seed + y * 1.17 + 5) - 0.5) * 9)
+      const w = wobbleRight - wobbleLeft
+      px(ctx, wobbleLeft, y, w, 5, color)
+      if (y % 15 === 0) {
+        ctx.globalAlpha = 0.55
+        px(ctx, wobbleLeft, y, w, 1, dark)
+        px(ctx, wobbleLeft, y + 1, w, 1, light)
+        ctx.globalAlpha = 1
+      }
+      if (y % 25 === 5) {
+        const cx = wobbleLeft + 4 + Math.floor(hash(seed + y * 2.3) * Math.max(1, w - 8))
+        px(ctx, cx, y, 1, 9, dark)
+        px(ctx, cx + 2, y + 2, 1, 6, dark)
+      }
+      if (y % 20 === 10) {
+        const mx = wobbleLeft + 3 + Math.floor(hash(seed + y) * Math.max(1, w - 8))
+        ctx.globalAlpha = 0.55
+        blob(ctx, mx, y + 2, 6, 2, '#27402c')
+        ctx.globalAlpha = 1
+      }
+    }
   }
-  for (let i = 0; i < 16; i += 1) {
-    const x = 118 + Math.floor(hash(i * 7.3) * 68)
-    const y = GROUND_Y - 14 - Math.floor(hash(i * 2.7) * 7)
-    blob(ctx, x, y, 3 + (i % 3), 2, i % 3 === 0 ? '#d8e4da' : '#9fb8af')
+  cliff(-8, 108, 11, '#1a2624', '#31423a', '#0d1715')
+  cliff(212, W + 8, 29, '#182320', '#2e3d34', '#0c1613')
+  cliff(-8, 84, 41, '#202c28', '#3a4b3f', '#111b17')
+  cliff(236, W + 8, 53, '#1d2824', '#35443a', '#101a16')
+
+  // Laje de granito de onde despenca a água.
+  px(ctx, 100, 22, 120, 8, '#26332d')
+  px(ctx, 100, 22, 120, 2, '#415348')
+  px(ctx, 104, 30, 112, 4, '#0f1c1a')
+  for (let x = 104; x < 216; x += 9) px(ctx, x, 26, 2, 2, '#2f3f36')
+
+  // Cachoeira em três quedas, com colunas de água e vãos escuros.
+  const fall = (x0: number, x1: number, top: number, bottom: number, seed: number): void => {
+    for (let x = x0; x < x1; x += 1) {
+      const wobble = Math.round(Math.sin(x * 0.31 + seed) * 1.2)
+      const end = bottom + Math.round(hash(x * 1.7 + seed) * 4)
+      const dark = hash(x * 3.1 + seed) > 0.78
+      px(ctx, x, top + wobble, 1, end - top - wobble, dark ? '#21383a' : '#345456')
+      if (x % 5 === 0) px(ctx, x, top + wobble + 2, 1, end - top - 4, '#5d8180')
+      if (x % 11 === 0) px(ctx, x, top + wobble + 1, 1, end - top - 3, '#aec7bf')
+      if (x % 17 === 0) px(ctx, x, top + wobble, 1, end - top - 2, '#d6e4d9')
+    }
+  }
+  fall(126, 196, 32, 74, 1.3)
+  fall(116, 206, 74, 108, 2.7)
+  fall(108, 214, 108, 132, 4.1)
+
+  // Espuma nas quebras de nível.
+  for (let tier = 0; tier < 2; tier += 1) {
+    const y = tier === 0 ? 73 : 107
+    for (let i = 0; i < 22; i += 1) {
+      const x = 110 + Math.floor(hash(i * 4.3 + tier) * 104)
+      const w = 2 + Math.floor(hash(i * 2.7 + tier) * 5)
+      px(ctx, x, y + Math.floor(hash(i * 5.9) * 3), w, 1, i % 4 === 0 ? '#e2ece3' : '#a6c0b7')
+    }
   }
 
-  // Margens de pedra e samambaias emoldurando.
-  rocks(ctx, 104, GROUND_Y + 2, 56, 30, '#1c2623', '#33423a')
-  rocks(ctx, 224, GROUND_Y + 2, 60, 32, '#192320', '#2f3d35')
-  palm(ctx, 20, GROUND_Y, 92, 10, '#0c1a12', '#1b2e1f')
-  palm(ctx, 300, GROUND_Y, 86, -8, '#0b1710', '#182a1c')
-  fern(ctx, 86, GROUND_Y - 2, 22, '#16281a', '#2f4a2a')
-  fern(ctx, 248, GROUND_Y - 2, 24, '#142517', '#2c4728')
-  fern(ctx, 60, GROUND_Y, 15, '#122114', '#274024')
-  fern(ctx, 268, GROUND_Y, 15, '#112013', '#253d22')
+  // Poço: reflexo do céu, ondulações e espuma onde a água bate.
+  px(ctx, 90, 126, 148, 18, '#162e31')
+  const pool = ctx.createLinearGradient(0, 126, 0, GROUND_Y)
+  pool.addColorStop(0, '#365957')
+  pool.addColorStop(1, '#102528')
+  ctx.fillStyle = pool
+  ctx.fillRect(90, 126, 148, 18)
+  for (let i = 0; i < 26; i += 1) {
+    const y = 128 + Math.floor(hash(i * 3.3) * 15)
+    const x = 94 + Math.floor(hash(i * 7.1) * 138)
+    const w = 4 + Math.floor(hash(i * 2.9) * 12)
+    px(ctx, x, y, w, 1, i % 5 === 0 ? '#8ba9a1' : '#426760')
+  }
+  for (let i = 0; i < 20; i += 1) {
+    const x = 112 + Math.floor(hash(i * 6.1) * 92)
+    const y = 126 + Math.floor(hash(i * 4.7) * 8)
+    blob(ctx, x, y, 3 + (i % 4), 2, i % 3 === 0 ? '#d8e7de' : '#9fbbb0')
+  }
+
+  // Rio correndo para a direita, com reflexos do céu.
+  px(ctx, 0, GROUND_Y - 10, W, 10, '#14282b')
+  for (let i = 0; i < 18; i += 1) {
+    const y = GROUND_Y - 9 + Math.floor(hash(i * 5.3) * 9)
+    const x = Math.floor(hash(i * 1.9) * W)
+    px(ctx, x, y, 6 + (i % 5) * 3, 1, i % 3 === 0 ? '#5c7b74' : '#2b4846')
+  }
+
+  // Canoa amarrada na margem e pedras molhadas.
+  canoe(ctx, 246, GROUND_Y - 12, 38, '#241b12', '#6d5230')
+  rocks(ctx, 92, GROUND_Y + 2, 54, 28, '#1c2823', '#35453a')
+  rocks(ctx, 232, GROUND_Y + 2, 58, 30, '#19241f', '#314036')
+
+  // Mata emoldurando a cena.
+  palm(ctx, 16, GROUND_Y, 96, 12, '#0b1810', '#1b2e1f')
+  palm(ctx, 304, GROUND_Y, 88, -10, '#0a1610', '#192a1c')
+  fern(ctx, 76, GROUND_Y - 2, 24, '#162a1b', '#33502d')
+  fern(ctx, 258, GROUND_Y - 2, 26, '#142617', '#2e4829')
+  fern(ctx, 46, GROUND_Y, 16, '#122214', '#294126')
+  fern(ctx, 280, GROUND_Y, 16, '#112013', '#263d23')
+  // Cipós pendurados no topo.
+  for (let i = 0; i < 7; i += 1) {
+    const vx = 24 + i * 46
+    const len = 10 + Math.floor(hash(i * 3.7) * 22)
+    for (let y = 0; y < len; y += 1) {
+      px(ctx, vx + Math.round(Math.sin(y * 0.25 + i) * 1.5), y, 1, 1, y > len - 5 ? '#2b442c' : '#182a1d')
+    }
+  }
 
   px(ctx, 0, GROUND_Y, W, H - GROUND_Y, '#07100d')
 }
@@ -867,52 +910,86 @@ function paintForestDawn(ctx: CanvasRenderingContext2D): void {
 }
 
 function paintRiverDawn(ctx: CanvasRenderingContext2D): void {
-  sky(ctx, '#22303a', '#4a4a44', '#8a6a4c')
-  ctx.globalAlpha = 0.3
-  blob(ctx, 78, 80, 60, 30, '#e8b76a')
+  sky(ctx, '#1d2b35', '#4e4d46', '#9c7552')
+
+  // Sol nascendo sobre a margem, com reflexo na água.
+  const glow = ctx.createRadialGradient(74, 86, 6, 74, 86, 86)
+  glow.addColorStop(0, 'rgba(255, 226, 162, 0.5)')
+  glow.addColorStop(0.45, 'rgba(232, 183, 106, 0.2)')
+  glow.addColorStop(1, 'rgba(214, 150, 80, 0)')
+  ctx.fillStyle = glow
+  ctx.fillRect(0, 10, 180, 132)
+  blob(ctx, 74, 86, 16, 11, '#f6d79a')
   ctx.globalAlpha = 0.5
-  blob(ctx, 78, 82, 22, 12, '#f7d9a0')
+  blob(ctx, 74, 84, 24, 17, '#e8b76a')
   ctx.globalAlpha = 1
 
   farCanopy(ctx, 78, 32, 16, '#2b332b', 11, 24)
   farCanopy(ctx, 94, 26, 13, '#202c22', 29, 20)
 
-  // Margem oposta.
-  px(ctx, 0, 100, W, 10, '#162018')
-  for (let i = 0; i < 30; i += 1) {
-    const x = Math.floor(hash(i * 2.7) * W)
-    px(ctx, x, 99 + Math.floor(hash(i * 5.3) * 8), 2, 2, '#22301f')
+  // Margem oposta: terra, capim e uma maloca distante.
+  px(ctx, 0, 98, W, 12, '#162018')
+  for (let x = 0; x < W; x += 2) {
+    const h = 2 + Math.floor(hash(x * 0.9) * 6)
+    px(ctx, x, 98 - h, 1, h, x % 3 === 0 ? '#2b3b27' : '#22301f')
+  }
+  px(ctx, 204, 88, 30, 10, '#141d15')
+  px(ctx, 206, 84, 26, 4, '#22301f')
+  px(ctx, 212, 80, 14, 4, '#1a251a')
+  px(ctx, 216, 78, 2, 2, '#2c3a25')
+
+  // Rio: água escura com faixas de corrente e reflexo do sol.
+  px(ctx, 0, 110, W, GROUND_Y - 110, '#16282c')
+  const water = ctx.createLinearGradient(0, 110, 0, GROUND_Y)
+  water.addColorStop(0, '#33514d')
+  water.addColorStop(1, '#102326')
+  ctx.fillStyle = water
+  ctx.fillRect(0, 110, W, GROUND_Y - 110)
+  for (let i = 0; i < 22; i += 1) {
+    const y = 112 + i * 1.5
+    const x = Math.floor(hash(i * 1.7) * (W - 60))
+    const w = 14 + Math.floor(hash(i * 3.1) * 44)
+    px(ctx, x, y, w, 1, i % 4 === 0 ? '#7c9082' : '#34534f')
+    px(ctx, x + w + 14, y, 10 + (i % 5) * 4, 1, '#29443f')
+  }
+  // Coluna de luz quebrada pela água.
+  for (let i = 0; i < 12; i += 1) {
+    const y = 112 + i * 3
+    const w = 8 + i * 2
+    px(ctx, 74 - w / 2, y, w, 1, i % 2 === 0 ? '#b8955e' : '#8a734c')
+    if (i % 3 === 0) px(ctx, 74 + w / 2 + 4, y + 1, 3, 1, '#c9a15a')
+  }
+  // Folhas flutuando.
+  for (let i = 0; i < 9; i += 1) {
+    const x = 20 + Math.floor(hash(i * 4.3) * 280)
+    const y = 116 + Math.floor(hash(i * 2.7) * 24)
+    px(ctx, x, y, 2 + (i % 2), 1, i % 3 === 0 ? '#a3894c' : '#4b5f3a')
   }
 
-  // Rio: faixas horizontais escuras e reflexos do amanhecer.
-  px(ctx, 0, 108, W, GROUND_Y - 108, '#16282c')
-  for (let i = 0; i < 16; i += 1) {
-    const y = 110 + i * 2
-    const x = Math.floor(hash(i * 1.7) * 120)
-    const w = 30 + Math.floor(hash(i * 3.1) * 90)
-    px(ctx, x, y, w, 1, i % 3 === 0 ? '#5c6a5c' : '#2c4448')
-    px(ctx, x + w + 12, y, 24, 1, i % 4 === 0 ? '#8a7a5c' : '#243c40')
-  }
-  // Reflexo do sol na água.
-  for (let i = 0; i < 10; i += 1) {
-    const y = 110 + i * 3
-    px(ctx, 62 - i * 2, y, 22 + i * 4, 1, i % 2 === 0 ? '#b8955e' : '#8a734c')
+  // Canoa com remador, na correnteza.
+  canoe(ctx, 168, 124, 40, '#241b12', '#6d5230')
+  px(ctx, 166, 118, 3, 5, '#5a3019')
+  px(ctx, 165, 116, 5, 2, '#2a1c12')
+  px(ctx, 171, 119, 12, 1, '#6d5230')
+
+  // Névoa baixa sobre a água.
+  for (let i = 0; i < 4; i += 1) {
+    ctx.globalAlpha = 0.05 + i * 0.01
+    px(ctx, 0, 106 + i * 6, W, 4, '#d8c39a')
+    ctx.globalAlpha = 1
   }
 
-  // Canoa no rio, com remo.
-  canoe(ctx, 154, 120, 34, '#241b12', '#4c3a24')
-
-  // Margem da frente.
+  // Margem da frente: pedras, juncos e samambaias.
   px(ctx, 0, GROUND_Y - 10, W, 14, '#121a11')
-  rocks(ctx, 48, GROUND_Y + 2, 44, 26, '#1c221a', '#333d2c')
-  rocks(ctx, 280, GROUND_Y + 2, 54, 30, '#192018', '#2f3828')
-  for (let i = 0; i < 16; i += 1) {
+  rocks(ctx, 44, GROUND_Y + 2, 46, 26, '#1c221a', '#333d2c')
+  rocks(ctx, 284, GROUND_Y + 2, 54, 30, '#192018', '#2f3828')
+  for (let i = 0; i < 22; i += 1) {
     const x = Math.floor(hash(i * 4.1) * W)
-    const y = GROUND_Y - 10 + Math.floor(hash(i * 2.3) * 8)
-    px(ctx, x, y, 1, 3 + (i % 4), i % 3 === 0 ? '#4f5a34' : '#39452a')
+    const y = GROUND_Y - 9 + Math.floor(hash(i * 2.3) * 9)
+    px(ctx, x, y, 1, 4 + (i % 5), i % 3 === 0 ? '#6a7541' : '#42502c')
   }
-  fern(ctx, 100, GROUND_Y - 4, 22, '#1a2a17', '#39502c')
-  fern(ctx, 240, GROUND_Y - 4, 20, '#182716', '#35502a')
+  fern(ctx, 94, GROUND_Y - 4, 22, '#1a2a17', '#39502c')
+  fern(ctx, 238, GROUND_Y - 4, 20, '#182716', '#35502a')
   palm(ctx, 12, GROUND_Y, 70, 8, '#0d1810', '#1b2a1a')
   palm(ctx, 304, GROUND_Y, 64, -6, '#0c1710', '#1a2919')
 

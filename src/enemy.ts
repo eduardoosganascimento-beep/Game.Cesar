@@ -480,6 +480,12 @@ export class Enemy {
         } else {
           this.vx = 0
         }
+
+        // Se o alvo está numa plataforma, o inimigo salta para alcançá-lo.
+        if (this.onGround && player.y + player.h < this.y - 6 && Math.abs(distance) < 72) {
+          this.vy = -285
+          this.onGround = false
+        }
       } else {
         this.patrol()
       }
@@ -607,7 +613,9 @@ export class Enemy {
       }
     }
 
-    // Gravidade e movimento vertical
+    // Gravidade e movimento vertical.
+    const previousBottom = this.y + this.h
+    this.onGround = false
     this.vy = Math.min(this.vy + GRAVITY * dt, MAX_FALL)
     this.y += this.vy * dt
 
@@ -618,6 +626,18 @@ export class Enemy {
         this.onGround = true
       } else if (this.vy < 0) {
         this.y = solid.y + solid.h
+      }
+    }
+
+    // Plataformas de um lado só: o inimigo pisa quando vem de cima e atravessa
+    // quando salta de baixo, igual ao jogador.
+    if (this.vy >= 0) {
+      for (const platform of map.platformsIn(this.rect)) {
+        if (previousBottom <= platform.y + 0.5 && this.y + this.h >= platform.y) {
+          this.y = platform.y - this.h
+          this.vy = 0
+          this.onGround = true
+        }
       }
     }
 

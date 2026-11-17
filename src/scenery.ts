@@ -700,6 +700,48 @@ function drawStone(
   drawSurfaceDetails(ctx, map, tx, ty, dx, dy, time, palette)
 }
 
+// Plataformas de madeira ou pedra, conforme o terreno do capítulo. São
+// decorativas no mapa (a colisão é one-way), então a cara tem que dizer ao
+// jogador onde ele pode pisar.
+function drawPlatform(
+  ctx: CanvasRenderingContext2D,
+  tx: number,
+  ty: number,
+  dx: number,
+  dy: number,
+  palette: Palette,
+  stone: boolean,
+): void {
+  const seed = tx * 5.1 + ty * 3.7
+  if (stone) {
+    px(ctx, dx, dy, TILE, 1, palette.stoneLight)
+    px(ctx, dx, dy + 1, TILE, 4, palette.stone)
+    px(ctx, dx, dy + 5, TILE, 1, palette.soilDeep)
+    px(ctx, dx + 5, dy + 1, 1, 4, palette.soilDark)
+    px(ctx, dx + 12, dy + 1, 1, 4, palette.soilDark)
+    if (hash(seed) > 0.5) {
+      px(ctx, dx + 2, dy, 4, 1, palette.cap)
+      px(ctx, dx + 10, dy, 3, 1, palette.capDark)
+    }
+  } else {
+    px(ctx, dx, dy, TILE, 1, palette.root)
+    px(ctx, dx, dy + 1, TILE, 3, palette.soil)
+    px(ctx, dx, dy + 4, TILE, 1, palette.soilDeep)
+    // Amarrações de cipó.
+    px(ctx, dx + 3, dy, 1, 5, palette.capDark)
+    px(ctx, dx + 12, dy, 1, 5, palette.capDark)
+    px(ctx, dx + 3, dy + 1, 1, 1, palette.capLight)
+    px(ctx, dx + 12, dy + 1, 1, 1, palette.capLight)
+    // Musgo e folhas sobre a prancha.
+    if (hash(seed) > 0.35) {
+      const mx = dx + 4 + Math.floor(hash(seed + 2.1) * 7)
+      px(ctx, mx, dy - 1, 2 + Math.floor(hash(seed + 4.7) * 2), 1, palette.cap)
+      px(ctx, mx, dy, 1, 1, palette.capLight)
+    }
+    if (hash(seed + 7.3) > 0.72) drawTuft(ctx, dx + 6, dy, seed + 1.9, palette)
+  }
+}
+
 // ---------- estacas ----------
 
 function drawSpikes(
@@ -768,6 +810,13 @@ export function drawScenery(
   const x1 = Math.ceil((cameraX + VIEW_W) / TILE) + 1
   const y0 = Math.floor(cameraY / TILE) - 1
   const y1 = Math.ceil((cameraY + VIEW_H) / TILE) + 1
+
+  for (let ty = y0; ty <= y1; ty += 1) {
+    for (let tx = x0; tx <= x1; tx += 1) {
+      if (map.tileAt(tx, ty) !== Tile.Platform) continue
+      drawPlatform(ctx, tx, ty, tx * TILE - cameraX, ty * TILE - cameraY, palette, stone)
+    }
+  }
 
   for (let ty = y0; ty <= y1; ty += 1) {
     for (let tx = x0; tx <= x1; tx += 1) {

@@ -4,6 +4,7 @@ export class Hud {
   private readonly root = document.querySelector<HTMLDivElement>('#hud')
   private readonly hearts = document.querySelector<HTMLDivElement>('#hearts')
   private readonly chapter = document.querySelector<HTMLElement>('#chapter')
+  private readonly difficulty = document.querySelector<HTMLElement>('#difficulty')
   private readonly muteButton = document.querySelector<HTMLButtonElement>('#mute')
   private readonly chapterCard = document.querySelector<HTMLDivElement>('#chapter-card')
   private readonly chapterKicker = document.querySelector<HTMLElement>('#chapter-card .chapter-kicker')
@@ -45,6 +46,10 @@ export class Hud {
 
   setChapter(name: string): void {
     if (this.chapter) this.chapter.textContent = name
+  }
+
+  setDifficulty(label: string): void {
+    if (this.difficulty) this.difficulty.textContent = label
   }
 
   show(): void {
