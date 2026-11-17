@@ -3,6 +3,7 @@
   "subtitle": "Aprenda os controles jogando.",
   "theme": "grove",
   "night": false,
+  "terrain": "jungle",
   "spawn": {
     "x": 2,
     "y": 8

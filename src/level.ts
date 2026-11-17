@@ -13,6 +13,9 @@ export enum Tile {
 }
 
 export type LevelTheme = 'village' | 'river' | 'camp' | 'grove' | 'night'
+// Conjunto de tiles usado no chão: cada capítulo escolhe o seu para combinar
+// com o cenário (selva, pedra musgosa, barro, templo ou pântano).
+export type TerrainSet = 'jungle' | 'moss' | 'mud' | 'temple' | 'bog'
 export type EnemyKind =
   | 'capanga'
   | 'soldado'
@@ -53,6 +56,8 @@ export type LevelData = {
   // Quando true, o capítulo acontece à noite: fundo de luar, luar e
   // vagalumes no lugar dos raios de sol.
   night?: boolean
+  // Tiles do chão; quando ausente, o tema escolhe o conjunto.
+  terrain?: TerrainSet
 }
 
 export class TileMap {

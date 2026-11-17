@@ -3,6 +3,7 @@
   "subtitle": "A correnteza leva tudo — menos a teimosia de voltar.",
   "theme": "river",
   "night": false,
+  "terrain": "moss",
   "spawn": {
     "x": 2,
     "y": 8

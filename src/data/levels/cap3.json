@@ -1,8 +1,9 @@
 {
-  "name": "Capítulo 3 — O Acampamento",
-  "subtitle": "Onde o ferro corta a mata, a fumaça esconde os cativos.",
+  "name": "Capítulo 3 — As Ruínas",
+  "subtitle": "Entre colunas antigas, a fogueira dos invasores ainda queima.",
   "theme": "camp",
-  "night": false,
+  "night": true,
+  "terrain": "mud",
   "spawn": {
     "x": 2,
     "y": 8

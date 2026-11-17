@@ -3,6 +3,7 @@
   "subtitle": "A floresta guarda o que a aldeia perdeu.",
   "theme": "village",
   "night": false,
+  "terrain": "jungle",
   "spawn": {
     "x": 2,
     "y": 8

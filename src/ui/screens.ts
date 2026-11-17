@@ -15,6 +15,7 @@ export type ChapterOption = {
   shortTitle: string
   tag: string
   subtitle: string
+  detail: string
 }
 
 import type { Difficulty } from '../difficulty'
@@ -242,9 +243,7 @@ export class Screens {
       return
     }
     const chapter = this.chapters[Number(index)]
-    this.chapterDetail.textContent = chapter
-      ? `${chapter.tag} · ${chapter.shortTitle} — ${chapter.subtitle}`
-      : ''
+    this.chapterDetail.textContent = chapter?.detail ?? ''
   }
 
   private clearSelection(): void {

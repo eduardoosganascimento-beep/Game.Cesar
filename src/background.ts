@@ -1,37 +1,1105 @@
 import { VIEW_H, VIEW_W } from './engine'
-import { publicAssetUrl } from './sprites'
 
-// Fundo: arte enviada pelo jogador + vagalumes. A imagem é desenhada com um
-// offset que alinha a grama da arte ao topo do chão do jogo (y = 9 * TILE).
-const sources = {
-  'forest-kenney': publicAssetUrl('assets/background/forest-kenney.png'),
-  'fg-spring': publicAssetUrl('assets/background/fg-spring.png'),
-  'fg-summer': publicAssetUrl('assets/background/fg-summer.png'),
-  'fg-autumn': publicAssetUrl('assets/background/fg-autumn.png'),
-  'fg-winter': publicAssetUrl('assets/background/fg-winter.png'),
+// Cenários desenhados no próprio jogo (sem pacote externo). A direção é a
+// mesma do resto: floresta indígena densa, noite, fumaça, urucum e osso.
+// Cada cena tem uma arte estática em cache; fogo, névoa, brasas e raios são
+// animados por cima todo quadro.
+export type BgScene =
+  | 'village-fire'
+  | 'waterfall'
+  | 'temple-night'
+  | 'temple-steps'
+  | 'forest-dawn'
+  | 'river-dawn'
+
+const W = VIEW_W
+const H = VIEW_H
+const GROUND_Y = 144
+
+// ---------- utilidades de pixel art ----------
+
+function hash(n: number): number {
+  const x = Math.sin(n * 127.1 + 311.7) * 43758.5453
+  return x - Math.floor(x)
 }
 
-const images = {
-  'forest-kenney': buildImage(sources['forest-kenney']),
-  'fg-spring': buildImage(sources['fg-spring']),
-  'fg-summer': buildImage(sources['fg-summer']),
-  'fg-autumn': buildImage(sources['fg-autumn']),
-  'fg-winter': buildImage(sources['fg-winter']),
+function px(ctx: CanvasRenderingContext2D, x: number, y: number, w: number, h: number, color: string): void {
+  if (w <= 0 || h <= 0) return
+  ctx.fillStyle = color
+  ctx.fillRect(Math.round(x), Math.round(y), Math.round(w), Math.round(h))
 }
 
-function buildImage(source: string): { image: HTMLImageElement; ready: boolean } {
-  const image = new Image()
-  const entry = { image, ready: false }
-  image.addEventListener('load', () => { entry.ready = true })
-  image.src = source
-  void image.decode().catch(() => { entry.ready = false })
-  return entry
+// Elipse "pixel": uma faixa de 1 px por linha, sem antialiasing.
+function blob(
+  ctx: CanvasRenderingContext2D,
+  cx: number,
+  cy: number,
+  rx: number,
+  ry: number,
+  color: string,
+): void {
+  if (rx <= 0 || ry <= 0) return
+  ctx.fillStyle = color
+  for (let y = -Math.round(ry); y <= Math.round(ry); y += 1) {
+    const t = y / ry
+    const w = Math.round(rx * Math.sqrt(Math.max(0, 1 - t * t)))
+    if (w > 0) ctx.fillRect(Math.round(cx - w), Math.round(cy + y), w * 2 + 1, 1)
+  }
+}
+
+function sky(ctx: CanvasRenderingContext2D, top: string, mid: string, bottom: string): void {
+  const g = ctx.createLinearGradient(0, 0, 0, GROUND_Y)
+  g.addColorStop(0, top)
+  g.addColorStop(0.58, mid)
+  g.addColorStop(1, bottom)
+  ctx.fillStyle = g
+  ctx.fillRect(0, 0, W, H)
+}
+
+function stars(ctx: CanvasRenderingContext2D, count: number, seed: number, alpha: number): void {
+  for (let i = 0; i < count; i += 1) {
+    const x = Math.floor(hash(seed + i * 1.37) * W)
+    const y = Math.floor(hash(seed + i * 2.71 + 9) * 92)
+    const bright = hash(seed + i * 4.13 + 3)
+    if (bright < 0.35) continue
+    ctx.globalAlpha = alpha * (0.35 + bright * 0.65)
+    px(ctx, x, y, bright > 0.88 ? 2 : 1, 1, '#d9e4e8')
+  }
+  ctx.globalAlpha = 1
+}
+
+// Copas distantes: uma faixa irregular de elipses escuras.
+function farCanopy(
+  ctx: CanvasRenderingContext2D,
+  baseY: number,
+  rx: number,
+  ry: number,
+  color: string,
+  seed: number,
+  step = 20,
+): void {
+  for (let x = -20; x < W + 20; x += step) {
+    const jitter = (hash(seed + x * 0.37) - 0.5) * 8
+    blob(ctx, x, baseY + jitter, rx * (0.7 + hash(seed + x * 0.91) * 0.5), ry, color)
+  }
+}
+
+function trunk(
+  ctx: CanvasRenderingContext2D,
+  x: number,
+  baseY: number,
+  height: number,
+  width: number,
+  color: string,
+  light: string,
+): void {
+  const w = Math.max(2, Math.round(width))
+  const lean = (hash(x * 1.71) - 0.5) * 8
+  for (let y = 0; y < height; y += 1) {
+    const t = y / height
+    const dx = Math.round(lean * t * t)
+    px(ctx, x + dx - w / 2, baseY - height + y, w, 1, color)
+  }
+  // Luz fria na lateral esquerda do tronco.
+  for (let y = 0; y < height; y += 2) {
+    const t = y / height
+    const dx = Math.round(lean * t * t)
+    px(ctx, x + dx - w / 2, baseY - height + y, 1, 1, light)
+  }
+  // Raízes na base.
+  px(ctx, x - w / 2 - 4, baseY - 3, 6, 2, color)
+  px(ctx, x + w / 2 - 1, baseY - 3, 5, 2, color)
+  px(ctx, x - w / 2 - 2, baseY - 1, 3, 1, color)
+}
+
+function tree(
+  ctx: CanvasRenderingContext2D,
+  x: number,
+  baseY: number,
+  height: number,
+  width: number,
+  trunkColor: string,
+  trunkLight: string,
+  leafColor: string,
+  leafLight: string,
+  seed: number,
+): void {
+  trunk(ctx, x, baseY, height, width, trunkColor, trunkLight)
+  const cy = baseY - height
+  blob(ctx, x + 6, cy + 8, 26, 11, leafColor)
+  blob(ctx, x - 18, cy + 14, 20, 9, leafColor)
+  blob(ctx, x + 22, cy + 16, 18, 8, leafColor)
+  blob(ctx, x, cy + 2, 18, 8, leafColor)
+  // Bordas iluminadas por cima.
+  ctx.globalAlpha = 0.5
+  blob(ctx, x + 2, cy, 12, 3, leafLight)
+  blob(ctx, x - 16, cy + 10, 8, 2, leafLight)
+  ctx.globalAlpha = 1
+  // Cipós.
+  for (let i = 0; i < 3; i += 1) {
+    const vx = x - 14 + Math.floor(hash(seed + i * 2.3) * 30)
+    const len = 10 + Math.floor(hash(seed + i * 5.1) * 22)
+    for (let y = 0; y < len; y += 2) {
+      px(ctx, vx + Math.round(Math.sin(y * 0.25 + i) * 1.5), cy + 12 + y, 1, 2, '#28331f')
+    }
+  }
+}
+
+// Árvore de floresta com tronco afunilado, galhos e copa em camadas.
+function jungleTree(
+  ctx: CanvasRenderingContext2D,
+  x: number,
+  baseY: number,
+  height: number,
+  width: number,
+  trunk: string,
+  trunkLight: string,
+  leaf: string,
+  leafLight: string,
+  seed: number,
+): void {
+  const lean = (hash(seed * 1.7) - 0.5) * 10
+  const topY = baseY - height
+  for (let y = 0; y < height; y += 1) {
+    const t = y / height
+    const w = Math.max(2, Math.round(width * (1 - t * 0.55)))
+    const dx = Math.round(lean * t * t)
+    px(ctx, x + dx - w / 2, baseY - height + y, w, 1, trunk)
+    if (y % 3 === 0) px(ctx, x + dx - w / 2, baseY - height + y, 1, 1, trunkLight)
+  }
+  // Raízes.
+  px(ctx, x - width / 2 - 5, baseY - 3, 7, 2, trunk)
+  px(ctx, x + width / 2 - 1, baseY - 3, 6, 2, trunk)
+  px(ctx, x - width / 2 - 2, baseY - 1, 4, 1, trunkLight)
+
+  // Galhos subindo para a copa.
+  for (const side of [-1, 1]) {
+    const branchY = baseY - height * (0.62 + hash(seed + side) * 0.12)
+    const reach = 16 + hash(seed + side * 3.1) * 14
+    const bx = x + lean * 0.6
+    for (let t = 1; t <= reach; t += 1) {
+      px(ctx, bx + side * t, branchY - t * 0.55, 2, 1, trunk)
+    }
+  }
+
+  // Copa: massas sobrepostas, com pontos de luz no topo.
+  const topX = x + lean
+  blob(ctx, topX, topY + 10, 30, 13, leaf)
+  blob(ctx, topX - 22, topY + 18, 20, 10, leaf)
+  blob(ctx, topX + 22, topY + 16, 22, 11, leaf)
+  blob(ctx, topX - 6, topY + 2, 18, 9, leaf)
+  blob(ctx, topX + 12, topY - 2, 13, 7, leaf)
+  ctx.globalAlpha = 0.55
+  blob(ctx, topX + 2, topY + 1, 13, 4, leafLight)
+  blob(ctx, topX - 20, topY + 12, 8, 3, leafLight)
+  blob(ctx, topX + 24, topY + 11, 9, 3, leafLight)
+  ctx.globalAlpha = 1
+  // Folhas pontudas na borda.
+  for (let i = 0; i < 7; i += 1) {
+    const fx = topX - 26 + i * 9
+    const fy = topY + 16 + Math.round(Math.sin(i * 1.7 + seed) * 3)
+    px(ctx, fx, fy, 1, 3, leaf)
+    px(ctx, fx + 1, fy + 1, 1, 2, leafLight)
+  }
+}
+
+function palm(
+  ctx: CanvasRenderingContext2D,
+  x: number,
+  baseY: number,
+  height: number,
+  lean: number,
+  color: string,
+  light: string,
+): void {
+  for (let y = 0; y < height; y += 1) {
+    const t = y / height
+    const dx = Math.round(lean * t * t)
+    px(ctx, x + dx, baseY - height + y, 2, 1, color)
+    if (y % 3 === 0) px(ctx, x + dx, baseY - height + y, 1, 1, light)
+  }
+  const topX = x + lean
+  const topY = baseY - height
+  const fronds = 7
+  for (let f = 0; f < fronds; f += 1) {
+    const dir = f < fronds / 2 ? -1 : 1
+    const spread = (f % Math.ceil(fronds / 2)) / 2
+    for (let t = 1; t <= 13; t += 1) {
+      const fx = topX + dir * t * (0.8 + spread * 0.5)
+      const fy = topY + Math.round(t * t * 0.085) - Math.round(spread * 5) - Math.round(t * 0.35)
+      px(ctx, fx, fy, 2, 1, t > 8 ? light : color)
+      // Folíolos pendurados.
+      if (t % 3 === 0) px(ctx, fx, fy + 1, 1, 2, color)
+    }
+  }
+}
+
+function fern(
+  ctx: CanvasRenderingContext2D,
+  x: number,
+  baseY: number,
+  size: number,
+  color: string,
+  light: string,
+): void {
+  const leaves = 5
+  for (let i = 0; i < leaves; i += 1) {
+    const dir = i - (leaves - 1) / 2
+    const reach = size * (0.6 + 0.4 * (1 - Math.abs(dir) / leaves))
+    for (let t = 1; t <= reach; t += 1) {
+      const fx = x + dir * t * 0.55
+      const fy = baseY - t + Math.round(t * t * 0.03)
+      px(ctx, fx, fy, 1, 1, t > reach * 0.7 ? light : color)
+    }
+  }
+}
+
+function rocks(
+  ctx: CanvasRenderingContext2D,
+  cx: number,
+  baseY: number,
+  width: number,
+  height: number,
+  color: string,
+  light: string,
+): void {
+  blob(ctx, cx, baseY - height / 2, width / 2, height / 2, color)
+  ctx.globalAlpha = 0.5
+  blob(ctx, cx - width * 0.12, baseY - height * 0.7, width * 0.32, height * 0.16, light)
+  ctx.globalAlpha = 1
+}
+
+// Maloca: telhado de palha em duas águas, parede de madeira e porta acesa.
+function maloca(
+  ctx: CanvasRenderingContext2D,
+  x: number,
+  baseY: number,
+  width: number,
+  height: number,
+  thatch: string,
+  thatchDark: string,
+  thatchLight: string,
+  wall: string,
+  glow: string,
+): void {
+  const ridge = baseY - height
+  const eave = baseY - height * 0.32
+  const half = width / 2
+
+  // Corpo da casa: madeira escura, vigas e tarimba.
+  px(ctx, x + 6, eave, width - 12, baseY - eave, wall)
+  for (let i = 0; i < 8; i += 1) {
+    const pxX = x + 10 + i * ((width - 20) / 7)
+    px(ctx, pxX, eave + 2, 1, baseY - eave - 2, thatchDark)
+    px(ctx, pxX + 1, eave + 2, 1, baseY - eave - 2, thatchLight)
+  }
+  for (let y = eave + 5; y < baseY; y += 6) {
+    ctx.globalAlpha = 0.4
+    px(ctx, x + 8, y, width - 16, 1, thatchDark)
+    ctx.globalAlpha = 1
+  }
+
+  // Porta com luz de fogueira.
+  const doorW = Math.max(8, Math.round(width * 0.14))
+  px(ctx, x + half - doorW / 2, baseY - height * 0.2, doorW, height * 0.2, '#120a05')
+  ctx.globalAlpha = 0.5
+  px(ctx, x + half - doorW / 2 + 1, baseY - height * 0.18, doorW - 2, height * 0.18, glow)
+  ctx.globalAlpha = 1
+
+  // Telhado: palha em faixas, com mechas e buracos de fogo.
+  for (let y = 0; y < eave - ridge; y += 1) {
+    const t = y / (eave - ridge)
+    const w = Math.round(width * (0.06 + t * 0.94))
+    const left = x + half - w / 2
+    const row = y % 3 === 0 ? thatchDark : thatch
+    px(ctx, left, ridge + y, w, 1, row)
+    // Mechas de palha apontando para baixo.
+    if (y % 2 === 0) {
+      for (let s = 0; s < 4; s += 1) {
+        const sx = left + Math.floor(hash(x * 0.3 + y * 7.7 + s * 3.1) * (w - 2))
+        px(ctx, left + sx, ridge + y, 1, 1 + (y % 3 === 0 ? 1 : 0), thatchLight)
+      }
+    }
+    // Buraco queimado revelando o interior.
+    if (y > 3 && hash(x * 1.7 + y * 2.3) > 0.93) {
+      const hx = left + Math.floor(hash(x + y * 4.1) * (w - 6))
+      px(ctx, left + hx, ridge + y, 4 + (y % 3), 2, '#0c0805')
+      px(ctx, left + hx + 1, ridge + y, 2, 1, glow)
+    }
+  }
+
+  // Cumeeira, beira e franjas de palha.
+  px(ctx, x + half - width * 0.035, ridge, width * 0.07, 2, thatchLight)
+  px(ctx, x + 2, eave - 2, width - 4, 2, thatchDark)
+  ctx.globalAlpha = 0.55
+  px(ctx, x + 4, eave - 3, width - 8, 1, thatchLight)
+  ctx.globalAlpha = 1
+  for (let f = 2; f < width - 2; f += 3) {
+    const len = 2 + Math.floor(hash(x + f * 1.9) * 3)
+    px(ctx, x + f, eave, 1, len, f % 2 === 0 ? thatchDark : thatch)
+  }
+  // Esteios da entrada.
+  px(ctx, x + half - doorW / 2 - 2, baseY - height * 0.24, 2, height * 0.24, thatchDark)
+  px(ctx, x + half + doorW / 2, baseY - height * 0.24, 2, height * 0.24, thatchDark)
+  // Ponteiro de palha no alto.
+  for (let i = 0; i < 5; i += 1) {
+    const a = -1.1 + i * 0.55
+    for (let t = 1; t < 7; t += 1) {
+      px(ctx, x + half + Math.sin(a) * t, ridge - Math.cos(a) * t, 1, 1, thatch)
+    }
+  }
+}
+
+// Totem de madeira com olhos e dentes geométricos.
+function totem(ctx: CanvasRenderingContext2D, x: number, baseY: number, height: number): void {
+  const w = 12
+  px(ctx, x - w / 2, baseY - height, w, height, '#3b2818')
+  px(ctx, x - w / 2, baseY - height, 2, height, '#5c4228')
+  const faces = 3
+  const fh = height / faces
+  for (let i = 0; i < faces; i += 1) {
+    const top = baseY - height + i * fh + 3
+    // Olhos.
+    px(ctx, x - 4, top + 2, 3, 2, '#0d0906')
+    px(ctx, x + 2, top + 2, 3, 2, '#0d0906')
+    px(ctx, x - 3, top + 2, 1, 1, i === 0 ? '#c9a15a' : '#a33a2a')
+    px(ctx, x + 3, top + 2, 1, 1, i === 0 ? '#c9a15a' : '#a33a2a')
+    // Boca/zigzag.
+    for (let t = -4; t <= 4; t += 2) {
+      px(ctx, x + t, top + fh - 6, 1, 2, '#c9a15a')
+    }
+    // Faixa pintada entre as faces.
+    px(ctx, x - w / 2, top + fh - 3, w, 1, '#a33a2a')
+  }
+  px(ctx, x - w / 2 - 3, baseY - 3, w + 6, 3, '#2a1c11')
+}
+
+// Pirâmide de degraus com escadaria central e brilho de luar.
+function pyramid(
+  ctx: CanvasRenderingContext2D,
+  cx: number,
+  baseY: number,
+  width: number,
+  height: number,
+  stone: string,
+  stoneDark: string,
+  stoneLight: string,
+): void {
+  const tiers = 6
+  const tierH = height / tiers
+  // Plataforma de base.
+  px(ctx, cx - width / 2 - 8, baseY - 4, width + 16, 4, stoneDark)
+  px(ctx, cx - width / 2 - 8, baseY - 4, width + 16, 1, stoneLight)
+
+  for (let i = 0; i < tiers; i += 1) {
+    const t = i / tiers
+    const tw = width * (1 - t * 0.66)
+    const y = baseY - (i + 1) * tierH
+    const left = cx - tw / 2
+    px(ctx, left, y, tw, tierH, stone)
+    // Bevel: topo claro e base em sombra.
+    px(ctx, left, y, tw, 1, stoneLight)
+    px(ctx, left, y + tierH - 2, tw, 2, stoneDark)
+    px(ctx, left, y, 2, tierH, stoneLight)
+    px(ctx, left + tw - 2, y, 2, tierH, stoneDark)
+    // Blocos e rachaduras.
+    for (let b = 0; b < 7; b += 1) {
+      const bx = left + 6 + b * ((tw - 12) / 7)
+      px(ctx, bx, y + 2, 1, tierH - 4, stoneDark)
+      if (hash(i * 11 + b * 3.7) > 0.66) {
+        px(ctx, bx + 2, y + 3 + Math.floor(hash(i + b) * 4), 2, 1, stoneLight)
+      }
+    }
+    // Musgo e folhagem nas quinas.
+    if (i % 2 === 0) {
+      px(ctx, left, y + tierH - 3, 5, 2, '#26331f')
+      px(ctx, left + tw - 5, y + tierH - 2, 5, 2, '#1e2a1b')
+      if (i > 1) {
+        px(ctx, left + 2, y + tierH - 1, 1, 4, '#2f3d24')
+      }
+    }
+    // Gravações geométricas.
+    for (let g = 0; g < 3; g += 1) {
+      const gx = left + tw * (0.18 + g * 0.3)
+      const gy = y + tierH / 2
+      px(ctx, gx, gy, 3, 1, stoneDark)
+      px(ctx, gx + 1, gy - 1, 1, 3, stoneDark)
+      px(ctx, gx, gy - 2, 3, 1, stoneLight)
+    }
+  }
+
+  // Escadaria central.
+  const stairW = Math.max(12, Math.round(width * 0.13))
+  px(ctx, cx - stairW / 2, baseY - height, stairW, height, stoneDark)
+  for (let y = baseY - height; y < baseY; y += 5) {
+    px(ctx, cx - stairW / 2, y, stairW, 1, stone)
+    px(ctx, cx - stairW / 2, y + 1, stairW, 1, stoneDark)
+  }
+  px(ctx, cx - stairW / 2 - 1, baseY - height, 1, height, stoneLight)
+  px(ctx, cx + stairW / 2, baseY - height, 1, height, stoneLight)
+
+  // Altar no topo com dois postes e uma fogueira apagada.
+  const topY = baseY - height - 10
+  px(ctx, cx - 16, topY, 32, 10, stoneDark)
+  px(ctx, cx - 16, topY, 32, 1, stoneLight)
+  px(ctx, cx - 16, topY + 8, 32, 2, '#1a1f1b')
+  px(ctx, cx - 11, topY - 7, 2, 7, '#2a2018')
+  px(ctx, cx + 9, topY - 7, 2, 7, '#2a2018')
+  px(ctx, cx - 13, topY - 8, 26, 2, '#2a2018')
+  px(ctx, cx - 4, topY - 3, 8, 3, '#0e0b08')
+  px(ctx, cx - 1, topY - 5, 2, 2, '#c9a15a')
+}
+
+// Pedra em pé com grafismo marajoara.
+function stela(
+  ctx: CanvasRenderingContext2D,
+  x: number,
+  baseY: number,
+  width: number,
+  height: number,
+  stone: string,
+  dark: string,
+  light: string,
+  accent: string,
+): void {
+  px(ctx, x - width / 2, baseY - height, width, height, stone)
+  px(ctx, x - width / 2, baseY - height, 2, height, light)
+  px(ctx, x + width / 2 - 1, baseY - height, 1, height, dark)
+  // Espiral/voluta.
+  const cx = x
+  const cy = baseY - height * 0.66
+  for (let a = 0; a < 12; a += 1) {
+    const ang = a * 0.55
+    px(ctx, cx + Math.cos(ang) * (2 + a * 0.7), cy + Math.sin(ang) * (2 + a * 0.7), 1, 1, accent)
+  }
+  // Losangos empilhados.
+  for (let i = 0; i < 3; i += 1) {
+    const dy = baseY - height * 0.4 + i * 6
+    px(ctx, cx, dy, 1, 1, dark)
+    px(ctx, cx - 2, dy + 1, 5, 1, dark)
+    px(ctx, cx - 3, dy + 2, 7, 1, dark)
+    px(ctx, cx - 2, dy + 3, 5, 1, dark)
+    px(ctx, cx, dy + 4, 1, 1, dark)
+  }
+}
+
+function canoe(
+  ctx: CanvasRenderingContext2D,
+  x: number,
+  y: number,
+  width: number,
+  color: string,
+  light: string,
+): void {
+  const half = width / 2
+  for (let i = 0; i < 4; i += 1) {
+    const w = half * (1 - i * 0.18)
+    px(ctx, x - w + i, y + i, w * 2 - i * 2, 1, i === 0 ? light : color)
+  }
+  // Proa e popa erguidas.
+  px(ctx, x - half, y - 2, 2, 3, color)
+  px(ctx, x + half - 1, y - 2, 2, 3, color)
+  // Remo.
+  for (let i = 0; i < 9; i += 1) {
+    px(ctx, x + 3 + i, y - 6 + Math.round(i * 0.4), 1, 1, light)
+  }
+}
+
+// ---------- cenas estáticas ----------
+
+function paintVillage(ctx: CanvasRenderingContext2D): void {
+  sky(ctx, '#050610', '#100f1e', '#271420')
+  stars(ctx, 70, 3, 0.5)
+
+  // Clarão de incêndio no horizonte.
+  const glow = ctx.createRadialGradient(168, 128, 8, 168, 128, 150)
+  glow.addColorStop(0, 'rgba(214, 92, 22, 0.22)')
+  glow.addColorStop(0.5, 'rgba(160, 54, 14, 0.08)')
+  glow.addColorStop(1, 'rgba(80, 24, 10, 0)')
+  ctx.fillStyle = glow
+  ctx.fillRect(0, 20, W, GROUND_Y)
+
+  // Serra distante e mata fechada.
+  farCanopy(ctx, 74, 26, 18, '#0a0f14', 11, 26)
+  farCanopy(ctx, 96, 22, 14, '#0b1210', 29, 18)
+  farCanopy(ctx, 116, 24, 12, '#0c1410', 41, 16)
+
+  // Árvores laterais, silhuetas.
+  palm(ctx, 18, GROUND_Y, 80, 16, '#0a0f0b', '#16201a')
+  palm(ctx, 302, GROUND_Y, 70, -12, '#090e0a', '#151f18')
+  tree(ctx, 36, GROUND_Y, 62, 6, '#0c0b08', '#1c1a12', '#0c1510', '#16241a', 5)
+  tree(ctx, 286, GROUND_Y, 70, 7, '#0b0a07', '#1a1810', '#0b140f', '#152319', 9)
+
+  // Paliçada de madeira protegendo a aldeia.
+  for (let x = 0; x < W; x += 7) {
+    if (x > 108 && x < 268) continue
+    const h = 18 + Math.floor(hash(x * 2.1) * 8)
+    const top = GROUND_Y - 8 - h
+    px(ctx, x, top, 3, h, '#241a11')
+    px(ctx, x, top, 1, h, '#3d2c1a')
+    px(ctx, x + 1, top - 2, 1, 2, '#3d2c1a')
+  }
+  px(ctx, 0, GROUND_Y - 20, 110, 1, '#2a1d11')
+  px(ctx, 270, GROUND_Y - 20, 50, 1, '#2a1d11')
+
+  // Maloca principal, à direita; a esquerda arde.
+  maloca(ctx, 118, GROUND_Y - 14, 156, 62, '#4a321e', '#2e1e11', '#6b4a2a', '#2a1b11', '#ff9a3c')
+  maloca(ctx, 48, GROUND_Y - 6, 78, 40, '#412a19', '#291a0e', '#5e4024', '#24170e', '#ff8a2e')
+
+  // Palha da maloca principal já queimando: buracos escuros no telhado.
+  px(ctx, 150, 86, 10, 5, '#120b06')
+  px(ctx, 186, 92, 7, 4, '#120b06')
+  px(ctx, 218, 80, 6, 3, '#120b06')
+  px(ctx, 132, 98, 8, 3, '#120b06')
+
+  // Totem e fogueira comunitária.
+  totem(ctx, 74, GROUND_Y - 2, 44)
+  px(ctx, 158, GROUND_Y - 6, 22, 3, '#241509')
+  px(ctx, 162, GROUND_Y - 9, 14, 3, '#2e1c0c')
+  px(ctx, 166, GROUND_Y - 11, 6, 2, '#3a2410')
+
+  // Caminho de terra batida.
+  for (let i = 0; i < 40; i += 1) {
+    const x = 100 + i * 4
+    const y = GROUND_Y - 1 - Math.floor(hash(i * 2.3) * 3)
+    px(ctx, x, y, 3, 1, '#1a110a')
+  }
+
+  // Chão sob a vila.
+  px(ctx, 0, GROUND_Y, W, H - GROUND_Y, '#0a0705')
+}
+
+function paintWaterfall(ctx: CanvasRenderingContext2D): void {
+  sky(ctx, '#0b1a20', '#173034', '#1d3a38')
+  farCanopy(ctx, 44, 34, 16, '#12251f', 23, 24)
+  farCanopy(ctx, 68, 28, 12, '#0d1c18', 37, 20)
+
+  // Paredões de pedra em camadas, com musgo e fendas.
+  const cliff = (left: number, right: number, seed: number, tone: string, edge: string): void => {
+    for (let y = 24; y < GROUND_Y; y += 4) {
+      const biteLeft = left + Math.round((hash(seed + y * 0.7) - 0.5) * 8)
+      const biteRight = right + Math.round((hash(seed + y * 1.3 + 9) - 0.5) * 8)
+      px(ctx, biteLeft, y, biteRight - biteLeft, 4, tone)
+      if (y % 12 === 0) {
+        ctx.globalAlpha = 0.45
+        px(ctx, biteLeft, y, biteRight - biteLeft, 1, '#0b1512')
+        ctx.globalAlpha = 1
+      }
+      // Fendas.
+      const crackX = biteLeft + 6 + Math.floor(hash(seed + y * 2.9) * Math.max(1, biteRight - biteLeft - 12))
+      if (y % 16 === 4) px(ctx, crackX, y, 1, 8, '#0b1512')
+      // Musgo nas saliências.
+      if (y % 20 === 8) {
+        const mx = biteLeft + 4 + Math.floor(hash(seed + y) * Math.max(1, biteRight - biteLeft - 10))
+        ctx.globalAlpha = 0.5
+        blob(ctx, mx, y + 1, 5, 2, '#263b2a')
+        ctx.globalAlpha = 1
+      }
+    }
+    px(ctx, right - 2, 24, 2, GROUND_Y - 24, edge)
+  }
+  cliff(-6, 124, 11, '#1a2422', '#2c3a34')
+  cliff(200, W + 6, 29, '#182120', '#2a3832')
+  cliff(-6, 92, 41, '#202b27', '#314036')
+  cliff(228, W + 6, 53, '#1d2724', '#2f3d35')
+
+  // Laje de onde a água cai.
+  px(ctx, 112, 28, 100, 8, '#202b27')
+  px(ctx, 112, 28, 100, 2, '#35453c')
+  px(ctx, 116, 36, 92, 3, '#101c1a')
+
+  // Cortina d'água: três planos de colunas com alturas diferentes.
+  for (let x = 122; x < 202; x += 1) {
+    const edge = Math.min(x - 122, 201 - x) / 40
+    const top = 36 + Math.round(hash(x * 2.1) * 5)
+    const end = GROUND_Y - 14 + Math.round(hash(x * 4.7) * 5)
+    const tone = x % 9 === 0 ? '#243b3d' : x % 5 === 0 ? '#3f6264' : '#345356'
+    px(ctx, x, top, 1, end - top, tone)
+    if (x % 6 === 0) px(ctx, x, top + 4, 1, end - top - 6, '#6d8d89')
+    if (x % 11 === 0) px(ctx, x, top + 2, 1, end - top - 4, '#a9c2ba')
+    if (edge > 0.75 && x % 3 === 0) px(ctx, x, top + 2, 1, end - top - 4, '#8aa8a3')
+  }
+  // Filetes de água quebrando no caminho.
+  for (let i = 0; i < 12; i += 1) {
+    const x = 126 + Math.floor(hash(i * 3.1) * 72)
+    const y = 46 + Math.floor(hash(i * 5.7) * 70)
+    ctx.globalAlpha = 0.5
+    px(ctx, x, y, 1, 3, '#c3d6cd')
+    ctx.globalAlpha = 1
+  }
+
+  // Poço e espuma na base.
+  px(ctx, 96, GROUND_Y - 14, 136, 14, '#142b2d')
+  const pool = ctx.createLinearGradient(0, GROUND_Y - 14, 0, GROUND_Y)
+  pool.addColorStop(0, '#2d5150')
+  pool.addColorStop(1, '#102224')
+  ctx.fillStyle = pool
+  ctx.fillRect(96, GROUND_Y - 14, 136, 14)
+  for (let i = 0; i < 34; i += 1) {
+    const x = 100 + Math.floor(hash(i * 3.7) * 128)
+    const y = GROUND_Y - 13 + Math.floor(hash(i * 5.1) * 12)
+    px(ctx, x, y, 2 + (i % 4), 1, i % 5 === 0 ? '#c8dbd2' : '#6f9690')
+  }
+  for (let i = 0; i < 16; i += 1) {
+    const x = 118 + Math.floor(hash(i * 7.3) * 68)
+    const y = GROUND_Y - 14 - Math.floor(hash(i * 2.7) * 7)
+    blob(ctx, x, y, 3 + (i % 3), 2, i % 3 === 0 ? '#d8e4da' : '#9fb8af')
+  }
+
+  // Margens de pedra e samambaias emoldurando.
+  rocks(ctx, 104, GROUND_Y + 2, 56, 30, '#1c2623', '#33423a')
+  rocks(ctx, 224, GROUND_Y + 2, 60, 32, '#192320', '#2f3d35')
+  palm(ctx, 20, GROUND_Y, 92, 10, '#0c1a12', '#1b2e1f')
+  palm(ctx, 300, GROUND_Y, 86, -8, '#0b1710', '#182a1c')
+  fern(ctx, 86, GROUND_Y - 2, 22, '#16281a', '#2f4a2a')
+  fern(ctx, 248, GROUND_Y - 2, 24, '#142517', '#2c4728')
+  fern(ctx, 60, GROUND_Y, 15, '#122114', '#274024')
+  fern(ctx, 268, GROUND_Y, 15, '#112013', '#253d22')
+
+  px(ctx, 0, GROUND_Y, W, H - GROUND_Y, '#07100d')
+}
+
+function paintTempleNight(ctx: CanvasRenderingContext2D): void {
+  sky(ctx, '#050714', '#0a0f22', '#131429')
+  stars(ctx, 90, 17, 0.6)
+
+  // Lua.
+  ctx.globalAlpha = 0.18
+  blob(ctx, 258, 38, 26, 26, '#c9d8e8')
+  ctx.globalAlpha = 1
+  blob(ctx, 258, 38, 12, 12, '#d9e2e6')
+  blob(ctx, 254, 33, 9, 9, '#eef2ee')
+
+  farCanopy(ctx, 64, 34, 18, '#080d13', 7, 22)
+  farCanopy(ctx, 92, 26, 15, '#0a1110', 19, 18)
+
+  // Pirâmide e estelas.
+  pyramid(ctx, 154, GROUND_Y - 8, 170, 78, '#39413a', '#232a26', '#59635a')
+  stela(ctx, 44, GROUND_Y - 4, 18, 74, '#3a4038', '#222823', '#5a6459', '#a33a2a')
+  stela(ctx, 278, GROUND_Y - 4, 16, 64, '#343a34', '#1f2521', '#525c53', '#c9a15a')
+
+  // Três tochas na escadaria e duas na base.
+  for (const [x, y] of [
+    [128, 128],
+    [154, 112],
+    [180, 128],
+    [100, 142],
+    [210, 142],
+  ] as const) {
+    px(ctx, x - 1, y, 2, 6, '#241a10')
+    px(ctx, x - 2, y - 2, 4, 2, '#4a3320')
+  }
+
+  // Mata fechando as laterais.
+  tree(ctx, 16, GROUND_Y, 74, 8, '#0a0907', '#191710', '#091310', '#132019', 31)
+  tree(ctx, 306, GROUND_Y, 78, 8, '#090807', '#17150e', '#08120e', '#121e17', 37)
+  palm(ctx, 34, GROUND_Y, 60, 8, '#08120c', '#142418')
+  palm(ctx, 288, GROUND_Y, 66, -6, '#08110b', '#132216')
+
+  px(ctx, 0, GROUND_Y, W, H - GROUND_Y, '#06090c')
+}
+
+function paintTempleSteps(ctx: CanvasRenderingContext2D): void {
+  sky(ctx, '#07120e', '#10251b', '#1b3626')
+  farCanopy(ctx, 40, 38, 20, '#0b1a13', 5, 24)
+  farCanopy(ctx, 66, 30, 16, '#0a1711', 23, 20)
+
+  // Templo distante no alto da escadaria.
+  px(ctx, 130, 22, 60, 12, '#1d2a20')
+  px(ctx, 136, 16, 48, 6, '#243327')
+  px(ctx, 144, 11, 32, 5, '#1a261d')
+  px(ctx, 158, 5, 4, 8, '#2a3a2b')
+  px(ctx, 156, 4, 8, 1, '#2a3a2b')
+  px(ctx, 150, 28, 20, 6, '#0d1510')
+  ctx.globalAlpha = 0.5
+  px(ctx, 156, 29, 8, 4, '#c9a15a')
+  ctx.globalAlpha = 1
+
+  // Escadaria em perspectiva: cada degrau é mais largo na base.
+  const steps = 14
+  const topY = 32
+  const stepH = 8
+  for (let i = 0; i < steps; i += 1) {
+    const y = topY + i * stepH
+    const t0 = i / steps
+    const t1 = (i + 1) / steps
+    for (let row = 0; row < stepH; row += 1) {
+      const t = t0 + (row / stepH) * (t1 - t0)
+      const half = 20 + t * 112
+      const left = 160 - half
+      const w = half * 2
+      let color = '#2f3a30'
+      if (row === 0) color = '#4d5c4b'
+      else if (row === 1) color = '#3a483b'
+      else if (row >= stepH - 2) color = '#1b241d'
+      px(ctx, left, y + row, w, 1, color)
+      // Juntas de pedra.
+      if (row > 2 && row < stepH - 2) {
+        const joint = left + 12 + Math.floor(hash(i * 7.1 + row) * Math.max(1, w - 24))
+        px(ctx, joint, y + row, 1, 1, '#232d25')
+      }
+      // Musgo nas bordas.
+      if (row >= 2 && row <= 4 && i % 2 === 0) {
+        px(ctx, left, y + row, 4, 1, '#24351f')
+        px(ctx, left + w - 4, y + row, 4, 1, '#20301c')
+      }
+    }
+  }
+
+  // Muros laterais em perspectiva com grafismos.
+  for (let y = 28; y < GROUND_Y; y += 4) {
+    const t = (y - 28) / (GROUND_Y - 28)
+    const inner = 22 + t * 110
+    const outer = inner + 14 + t * 12
+    px(ctx, 160 - outer, y, outer - inner, 4, '#222b23')
+    px(ctx, 160 + inner, y, outer - inner, 4, '#202820')
+    px(ctx, 160 - outer, y, outer - inner, 1, '#39463a')
+    px(ctx, 160 + inner, y, outer - inner, 1, '#39463a')
+    // Losangos marajoara.
+    if (y % 12 === 0) {
+      const lx = 160 - outer + 3
+      const rx = 160 + inner + 3
+      px(ctx, lx + 4, y + 2, 4, 2, '#4b5a40')
+      px(ctx, lx + 3, y + 4, 6, 1, '#4b5a40')
+      px(ctx, lx + 4, y + 5, 4, 2, '#4b5a40')
+      px(ctx, rx + 4, y + 2, 4, 2, '#4b5a40')
+      px(ctx, rx + 3, y + 4, 6, 1, '#4b5a40')
+      px(ctx, rx + 4, y + 5, 4, 2, '#4b5a40')
+    }
+  }
+
+  // Dois postes/totens em primeiro plano.
+  totem(ctx, 26, GROUND_Y - 2, 96)
+  totem(ctx, 296, GROUND_Y - 2, 88)
+
+  // Tochas nos cantos da escada.
+  for (const [x, y] of [
+    [56, 112],
+    [264, 112],
+    [48, 82],
+    [272, 82],
+  ] as const) {
+    px(ctx, x - 1, y, 2, 7, '#20160d')
+    px(ctx, x - 2, y - 2, 4, 2, '#4a3320')
+  }
+
+  // Copa fechando a cena por cima.
+  blob(ctx, 60, 8, 90, 22, '#0a150f')
+  blob(ctx, 250, 4, 110, 22, '#09130e')
+  tree(ctx, 12, GROUND_Y, 82, 9, '#0a0806', '#18150e', '#08120d', '#111d16', 43)
+  tree(ctx, 310, GROUND_Y, 84, 9, '#090706', '#17140d', '#07110c', '#101c15', 47)
+  palm(ctx, 40, GROUND_Y, 54, 10, '#08120c', '#142418')
+  palm(ctx, 282, GROUND_Y, 58, -8, '#07110b', '#132317')
+
+  px(ctx, 0, GROUND_Y, W, H - GROUND_Y, '#060b08')
+}
+
+function paintForestDawn(ctx: CanvasRenderingContext2D): void {
+  sky(ctx, '#1a2530', '#565248', '#a6744a')
+
+  // Sol baixo, difuso, com halo largo.
+  const sun = ctx.createRadialGradient(246, 92, 6, 246, 92, 76)
+  sun.addColorStop(0, 'rgba(255, 226, 158, 0.55)')
+  sun.addColorStop(0.35, 'rgba(232, 183, 106, 0.28)')
+  sun.addColorStop(1, 'rgba(214, 150, 80, 0)')
+  ctx.fillStyle = sun
+  ctx.fillRect(160, 16, 160, 152)
+  blob(ctx, 246, 92, 18, 12, '#f2cf8e')
+  ctx.globalAlpha = 0.5
+  blob(ctx, 246, 90, 26, 18, '#e8b76a')
+  ctx.globalAlpha = 1
+
+  // Névoa em faixas entre as camadas de mata.
+  for (let i = 0; i < 5; i += 1) {
+    ctx.globalAlpha = 0.06 + i * 0.012
+    px(ctx, 0, 70 + i * 11, W, 5, '#d8c39a')
+    ctx.globalAlpha = 1
+  }
+
+  farCanopy(ctx, 82, 26, 16, '#2a3329', 13, 22)
+  farCanopy(ctx, 104, 22, 13, '#1d2a20', 29, 18)
+
+  // Aldeia distante, pequena entre as árvores: o destino de Sandman.
+  px(ctx, 214, 108, 34, 10, '#141d15')
+  px(ctx, 216, 103, 30, 5, '#22301f')
+  px(ctx, 222, 99, 18, 4, '#1a251a')
+  px(ctx, 228, 96, 5, 3, '#2c3a25')
+  for (let x = 216; x < 248; x += 4) px(ctx, x, 118, 2, 2, '#0f1710')
+  ctx.globalAlpha = 0.35
+  px(ctx, 236, 92, 1, 7, '#5a5f4c')
+  px(ctx, 239, 88, 1, 5, '#4a5042')
+  ctx.globalAlpha = 1
+
+  // Árvores médias, com copas recortadas contra a luz.
+  jungleTree(ctx, 70, GROUND_Y, 96, 10, '#181610', '#29251a', '#16271c', '#2b3f2a', 3)
+  jungleTree(ctx, 170, GROUND_Y, 84, 8, '#161410', '#252217', '#132318', '#273b26', 17)
+  jungleTree(ctx, 260, GROUND_Y, 104, 11, '#14120e', '#232016', '#112116', '#253925', 23)
+
+  // Primeiro plano: troncos grossos e raízes.
+  jungleTree(ctx, 18, GROUND_Y, 118, 16, '#0f0d0a', '#221e15', '#0d1a12', '#1f3321', 31)
+  jungleTree(ctx, 306, GROUND_Y, 110, 14, '#0e0c09', '#201c14', '#0c180f', '#1d301f', 37)
+
+  // Samambaias e capim na base.
+  fern(ctx, 54, GROUND_Y, 24, '#1b2c18', '#3c5530')
+  fern(ctx, 110, GROUND_Y, 19, '#182715', '#35502c')
+  fern(ctx, 204, GROUND_Y, 21, '#172615', '#334d2a')
+  fern(ctx, 266, GROUND_Y, 25, '#162413', '#314a28')
+  for (let i = 0; i < 12; i += 1) {
+    const x = 30 + Math.floor(hash(i * 4.3) * 260)
+    const h = 5 + Math.floor(hash(i * 2.7) * 7)
+    for (let y = 0; y < h; y += 1) {
+      px(ctx, x + Math.round(y * 0.18), GROUND_Y - y, 1, 1, i % 2 ? '#4a5f33' : '#33492a')
+    }
+  }
+
+  // Aves atravessando o clarão.
+  for (const [bx, by] of [
+    [198, 52],
+    [206, 47],
+    [214, 54],
+  ] as const) {
+    px(ctx, bx, by, 2, 1, '#1a2320')
+    px(ctx, bx - 1, by - 1, 1, 1, '#1a2320')
+    px(ctx, bx + 2, by - 1, 1, 1, '#1a2320')
+  }
+
+  px(ctx, 0, GROUND_Y, W, H - GROUND_Y, '#0b0e08')
+}
+
+function paintRiverDawn(ctx: CanvasRenderingContext2D): void {
+  sky(ctx, '#22303a', '#4a4a44', '#8a6a4c')
+  ctx.globalAlpha = 0.3
+  blob(ctx, 78, 80, 60, 30, '#e8b76a')
+  ctx.globalAlpha = 0.5
+  blob(ctx, 78, 82, 22, 12, '#f7d9a0')
+  ctx.globalAlpha = 1
+
+  farCanopy(ctx, 78, 32, 16, '#2b332b', 11, 24)
+  farCanopy(ctx, 94, 26, 13, '#202c22', 29, 20)
+
+  // Margem oposta.
+  px(ctx, 0, 100, W, 10, '#162018')
+  for (let i = 0; i < 30; i += 1) {
+    const x = Math.floor(hash(i * 2.7) * W)
+    px(ctx, x, 99 + Math.floor(hash(i * 5.3) * 8), 2, 2, '#22301f')
+  }
+
+  // Rio: faixas horizontais escuras e reflexos do amanhecer.
+  px(ctx, 0, 108, W, GROUND_Y - 108, '#16282c')
+  for (let i = 0; i < 16; i += 1) {
+    const y = 110 + i * 2
+    const x = Math.floor(hash(i * 1.7) * 120)
+    const w = 30 + Math.floor(hash(i * 3.1) * 90)
+    px(ctx, x, y, w, 1, i % 3 === 0 ? '#5c6a5c' : '#2c4448')
+    px(ctx, x + w + 12, y, 24, 1, i % 4 === 0 ? '#8a7a5c' : '#243c40')
+  }
+  // Reflexo do sol na água.
+  for (let i = 0; i < 10; i += 1) {
+    const y = 110 + i * 3
+    px(ctx, 62 - i * 2, y, 22 + i * 4, 1, i % 2 === 0 ? '#b8955e' : '#8a734c')
+  }
+
+  // Canoa no rio, com remo.
+  canoe(ctx, 154, 120, 34, '#241b12', '#4c3a24')
+
+  // Margem da frente.
+  px(ctx, 0, GROUND_Y - 10, W, 14, '#121a11')
+  rocks(ctx, 48, GROUND_Y + 2, 44, 26, '#1c221a', '#333d2c')
+  rocks(ctx, 280, GROUND_Y + 2, 54, 30, '#192018', '#2f3828')
+  for (let i = 0; i < 16; i += 1) {
+    const x = Math.floor(hash(i * 4.1) * W)
+    const y = GROUND_Y - 10 + Math.floor(hash(i * 2.3) * 8)
+    px(ctx, x, y, 1, 3 + (i % 4), i % 3 === 0 ? '#4f5a34' : '#39452a')
+  }
+  fern(ctx, 100, GROUND_Y - 4, 22, '#1a2a17', '#39502c')
+  fern(ctx, 240, GROUND_Y - 4, 20, '#182716', '#35502a')
+  palm(ctx, 12, GROUND_Y, 70, 8, '#0d1810', '#1b2a1a')
+  palm(ctx, 304, GROUND_Y, 64, -6, '#0c1710', '#1a2919')
+
+  px(ctx, 0, GROUND_Y, W, H - GROUND_Y, '#090d08')
+}
+
+// ---------- animações ----------
+
+const FLAME_LAYERS: ReadonlyArray<readonly [number, string]> = [
+  [1, '#a8230f'],
+  [0.82, '#d63f14'],
+  [0.62, '#f57a17'],
+  [0.42, '#ffb32e'],
+  [0.22, '#ffe89a'],
+]
+
+function drawFlame(
+  ctx: CanvasRenderingContext2D,
+  x: number,
+  baseY: number,
+  scale: number,
+  time: number,
+  seed: number,
+): void {
+  const sway = Math.sin(time * 5.2 + seed) * 1.7
+  const halo = ctx.createRadialGradient(x, baseY - 5, 1, x, baseY - 5, 18 * scale)
+  halo.addColorStop(0, 'rgba(255, 160, 52, 0.18)')
+  halo.addColorStop(1, 'rgba(255, 90, 20, 0)')
+  ctx.fillStyle = halo
+  ctx.fillRect(x - 20 * scale, baseY - 24 * scale, 40 * scale, 28 * scale)
+
+  for (let layer = 0; layer < FLAME_LAYERS.length; layer += 1) {
+    const [k, color] = FLAME_LAYERS[layer]
+    const height = Math.max(2, (10 + Math.sin(time * 9 + seed + layer) * 2.2) * scale * k)
+    const half = 3 * scale * k * (1 + 0.1 * Math.sin(time * 7 + seed))
+    ctx.fillStyle = color
+    for (let i = 0; i < Math.ceil(height); i += 1) {
+      const t = i / height
+      const w = Math.max(1, Math.round(half * (1 - t * 0.9)))
+      const fx = Math.round(x + sway * t + Math.sin(time * 8 + seed + i * 0.9) * t * 1.2)
+      const fy = Math.round(baseY - i)
+      ctx.fillRect(fx - w, fy, w * 2, 1)
+    }
+  }
+}
+
+function drawMist(ctx: CanvasRenderingContext2D, time: number, strength: number, top = 104): void {
+  for (let i = 0; i < 6; i += 1) {
+    const y = top + i * 7
+    const drift = Math.sin(time * 0.24 + i * 1.8) * 20
+    const w = 130 + i * 16
+    const x = ((i * 71 + drift + W) % (W + w)) - w / 2
+    const grad = ctx.createRadialGradient(x + w / 2, y, 2, x + w / 2, y, w / 2)
+    grad.addColorStop(0, `rgba(205, 222, 214, ${(strength * 0.07).toFixed(3)})`)
+    grad.addColorStop(1, 'rgba(205, 222, 214, 0)')
+    ctx.fillStyle = grad
+    ctx.fillRect(x, y - 8, w, 16)
+  }
+}
+
+function drawGodRays(ctx: CanvasRenderingContext2D, time: number, warm: boolean): void {
+  ctx.save()
+  ctx.globalCompositeOperation = 'screen'
+  ctx.translate(214, -30)
+  ctx.rotate(-0.3)
+  for (let i = 0; i < 5; i += 1) {
+    const width = 12 + i * 8
+    const x = i * 30 - 40 + Math.sin(time * 0.16 + i) * 3
+    const beam = ctx.createLinearGradient(x, 0, x, 280)
+    const color = warm ? '255, 220, 164' : '190, 220, 208'
+    beam.addColorStop(0, `rgba(${color}, ${(0.05 + i * 0.007).toFixed(3)})`)
+    beam.addColorStop(0.6, `rgba(${color}, 0.012)`)
+    beam.addColorStop(1, `rgba(${color}, 0)`)
+    ctx.fillStyle = beam
+    ctx.beginPath()
+    ctx.moveTo(x, 0)
+    ctx.lineTo(x + width, 0)
+    ctx.lineTo(x + width + 66, 280)
+    ctx.lineTo(x + 40, 280)
+    ctx.closePath()
+    ctx.fill()
+  }
+  ctx.restore()
+}
+
+function drawVillageFire(ctx: CanvasRenderingContext2D, time: number): void {
+  // Clarão pulsante.
+  const heat = ctx.createLinearGradient(0, 40, 0, H)
+  heat.addColorStop(0, 'rgba(255, 120, 28, 0)')
+  heat.addColorStop(0.62, `rgba(255, 96, 22, ${(0.04 + 0.015 * (0.5 + 0.5 * Math.sin(time * 2.6))).toFixed(3)})`)
+  heat.addColorStop(1, `rgba(255, 72, 12, ${(0.1 + 0.035 * (0.5 + 0.5 * Math.sin(time * 3.2))).toFixed(3)})`)
+  ctx.fillStyle = heat
+  ctx.fillRect(0, 0, W, H)
+
+  // Fogo na maloca, na casa menor e na fogueira central.
+  const fires: ReadonlyArray<readonly [number, number, number, number]> = [
+    [152, 88, 1.5, 0.4],
+    [190, 94, 1.1, 1.7],
+    [220, 82, 1.3, 3.1],
+    [86, 104, 1.0, 4.6],
+    [58, 92, 0.8, 6.2],
+    [168, 138, 1.9, 7.9],
+    [200, 140, 0.9, 9.4],
+  ]
+  for (const [x, y, scale, seed] of fires) {
+    drawFlame(ctx, x, y, scale, time, seed)
+  }
+
+  // Fumaça subindo em blocos.
+  ctx.globalAlpha = 0.15
+  ctx.fillStyle = '#232438'
+  for (let i = 0; i < 20; i += 1) {
+    const base = fires[i % fires.length]
+    const p = (time * 0.1 + i / 20) % 1
+    const sx = base[0] + Math.sin(time * 0.9 + i * 1.7) * (3 + p * 14)
+    const sy = base[1] - 10 - p * 70
+    const size = 3 + p * 13
+    ctx.fillRect(Math.round(sx), Math.round(sy), Math.round(size), Math.round(size * 0.75))
+  }
+  ctx.globalAlpha = 1
+
+  // Brasas.
+  for (let i = 0; i < 46; i += 1) {
+    const bx = (i * 61 + 13) % W
+    const by = H - 16 - ((time * (10 + (i % 5)) + i * 17) % 138)
+    const flicker = 0.35 + 0.65 * (0.5 + 0.5 * Math.sin(time * 6 + i * 1.3))
+    ctx.globalAlpha = flicker
+    ctx.fillStyle = i % 3 === 0 ? '#ffe066' : '#ff8c1a'
+    const size = i % 4 === 0 ? 2 : 1
+    ctx.fillRect(Math.round(bx), Math.round(by), size, size)
+  }
+  ctx.globalAlpha = 1
+}
+
+function drawMoonGlow(ctx: CanvasRenderingContext2D, time: number): void {
+  const strength = 0.05 + 0.02 * (0.5 + 0.5 * Math.sin(time * 1.4))
+  const glow = ctx.createRadialGradient(258, 38, 6, 258, 38, 80)
+  glow.addColorStop(0, `rgba(170, 200, 225, ${strength.toFixed(3)})`)
+  glow.addColorStop(1, 'rgba(90, 130, 200, 0)')
+  ctx.fillStyle = glow
+  ctx.fillRect(150, 0, 170, 130)
+}
+
+function drawTorchGlow(ctx: CanvasRenderingContext2D, time: number, points: ReadonlyArray<readonly [number, number]>): void {
+  for (let i = 0; i < points.length; i += 1) {
+    const [x, y] = points[i]
+    const flicker = 0.08 + 0.03 * (0.5 + 0.5 * Math.sin(time * 6 + i * 1.9))
+    const glow = ctx.createRadialGradient(x, y, 1, x, y, 26)
+    glow.addColorStop(0, `rgba(255, 170, 80, ${flicker.toFixed(3)})`)
+    glow.addColorStop(1, 'rgba(255, 120, 40, 0)')
+    ctx.fillStyle = glow
+    ctx.fillRect(x - 28, y - 28, 56, 56)
+    drawFlame(ctx, x, y, 0.55, time, i * 2.3)
+  }
+}
+
+// ---------- cache das artes estáticas ----------
+
+const painters: Record<BgScene, (ctx: CanvasRenderingContext2D) => void> = {
+  'village-fire': paintVillage,
+  waterfall: paintWaterfall,
+  'temple-night': paintTempleNight,
+  'temple-steps': paintTempleSteps,
+  'forest-dawn': paintForestDawn,
+  'river-dawn': paintRiverDawn,
+}
+
+const cache = new Map<BgScene, HTMLCanvasElement>()
+
+function sceneCanvas(scene: BgScene): HTMLCanvasElement | undefined {
+  const cached = cache.get(scene)
+  if (cached) return cached
+  const canvas = document.createElement('canvas')
+  canvas.width = W
+  canvas.height = H
+  const context = canvas.getContext('2d')
+  if (!context) return undefined
+  context.imageSmoothingEnabled = false
+  painters[scene](context)
+  cache.set(scene, canvas)
+  return canvas
 }
 
 // Vagalumes: pontos de luz que piscam devagar sobre a floresta.
-const FIREFLIES = Array.from({ length: 26 }, (_, i) => ({
-  x: (i * 73 + 19) % VIEW_W,
-  y: 24 + ((i * 47) % 104),
+const FIREFLIES = Array.from({ length: 24 }, (_, i) => ({
+  x: (i * 73 + 19) % W,
+  y: 24 + ((i * 47) % 100),
   phase: i * 1.17,
 }))
 
@@ -39,42 +1107,79 @@ export function drawBackground(
   ctx: CanvasRenderingContext2D,
   cameraX: number,
   time: number,
-  scene: 'forest-kenney' | 'fg-spring' | 'fg-summer' | 'fg-autumn' | 'fg-winter' = 'forest-kenney',
-  _night = false,
+  scene: BgScene = 'forest-dawn',
+  night = false,
 ): void {
-  // Base escura cobre qualquer borda.
-  ctx.fillStyle = _night ? '#0a1024' : '#13241a'
-  ctx.fillRect(0, 0, VIEW_W, VIEW_H)
+  ctx.fillStyle = '#070a08'
+  ctx.fillRect(0, 0, W, H)
+  const canvas = sceneCanvas(scene)
+  if (canvas) ctx.drawImage(canvas, 0, 0)
 
-  const entry = images[scene] ?? images['forest-kenney']
-  if (entry.ready) {
-    const image = entry.image
-    const w = image.naturalWidth
-    const h = image.naturalHeight
-    // Imagem 320x180 exata: desenha FIXA (sem parallax vertical) para a
-    // vegetação do fundo continuar alinhada ao chão quando Sand pula.
-    ctx.drawImage(image, 0, 0, w, h)
+  if (scene === 'village-fire') {
+    drawVillageFire(ctx, time)
+    drawMist(ctx, time, 0.32, 116)
+  }
+  if (scene === 'waterfall') {
+    drawMist(ctx, time, 1, 100)
+    // Brilho da água.
+    const sheen = 0.05 + 0.02 * (0.5 + 0.5 * Math.sin(time * 1.2))
+    const g = ctx.createLinearGradient(0, 40, 0, GROUND_Y)
+    g.addColorStop(0, 'rgba(160, 210, 210, 0)')
+    g.addColorStop(1, `rgba(160, 210, 210, ${sheen.toFixed(3)})`)
+    ctx.fillStyle = g
+    ctx.fillRect(120, 40, 86, GROUND_Y - 40)
+  }
+  if (scene === 'temple-night') {
+    drawMoonGlow(ctx, time)
+    drawTorchGlow(ctx, time, [
+      [128, 128],
+      [154, 112],
+      [180, 128],
+      [100, 142],
+      [210, 142],
+    ])
+    drawMist(ctx, time, 0.4, 116)
+  }
+  if (scene === 'temple-steps') {
+    drawTorchGlow(ctx, time, [
+      [56, 112],
+      [264, 112],
+      [48, 82],
+      [272, 82],
+    ])
+    drawGodRays(ctx, time, false)
+    drawMist(ctx, time, 0.5, 110)
+  }
+  if (scene === 'forest-dawn') {
+    drawGodRays(ctx, time, true)
+    drawMist(ctx, time, 0.55, 104)
+  }
+  if (scene === 'river-dawn') {
+    drawGodRays(ctx, time, true)
+    drawMist(ctx, time, 0.7, 102)
   }
 
-  // Vagalumes com brilho suave.
-  for (const fly of FIREFLIES) {
-    const x = (fly.x - cameraX * 0.12 + VIEW_W) % VIEW_W
-    const y = fly.y + Math.sin(time * 0.8 + fly.phase) * 6
-    const glow = 0.3 + 0.5 * (0.5 + 0.5 * Math.sin(time * 2 + fly.phase))
-    ctx.globalAlpha = glow * 0.28
-    ctx.fillStyle = '#ffe9a8'
-    ctx.fillRect(Math.round(x) - 2, Math.round(y) - 2, 4, 4)
-    ctx.globalAlpha = glow
-    ctx.fillStyle = '#fff6d0'
-    ctx.fillRect(Math.round(x), Math.round(y), 1, 1)
+  // Vagalumes discretos; a aldeia em chamas já tem brasas.
+  if (scene !== 'village-fire' && scene !== 'river-dawn') {
+    const alpha = night ? 0.45 : 0.18
+    for (const fly of FIREFLIES) {
+      const x = (fly.x - cameraX * 0.12 + W) % W
+      const y = fly.y + Math.sin(time * 0.8 + fly.phase) * 6
+      const glow = 0.3 + 0.5 * (0.5 + 0.5 * Math.sin(time * 2 + fly.phase))
+      ctx.globalAlpha = glow * alpha * 0.55
+      ctx.fillStyle = '#ffe9a8'
+      ctx.fillRect(Math.round(x) - 2, Math.round(y) - 2, 4, 4)
+      ctx.globalAlpha = glow * alpha
+      ctx.fillStyle = '#fff6d0'
+      ctx.fillRect(Math.round(x), Math.round(y), 1, 1)
+    }
+    ctx.globalAlpha = 1
   }
-  ctx.globalAlpha = 1
 
-  // Vinheta leve dá profundidade sem sujar a arte.
-  const v = ctx.createRadialGradient(VIEW_W/2, VIEW_H/2, VIEW_H*0.4, VIEW_W/2, VIEW_H/2, VIEW_H*0.95)
+  // Vinheta suave.
+  const v = ctx.createRadialGradient(W / 2, H / 2, H * 0.42, W / 2, H / 2, H * 0.98)
   v.addColorStop(0, 'rgba(0,0,0,0)')
-  v.addColorStop(1, _night ? 'rgba(0,0,20,0.16)' : 'rgba(10,5,0,0.12)')
+  v.addColorStop(1, 'rgba(0,0,4,0.24)')
   ctx.fillStyle = v
-  ctx.fillRect(0, 0, VIEW_W, VIEW_H)
-  void VIEW_H
+  ctx.fillRect(0, 0, W, H)
 }

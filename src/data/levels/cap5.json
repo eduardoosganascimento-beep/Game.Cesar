@@ -1,8 +1,9 @@
 {
-  "name": "Capítulo 5 — O Portal",
-  "subtitle": "Um clarão entre as árvores abre passagem para o desconhecido.",
+  "name": "Capítulo 5 — O Regresso",
+  "subtitle": "A floresta respira de novo. O povo volta para casa.",
   "theme": "grove",
-  "night": true,
+  "night": false,
+  "terrain": "jungle",
   "spawn": {
     "x": 2,
     "y": 8

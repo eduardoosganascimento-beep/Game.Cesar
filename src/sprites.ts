@@ -21,7 +21,25 @@ export type Sprite = {
   white: HTMLCanvasElement
 }
 
+// Altura visível média de cada folha (em px de arte). Todas as pessoas do
+// jogo são desenhadas na mesma altura final, para ninguém parecer gigante
+// ao lado do Sandman.
+export const CHARACTER_HEIGHT = 38
+export const VISUAL_HEIGHT: Readonly<Record<'player' | 'colonist' | 'wolf' | 'zombie', number>> = {
+  player: 35,
+  colonist: 37,
+  wolf: 29,
+  zombie: 50,
+}
+
+export function characterScale(kind: keyof typeof VISUAL_HEIGHT): number {
+  return CHARACTER_HEIGHT / VISUAL_HEIGHT[kind]
+}
+
 const PUBLIC_BASE = import.meta.env.BASE_URL
+// Versão dos assets servidos de public/ (dev). Evita que o navegador reuse
+// tiles antigos depois de uma mudança de paleta; no build tudo é data URI.
+const ASSET_QUERY = '?v=3'
 const PLAYER_DIR = 'assets/sprites/player/'
 const COLONIST_DIR = 'assets/sprites/colonist/'
 const INDIO_DIR = 'assets/sprites/indio/'
@@ -75,7 +93,7 @@ export function loadedFrameCount(): number {
 export function publicAssetUrl(relativePath: string): string {
   const embedded = embeddedAssets[relativePath]
   if (embedded) return embedded
-  return `${PUBLIC_BASE}${relativePath}`
+  return `${PUBLIC_BASE}${relativePath}${ASSET_QUERY}`
 }
 
 function waitForImage(img: HTMLImageElement): Promise<void> {
@@ -110,6 +128,104 @@ function lighten(
   } catch {
     return source
   }
+}
+
+// Paleta quente do guardião: cabelo quase preto, pele de terra, urucum nos
+// pontos de luz e osso nos realces. A arte original é toda marrom-arroxeada;
+// aqui ela é remapeada por brilho, preservando o desenho pixel a pixel.
+type Ramp = ReadonlyArray<readonly [number, string]>
+
+const SKIN_RAMP: Ramp = [
+  [0, '#140c08'],
+  [0.16, '#2f1a10'],
+  [0.3, '#5a3019'],
+  [0.44, '#8a4e28'],
+  [0.58, '#b1733d'],
+  [0.72, '#cf9755'],
+  [0.86, '#e4b878'],
+  [1, '#f2d59c'],
+]
+
+const HAIR_RAMP: Ramp = [
+  [0, '#0b0908'],
+  [0.24, '#17100c'],
+  [0.46, '#281a12'],
+  [0.68, '#3a271a'],
+  [0.86, '#503625'],
+  [1, '#6b4a31'],
+]
+
+const URUCUM_RAMP: Ramp = [
+  [0, '#1d0805'],
+  [0.2, '#4c110a'],
+  [0.4, '#872514'],
+  [0.58, '#b23d20'],
+  [0.74, '#d46230'],
+  [0.88, '#e88b48'],
+  [1, '#f4b169'],
+]
+
+function hexToRgb(hex: string): [number, number, number] {
+  const n = Number.parseInt(hex.slice(1), 16)
+  return [(n >> 16) & 255, (n >> 8) & 255, n & 255]
+}
+
+const RAMPS = {
+  skin: SKIN_RAMP.map(([stop, color]) => [stop, hexToRgb(color)] as const),
+  hair: HAIR_RAMP.map(([stop, color]) => [stop, hexToRgb(color)] as const),
+  urucum: URUCUM_RAMP.map(([stop, color]) => [stop, hexToRgb(color)] as const),
+}
+
+function sampleRamp(ramp: (readonly [number, readonly [number, number, number]])[], t: number): [number, number, number] {
+  let i = 1
+  while (i < ramp.length - 1 && ramp[i][0] < t) i += 1
+  const [stop0, c0] = ramp[i - 1]
+  const [stop1, c1] = ramp[i]
+  const k = Math.max(0, Math.min(1, (t - stop0) / (stop1 - stop0)))
+  return [
+    Math.round(c0[0] + (c1[0] - c0[0]) * k),
+    Math.round(c0[1] + (c1[1] - c0[1]) * k),
+    Math.round(c0[2] + (c1[2] - c0[2]) * k),
+  ]
+}
+
+function recolorPlayer(
+  source: HTMLImageElement,
+  w: number,
+  h: number,
+): HTMLCanvasElement {
+  const canvas = document.createElement('canvas')
+  canvas.width = w
+  canvas.height = h
+  const context = canvas.getContext('2d')
+  if (!context) return canvas
+  context.imageSmoothingEnabled = false
+  context.drawImage(source, 0, 0, w, h)
+  const image = context.getImageData(0, 0, w, h)
+  const data = image.data
+  for (let i = 0; i < data.length; i += 4) {
+    const alpha = data[i + 3]
+    if (alpha < 16) continue
+    const r = data[i]
+    const g = data[i + 1]
+    const b = data[i + 2]
+    const l = (0.299 * r + 0.587 * g + 0.114 * b) / 255
+    const t = Math.max(0, Math.min(0.999, l * 1.18 + 0.05))
+    // Tons frios/arroxeados viram cabelo e sombra; os quentes viram pele;
+    // os muito avermelhados recebem urucum.
+    const ramp =
+      b > r * 0.92 && b > g * 1.02
+        ? RAMPS.hair
+        : r > g * 1.78 && r > b * 1.55 && l > 0.24 && l < 0.62
+          ? RAMPS.urucum
+          : RAMPS.skin
+    const [nr, ng, nb] = sampleRamp(ramp, t)
+    data[i] = nr
+    data[i + 1] = ng
+    data[i + 2] = nb
+  }
+  context.putImageData(image, 0, 0)
+  return canvas
 }
 
 function makeOutline(
@@ -157,7 +273,10 @@ async function loadAtlas(
       if (img.naturalWidth === 0) return
       const w = img.naturalWidth || frame.w
       const h = img.naturalHeight || frame.h
-      const lit = lighten(img, w, h, brightness, saturation)
+      const lit =
+        directory === PLAYER_DIR
+          ? recolorPlayer(img, w, h)
+          : lighten(img, w, h, brightness, saturation)
 
       // Âncoras antigas de Sand apontavam para fora do quadro (31 em um
       // sprite de 26 px), o que deixava o personagem flutuando. Quando isso

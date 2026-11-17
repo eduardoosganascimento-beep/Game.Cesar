@@ -10,7 +10,8 @@ import { Input } from './input'
 import { TileMap, Tile, type EnemyKind, type LevelData } from './level'
 import { MAX_HP, Player } from './player'
 import { drawScenery } from './scenery'
-import { loadSprites, type Sprite } from './sprites'
+import { characterScale, loadSprites, type Sprite } from './sprites'
+import { CutsceneView } from './ui/cutscene'
 import { Hud } from './ui/hud'
 import { Screens, type RunStats } from './ui/screens'
 
@@ -21,7 +22,23 @@ if (!context) throw new Error('Canvas 2D indisponível')
 const ctx: CanvasRenderingContext2D = context
 ctx.imageSmoothingEnabled = false
 
-const SPRITE_SCALE = 1.0
+// Todos os personagens são desenhados na mesma altura visível (38 px).
+// O Sand não tem cocar: só o sprite original, recolorido com tons quentes.
+const SPRITE_SCALE = characterScale('player')
+
+function enemyScale(enemy: Enemy): number {
+  if (enemy.isZombie) return characterScale('zombie')
+  if (enemy.kind === 'lobisomem') return characterScale('wolf')
+  return characterScale('colonist')
+}
+
+// Passe final de cor: o jogo é desenhado no canvas e depois copiado de volta
+// com dessaturação, contraste e split-tone (sombras frias, luzes quentes).
+// Dá unidade cinematográfica aos cenários, sprites e efeitos sem custo de GPU.
+const gradeCanvas = document.createElement('canvas')
+gradeCanvas.width = VIEW_W
+gradeCanvas.height = VIEW_H
+const gradeCtx = gradeCanvas.getContext('2d')
 const WIN_DELAY = 1100
 // Tempo do esmagamento do corpo ao aterrissar.
 const LAND_SQUASH_TIME = 0.2
@@ -78,13 +95,12 @@ class Game {
   private readonly animator = new Animator()
   private readonly effects = new Effects()
   private readonly hud = new Hud()
+  private readonly cutsceneView = new CutsceneView()
 
   private chapterIndex = 0
   private chapter: ChapterDef = CHAPTERS[0]
   private cutsceneLines: string[] = []
-  private cutsceneTitle = ''
   private cutsceneLine = 0
-  private cutsceneTimer = 0
   private tutorialMode = false
   private tutorialStep = 0
   private tutorialStartX = 0
@@ -173,16 +189,7 @@ class Game {
     this.input.clear()
     this.hud.show()
     this.hud.hideOverlays()
-    this.hud.showChapterCard(
-      this.chapter.kicker,
-      shortTitle(this.chapter.data.name),
-      this.chapter.data.subtitle ?? '',
-    )
     this.showCutscene()
-    if (!this.hinted) {
-      this.hinted = true
-      this.hud.showControlsHint()
-    }
     this.syncHud(true)
   }
 
@@ -272,10 +279,9 @@ class Game {
   // com Espaço/Enter/J; a ação fica pausada até a última fala.
   private showCutscene(): void {
     const cut = this.chapter.cutscene
-    this.cutsceneTitle = cut.title
     this.cutsceneLines = cut.lines
     this.cutsceneLine = 0
-    this.cutsceneTimer = 0
+    this.cutsceneView.show(this.chapter.kicker, cut.title, cut.lines)
   }
 
   private get inCutscene(): boolean {
@@ -285,9 +291,21 @@ class Game {
   private advanceCutscene(): void {
     if (this.cutsceneLine < this.cutsceneLines.length - 1) {
       this.cutsceneLine += 1
-      this.cutsceneTimer = 0
-    } else {
-      this.cutsceneLines = []
+      this.cutsceneView.setLine(this.cutsceneLine)
+      return
+    }
+
+    this.cutsceneLines = []
+    this.cutsceneView.hide()
+    this.hud.show()
+    this.hud.showChapterCard(
+      this.chapter.kicker,
+      shortTitle(this.chapter.data.name),
+      this.chapter.data.subtitle ?? '',
+    )
+    if (!this.hinted) {
+      this.hinted = true
+      this.hud.showControlsHint()
     }
   }
 
@@ -308,6 +326,8 @@ class Game {
     this.running = false
     this.paused = false
     this.tutorialMode = false
+    this.cutsceneLines = []
+    this.cutsceneView.hide()
     this.hud.hideTutorialPrompt()
     this.reset()
     this.hud.hide()
@@ -378,7 +398,6 @@ class Game {
 
     // Cutcine: a ação fica suspensa; Espaço/Enter/J avança as falas.
     if (this.inCutscene) {
-      this.cutsceneTimer += safeDt
       if (this.input.jumpPressed || this.input.attackPressed) {
         this.advanceCutscene()
       }
@@ -597,7 +616,7 @@ class Game {
         // A morte é verificada antes de qualquer interior: sem isso, cair com
     // vida zerada deixava Sand congelado.
     if (player.hp <= 0) {
-      this.beginDeath('Sand caiu — a floresta o chama de volta.')
+      this.beginDeath('Sandman caiu — a floresta o chama de volta.')
       this.input.endFrame()
       return
     }
@@ -621,7 +640,7 @@ class Game {
     }
 
     if (player.hp <= 0) {
-      this.beginDeath('Sand caiu — a floresta o chama de volta.')
+      this.beginDeath('Sandman caiu — a floresta o chama de volta.')
       this.input.endFrame()
       return
     }
@@ -714,6 +733,7 @@ class Game {
       time,
       this.chapter.data.theme,
       this.goalLocked,
+      this.chapter.data.terrain,
     )
 
     ctx.fillStyle = this.chapter.tint
@@ -722,9 +742,9 @@ class Game {
     // À noite a floresta recebe um véu azul: o luar entra, a cor some.
     if (this.isNight) {
       const veil = ctx.createLinearGradient(0, 0, 0, VIEW_H)
-      veil.addColorStop(0, 'rgba(18, 28, 66, 0.34)')
-      veil.addColorStop(0.55, 'rgba(16, 26, 60, 0.2)')
-      veil.addColorStop(1, 'rgba(8, 14, 38, 0.36)')
+      veil.addColorStop(0, 'rgba(18, 28, 66, 0.16)')
+      veil.addColorStop(0.55, 'rgba(16, 26, 60, 0.09)')
+      veil.addColorStop(1, 'rgba(8, 14, 38, 0.18)')
       ctx.fillStyle = veil
       ctx.fillRect(0, 0, VIEW_W, VIEW_H)
     }
@@ -766,6 +786,7 @@ class Game {
     }
 
     ctx.restore()
+    this.paintGrade()
     this.paintVignette()
 
     // Flash de dano e de abate: dá peso aos golpes.
@@ -800,65 +821,6 @@ class Game {
       ctx.globalAlpha = 1
     }
 
-    // Cutcine: faixa escura com o título e a fala atual.
-    if (this.inCutscene) this.paintCutscene()
-  }
-
-  private paintCutscene(): void {
-    // Fundo SÓLIDO (não transparente) — garante contraste total.
-    ctx.fillStyle = '#070c0a'
-    ctx.fillRect(0, 0, VIEW_W, VIEW_H)
-
-    // Faixa dourada no topo com o título.
-    ctx.fillStyle = '#7a4a24'
-    ctx.fillRect(0, 0, VIEW_W, 34)
-    ctx.fillStyle = '#e8a45c'
-    ctx.fillRect(0, 32, VIEW_W, 2)
-
-    ctx.textAlign = 'center'
-    ctx.fillStyle = '#ffe0a8'
-    ctx.font = 'bold 14px "Courier New", monospace'
-    ctx.fillText(this.cutsceneTitle, VIEW_W / 2, 22)
-
-    // Fala em fonte grande e negrito, centralizada verticalmente.
-    const line = this.cutsceneLines[this.cutsceneLine] ?? ''
-    ctx.font = 'bold 12px "Courier New", monospace'
-    const words = line.split(' ')
-    const lines: string[] = []
-    let current = ''
-    for (const word of words) {
-      const test = current ? `${current} ${word}` : word
-      if (ctx.measureText(test).width > VIEW_W - 36 && current) {
-        lines.push(current)
-        current = word
-      } else {
-        current = test
-      }
-    }
-    if (current) lines.push(current)
-    const startY = 70
-    lines.forEach((text, i) => {
-      // Sombra preta para o texto saltar do fundo.
-      ctx.fillStyle = '#000'
-      ctx.fillText(text, VIEW_W / 2 + 1, startY + i * 18 + 1)
-      ctx.fillStyle = '#ffffff'
-      ctx.fillText(text, VIEW_W / 2, startY + i * 18)
-    })
-
-    // Barra de progresso no rodapé.
-    const total = this.cutsceneLines.length
-    for (let i = 0; i < total; i += 1) {
-      ctx.fillStyle = i === this.cutsceneLine ? '#ffd166' : '#4a4030'
-      ctx.fillRect(VIEW_W / 2 - total * 6 + i * 12, VIEW_H - 36, 8, 3)
-    }
-
-    const blink = Math.floor(this.cutsceneTimer * 2) % 2 === 0
-    if (blink) {
-      ctx.fillStyle = '#ffd166'
-      ctx.font = 'bold 10px "Courier New", monospace'
-      ctx.fillText('ESPAÇO →', VIEW_W / 2, VIEW_H - 18)
-    }
-    ctx.textAlign = 'left'
   }
 
   get debug(): {
@@ -1031,7 +993,7 @@ class Game {
     if (this.dying > 0 || this.won) return
     const cx = this.player.x + this.player.w / 2
     const cy = this.player.y + this.player.h / 2
-    this.beginDeath('Mordida de zumbi — Sand não resistiu.')
+    this.beginDeath('Mordida de zumbi — Sandman não resistiu.')
     this.damageFlash = 1
     this.effects.burst(cx, cy, 'death', 20, 76)
     this.effects.burst(
@@ -1242,7 +1204,7 @@ class Game {
     this.player.hit()
     if (this.player.hp <= 0) {
       this.player.hp = MAX_HP
-      this.effects.text(splashX, splashY - 20, 'Sand respira de novo.', '#ffd166')
+      this.effects.text(splashX, splashY - 20, 'Sandman respira de novo.', '#ffd166')
     }
     this.player.respawn()
     this.shots = []
@@ -1319,7 +1281,7 @@ class Game {
 
   private paintEnemy(enemy: Enemy, time: number): void {
     const sprite = enemy.animator.frame
-    const scale = enemy.visualScale
+    const scale = enemy.visualScale * enemyScale(enemy)
     const walking = enemy.alive && Math.abs(enemy.vx) > 4
     // Andar balança o corpo; parado, o colono só respira.
     const bob = enemy.alive
@@ -1558,6 +1520,15 @@ class Game {
 
     if (blink) ctx.globalAlpha = 0.5
 
+    // Luz de fogueira atrás de Sandro: separa a silhueta do chão escuro sem
+    // desenhar um contorno artificial.
+    const backlight = ctx.createRadialGradient(feetX, feetY - 18, 2, feetX, feetY - 18, 24)
+    backlight.addColorStop(0, 'rgba(255, 189, 108, 0.16)')
+    backlight.addColorStop(0.55, 'rgba(235, 132, 54, 0.07)')
+    backlight.addColorStop(1, 'rgba(200, 90, 30, 0)')
+    ctx.fillStyle = backlight
+    ctx.fillRect(feetX - 24, feetY - 42, 48, 44)
+
     // Espremer e esticar: Sand afunda ao aterrissar e se estica na subida.
     const squash = this.landSquash > 0 ? this.landSquash / LAND_SQUASH_TIME : 0
     const rising = !player.onGround && player.vy < -50
@@ -1574,10 +1545,10 @@ class Game {
         ctx.save()
         ctx.translate(feetX, 0)
         ctx.scale(-1, 1)
-        this.drawSprite(sprite, -sprite.ax * SPRITE_SCALE, dy, SPRITE_SCALE)
+        this.drawSprite(sprite, -sprite.ax * SPRITE_SCALE, dy, SPRITE_SCALE, 0, 0.18)
         ctx.restore()
       } else {
-        this.drawSprite(sprite, feetX - sprite.ax * SPRITE_SCALE, dy, SPRITE_SCALE)
+        this.drawSprite(sprite, feetX - sprite.ax * SPRITE_SCALE, dy, SPRITE_SCALE, 0, 0.18)
       }
       ctx.restore()
     } else {
@@ -1622,11 +1593,20 @@ class Game {
     y: number,
     scale: number,
     outlineAlpha = 0,
+    rimAlpha = 0,
   ): void {
     const px = Math.round(x)
     const py = Math.round(y)
     const w = Math.max(1, Math.round(sprite.w * scale))
     const h = Math.max(1, Math.round(sprite.h * scale))
+
+    // Rim light: uma cópia clara deslocada 1 px atrás da silhueta. Só aparece
+    // na borda e separa Sandro do fundo escuro sem contorno artificial.
+    if (rimAlpha > 0) {
+      ctx.globalAlpha = rimAlpha
+      ctx.drawImage(sprite.white, px - 1, py - 1, w, h)
+      ctx.globalAlpha = 1
+    }
 
     // Contorno fino opcional: só nos inimigos, para separar a silhueta do
     // cenário. Sand já tem contorno próprio e fica mais nítido sem ele.
@@ -1680,6 +1660,40 @@ class Game {
     ctx.fillRect(facing > 0 ? x + w - 4 : x + 2, y + 2, 2, 1)
   }
 
+  // Color grading cinematográfico: menos saturação de desenho, contraste
+  // maior, sombras azul-esverdeadas e luzes puxadas para o fogo/ocre.
+  private paintGrade(): void {
+    if (!gradeCtx || !canvas) return
+    gradeCtx.clearRect(0, 0, VIEW_W, VIEW_H)
+    gradeCtx.drawImage(canvas, 0, 0)
+
+    ctx.clearRect(0, 0, VIEW_W, VIEW_H)
+    ctx.save()
+    ctx.filter = 'saturate(0.74) contrast(1.12) brightness(0.94)'
+    ctx.drawImage(gradeCanvas, 0, 0)
+    ctx.filter = 'none'
+
+    ctx.globalCompositeOperation = 'soft-light'
+    const tone = ctx.createLinearGradient(0, 0, 0, VIEW_H)
+    tone.addColorStop(0, 'rgba(46, 78, 92, 0.42)')
+    tone.addColorStop(0.5, 'rgba(28, 40, 34, 0.2)')
+    tone.addColorStop(1, 'rgba(128, 74, 30, 0.34)')
+    ctx.fillStyle = tone
+    ctx.fillRect(0, 0, VIEW_W, VIEW_H)
+
+    // Escurece topo e base como uma lente antiga; o centro permanece legível.
+    ctx.globalCompositeOperation = 'multiply'
+    const shade = ctx.createLinearGradient(0, 0, 0, VIEW_H)
+    shade.addColorStop(0, 'rgba(9, 15, 19, 0.4)')
+    shade.addColorStop(0.42, 'rgba(255, 255, 255, 0)')
+    shade.addColorStop(0.72, 'rgba(255, 255, 255, 0)')
+    shade.addColorStop(1, 'rgba(20, 12, 8, 0.32)')
+    ctx.fillStyle = shade
+    ctx.fillRect(0, 0, VIEW_W, VIEW_H)
+    ctx.globalCompositeOperation = 'source-over'
+    ctx.restore()
+  }
+
   private paintVignette(): void {
     const gradient = ctx.createRadialGradient(
       VIEW_W / 2,
@@ -1690,13 +1704,13 @@ class Game {
       205,
     )
     gradient.addColorStop(0, 'rgba(0, 0, 0, 0)')
-    gradient.addColorStop(1, 'rgba(0, 0, 0, 0.42)')
+    gradient.addColorStop(1, 'rgba(2, 4, 5, 0.52)')
     ctx.fillStyle = gradient
     ctx.fillRect(0, 0, VIEW_W, VIEW_H)
 
     const bottom = ctx.createLinearGradient(0, VIEW_H - 40, 0, VIEW_H)
     bottom.addColorStop(0, 'rgba(0, 0, 0, 0)')
-    bottom.addColorStop(1, 'rgba(0, 0, 0, 0.22)')
+    bottom.addColorStop(1, 'rgba(0, 0, 0, 0.28)')
     ctx.fillStyle = bottom
     ctx.fillRect(0, VIEW_H - 40, VIEW_W, 40)
   }
@@ -1755,6 +1769,7 @@ screens.setChapters(
     shortTitle: shortTitle(chapter.data.name),
     tag: chapter.tag,
     subtitle: chapter.data.subtitle ?? '',
+    detail: chapter.detail,
   })),
 )
 
