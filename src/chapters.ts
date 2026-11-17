@@ -15,8 +15,7 @@ import type { LevelData } from './level'
 export const TUTORIAL: ChapterDef = {
   data: tutorial as unknown as LevelData,
   kicker: 'Tutorial',
-  endText:
-    'Controles dominados. A floresta espera por você na Aldeia — boa travessia, Sand.',
+  endText: 'Os primeiros passos do guardião. A floresta espera na aldeia — boa travessia, Sand.',
   tint: 'rgba(255, 209, 102, 0.06)',
   lockGoalUntilBoss: false,
   tag: 'Tutorial',
@@ -35,17 +34,15 @@ export const CHAPTERS: ChapterDef[] = [
   {
     data: cap1 as unknown as LevelData,
     kicker: 'Capítulo um',
-    endText:
-      'A trilha segue para o rio. Se a família foi levada rio abaixo, é por lá que Sand vai.',
-    tint: 'rgba(255, 172, 86, 0.05)',
+    endText: 'A aldeia foi tomada. O rio leva os invasores — e o guardião vai atrás.',
+    tint: 'rgba(197, 122, 61, 0.06)',
     lockGoalUntilBoss: false,
     tag: 'Aldeia',
   },
   {
     data: cap2 as unknown as LevelData,
     kicker: 'Capítulo dois',
-    endText:
-      'Do outro lado do rio, fumaça sobe entre as árvores. O acampamento não fica longe.',
+    endText: 'Além do rio, fumaça sobe entre as árvores. O acampamento dos invasores não fica longe.',
     tint: 'rgba(64, 168, 184, 0.08)',
     lockGoalUntilBoss: false,
     tag: 'Rio',
@@ -53,17 +50,15 @@ export const CHAPTERS: ChapterDef[] = [
   {
     data: cap3 as unknown as LevelData,
     kicker: 'Capítulo três',
-    endText:
-      'O feitor caiu. Atrás da paliçada, um caminho de pedra leva ao coração da mata.',
-    tint: 'rgba(255, 126, 62, 0.07)',
+    endText: 'O acampamento caiu. Atrás da paliçada, um caminho de pedra leva ao coração da mata.',
+    tint: 'rgba(190, 96, 48, 0.07)',
     lockGoalUntilBoss: false,
     tag: 'Acampamento',
   },
   {
     data: cap4 as unknown as LevelData,
     kicker: 'Capítulo quatro',
-    endText:
-      'A família está livre. A floresta ainda guarda cicatrizes — mas Sand finalmente tem para onde voltar.',
+    endText: 'O povo está livre. A floresta ainda guarda cicatrizes — mas há para onde voltar.',
     tint: 'rgba(134, 106, 226, 0.08)',
     lockGoalUntilBoss: false,
     tag: 'Bosque',
@@ -71,8 +66,7 @@ export const CHAPTERS: ChapterDef[] = [
   {
     data: cap5 as unknown as LevelData,
     kicker: 'Capítulo cinco',
-    endText:
-      'Um portal dimensional se abre. Sand atravessa e encontra versões alternadas de sua família.',
+    endText: 'Um clarão entre as árvores abre passagem para o mundo dos espíritos.',
     tint: 'rgba(255, 209, 102, 0.08)',
     lockGoalUntilBoss: false,
     tag: 'Portal',
@@ -80,8 +74,7 @@ export const CHAPTERS: ChapterDef[] = [
   {
     data: cap6 as unknown as LevelData,
     kicker: 'Capítulo seis',
-    endText:
-      'Uma cavidade natural na rocha. Memórias antigas são despertadas pelo eco da água.',
+    endText: 'Uma cavidade na rocha guarda os ancestrais. A água desperta memórias antigas.',
     tint: 'rgba(64, 168, 184, 0.08)',
     lockGoalUntilBoss: false,
     tag: 'Caverna',
@@ -89,17 +82,15 @@ export const CHAPTERS: ChapterDef[] = [
   {
     data: cap7 as unknown as LevelData,
     kicker: 'Capítulo sete',
-    endText:
-      'Antigos castelos se erguem entre musgo e trepadeiras. Guardiões ancestrais protegem o caminho.',
-    tint: 'rgba(255, 126, 62, 0.07)',
+    endText: 'Ruínas antigas cobertas de musgo. Guardiões de pedra protegem o caminho.',
+    tint: 'rgba(190, 96, 48, 0.07)',
     lockGoalUntilBoss: false,
     tag: 'Castelo',
   },
   {
     data: cap8 as unknown as LevelData,
     kicker: 'Capítulo oito',
-    endText:
-      'Tecnologia antiga piscando em torres distantes. O ar cheira a ozônio e ozônio.',
+    endText: 'Torres antigas piscam ao longe. O ar cheira a ozônio e os espíritos inquietos.',
     tint: 'rgba(134, 106, 226, 0.08)',
     lockGoalUntilBoss: false,
     tag: 'Futuro',
@@ -107,8 +98,7 @@ export const CHAPTERS: ChapterDef[] = [
   {
     data: cap9 as unknown as LevelData,
     kicker: 'Capítulo nove',
-    endText:
-      'Sandman retorna para casa. A família está livre. A floresta ainda guarda cicatrizes.',
+    endText: 'O guardião retorna à aldeia. O povo está livre, e a floresta respira de novo.',
     tint: 'rgba(255, 209, 102, 0.08)',
     lockGoalUntilBoss: false,
     tag: 'Fim',

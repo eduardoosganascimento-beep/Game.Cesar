@@ -42,7 +42,7 @@ const STATS: Record<EnemyKind, Stats> = {
     ranged: false,
     cooldown: 1.7,
     visualScale: 1,
-    label: 'Capanga',
+    label: 'Mercenário',
   },
   soldado: {
     w: 15,
