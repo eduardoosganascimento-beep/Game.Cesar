@@ -4,7 +4,7 @@ import { publicAssetUrl } from './sprites'
 // Fundo: arte enviada pelo jogador + vagalumes. A imagem é desenhada com um
 // offset que alinha a grama da arte ao topo do chão do jogo (y = 9 * TILE).
 const sources = {
-  day: publicAssetUrl('assets/background/forest.png'),
+  day: publicAssetUrl('assets/background/forest-kenney.png'),
   night: publicAssetUrl('assets/background/night.jpg'),
 }
 
@@ -45,9 +45,8 @@ export function drawBackground(
     const image = entry.image
     const w = image.naturalWidth
     const h = image.naturalHeight
-    // Offset -6 alinha a grama da arte (y≈150) ao chão do jogo (y=144).
-    // Parallax vertical mínimo para não criar vãos.
-    const y = Math.round(-6 - cameraY * 0.08)
+    // Imagem 320x180 exata: desenha sem offset.
+    const y = Math.round(0 - cameraY * 0.08)
     ctx.drawImage(image, 0, y, w, h)
     // Se a imagem for mais estreita que a tela, repete espelhada.
     if (w < VIEW_W) {
