@@ -5,16 +5,18 @@ import { publicAssetUrl } from './sprites'
 // offset que alinha a grama da arte ao topo do chão do jogo (y = 9 * TILE).
 const sources = {
   'forest-kenney': publicAssetUrl('assets/background/forest-kenney.png'),
-  'forest-day': publicAssetUrl('assets/background/forest-day.png'),
-  'forest-night': publicAssetUrl('assets/background/forest-night.png'),
-  'forest-cave': publicAssetUrl('assets/background/forest-cave.png'),
+  'fg-spring': publicAssetUrl('assets/background/fg-spring.png'),
+  'fg-summer': publicAssetUrl('assets/background/fg-summer.png'),
+  'fg-autumn': publicAssetUrl('assets/background/fg-autumn.png'),
+  'fg-winter': publicAssetUrl('assets/background/fg-winter.png'),
 }
 
 const images = {
   'forest-kenney': buildImage(sources['forest-kenney']),
-  'forest-day': buildImage(sources['forest-day']),
-  'forest-night': buildImage(sources['forest-night']),
-  'forest-cave': buildImage(sources['forest-cave']),
+  'fg-spring': buildImage(sources['fg-spring']),
+  'fg-summer': buildImage(sources['fg-summer']),
+  'fg-autumn': buildImage(sources['fg-autumn']),
+  'fg-winter': buildImage(sources['fg-winter']),
 }
 
 function buildImage(source: string): { image: HTMLImageElement; ready: boolean } {
@@ -37,7 +39,7 @@ export function drawBackground(
   ctx: CanvasRenderingContext2D,
   cameraX: number,
   time: number,
-  scene: 'forest-kenney' | 'forest-day' | 'forest-night' | 'forest-cave' = 'forest-kenney',
+  scene: 'forest-kenney' | 'fg-spring' | 'fg-summer' | 'fg-autumn' | 'fg-winter' = 'forest-kenney',
   _night = false,
 ): void {
   // Base escura cobre qualquer borda.
