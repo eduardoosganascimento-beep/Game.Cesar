@@ -805,39 +805,30 @@ class Game {
   }
 
   private paintCutscene(): void {
-    // Tela inteira escura: a cutcine é uma cena, não um letreiro no HUD.
-    ctx.fillStyle = 'rgba(5, 10, 8, 0.94)'
+    // Fundo SÓLIDO (não transparente) — garante contraste total.
+    ctx.fillStyle = '#070c0a'
     ctx.fillRect(0, 0, VIEW_W, VIEW_H)
 
-    // Moldura com motivos indígenas (losangos) nas bordas.
-    ctx.fillStyle = '#c97a3d'
-    ctx.fillRect(14, 12, VIEW_W - 28, 2)
-    ctx.fillRect(14, VIEW_H - 14, VIEW_W - 28, 2)
-    for (let x = 18; x < VIEW_W - 18; x += 14) {
-      ctx.fillStyle = 'rgba(201, 122, 61, 0.5)'
-      ctx.fillRect(x, 8, 3, 3)
-      ctx.fillRect(x, VIEW_H - 11, 3, 3)
-    }
+    // Faixa dourada no topo com o título.
+    ctx.fillStyle = '#7a4a24'
+    ctx.fillRect(0, 0, VIEW_W, 34)
+    ctx.fillStyle = '#e8a45c'
+    ctx.fillRect(0, 32, VIEW_W, 2)
 
     ctx.textAlign = 'center'
-    // Título em destaque.
-    ctx.fillStyle = '#ffcf8a'
-    ctx.font = 'bold 13px "Courier New", monospace'
-    ctx.fillText(this.cutsceneTitle, VIEW_W / 2, 40)
+    ctx.fillStyle = '#ffe0a8'
+    ctx.font = 'bold 14px "Courier New", monospace'
+    ctx.fillText(this.cutsceneTitle, VIEW_W / 2, 22)
 
-    ctx.fillStyle = '#c97a3d'
-    ctx.fillRect(VIEW_W / 2 - 40, 48, 80, 1)
-
-    // Fala atual: fonte maior, quebrada em linhas centralizadas.
+    // Fala em fonte grande e negrito, centralizada verticalmente.
     const line = this.cutsceneLines[this.cutsceneLine] ?? ''
-    ctx.fillStyle = '#f4e8cf'
-    ctx.font = '10px "Courier New", monospace'
+    ctx.font = 'bold 12px "Courier New", monospace'
     const words = line.split(' ')
     const lines: string[] = []
     let current = ''
     for (const word of words) {
       const test = current ? `${current} ${word}` : word
-      if (ctx.measureText(test).width > VIEW_W - 44 && current) {
+      if (ctx.measureText(test).width > VIEW_W - 36 && current) {
         lines.push(current)
         current = word
       } else {
@@ -845,22 +836,27 @@ class Game {
       }
     }
     if (current) lines.push(current)
-    const startY = 84
-    lines.forEach((text, i) => ctx.fillText(text, VIEW_W / 2, startY + i * 15))
+    const startY = 70
+    lines.forEach((text, i) => {
+      // Sombra preta para o texto saltar do fundo.
+      ctx.fillStyle = '#000'
+      ctx.fillText(text, VIEW_W / 2 + 1, startY + i * 18 + 1)
+      ctx.fillStyle = '#ffffff'
+      ctx.fillText(text, VIEW_W / 2, startY + i * 18)
+    })
 
-    // Indicador de progresso (pontinhos).
+    // Barra de progresso no rodapé.
     const total = this.cutsceneLines.length
     for (let i = 0; i < total; i += 1) {
-      ctx.fillStyle = i === this.cutsceneLine ? '#ffd166' : 'rgba(255, 209, 102, 0.3)'
-      ctx.fillRect(VIEW_W / 2 - total * 4 + i * 8, VIEW_H - 40, 5, 2)
+      ctx.fillStyle = i === this.cutsceneLine ? '#ffd166' : '#4a4030'
+      ctx.fillRect(VIEW_W / 2 - total * 6 + i * 12, VIEW_H - 36, 8, 3)
     }
 
-    // Pisca para avançar.
     const blink = Math.floor(this.cutsceneTimer * 2) % 2 === 0
     if (blink) {
       ctx.fillStyle = '#ffd166'
-      ctx.font = 'bold 9px "Courier New", monospace'
-      ctx.fillText('ESPAÇO PARA CONTINUAR ▸', VIEW_W / 2, VIEW_H - 24)
+      ctx.font = 'bold 10px "Courier New", monospace'
+      ctx.fillText('ESPAÇO →', VIEW_W / 2, VIEW_H - 18)
     }
     ctx.textAlign = 'left'
   }

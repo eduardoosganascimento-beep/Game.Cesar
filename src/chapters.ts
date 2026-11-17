@@ -46,11 +46,7 @@ export const CHAPTERS: ChapterDef[] = [
     tag: 'Aldeia',
     cutscene: {
       title: 'A aldeia em cinzas',
-      lines: [
-        'Sandro volta à aldeia e encontra tudo tomado pelos invasores.',
-        'O fogo ainda fumaça. Seu povo foi levado rio abaixo.',
-        '— Vou trazê-los de volta —, jura o guardião, empunhando o cajado.',
-      ],
+      lines: ['Sandro volta: a aldeia foi tomada.', 'Seu povo foi levado rio abaixo.', '— Vou trazê-los de volta —, jura o guardião.'],
     },
   },
   {
@@ -62,11 +58,7 @@ export const CHAPTERS: ChapterDef[] = [
     tag: 'Rio',
     cutscene: {
       title: 'O rio escuro',
-      lines: [
-        'A correnteza é forte, mas Sandro nada com a força do povo da floresta.',
-        'Do outro lado, o cheiro de fumaça sobe entre as árvores.',
-        'Os invasores acamparam ali — e o rastro do seu povo termina nesse caminho.',
-      ],
+      lines: ['A correnteza é forte, mas Sandro atravessa.', 'Do outro lado, fumaça sobe entre as árvores.', 'Os invasores acamparam ali.', 'O rastro do seu povo termina nesse caminho.'],
     },
   },
   {
@@ -78,11 +70,7 @@ export const CHAPTERS: ChapterDef[] = [
     tag: 'Acampamento',
     cutscene: {
       title: 'O acampamento',
-      lines: [
-        'Sandro se aproxima do acampamento em silêncio, entre as sombras.',
-        'As fogueiras queimam. Os captores dormem despreocupados.',
-        'Hoje a floresta cobra o preço da invasão.',
-      ],
+      lines: ['Sandro se aproxima em silêncio.', 'As fogueiras queimam na madrugada.', 'Hoje a floresta cobra o preço da invasão.'],
     },
   },
   {
@@ -94,11 +82,7 @@ export const CHAPTERS: ChapterDef[] = [
     tag: 'Bosque',
     cutscene: {
       title: 'O coração da mata',
-      lines: [
-        'No bosque sagrado, os ancestrais sussurram pelo vento nas folhas.',
-        'Sandro sente a presença do seu povo — próximo, mas ainda não livre.',
-        'A lança brilha. A última barreira está adiante.',
-      ],
+      lines: ['No bosque sagrado, os ancestrais sussurram.', 'Sandro sente seu povo muito perto.', 'A última barreira está adiante.'],
     },
   },
   {
@@ -110,11 +94,7 @@ export const CHAPTERS: ChapterDef[] = [
     tag: 'Fim',
     cutscene: {
       title: 'O regresso',
-      lines: [
-        'As algemas caem. O povo corre para abraçar Sandro.',
-        'A aldeia se reconstrói com as mãos de quem nunca se rendeu.',
-        'A floresta respira. E a lenda do guardião começa a ser contada.',
-      ],
+      lines: ['As algemas caem. O povo corre para Sandro.', 'A aldeia se reconstrói com suas próprias mãos.', 'A floresta respira. A lenda começa.'],
     },
   },
 ]
