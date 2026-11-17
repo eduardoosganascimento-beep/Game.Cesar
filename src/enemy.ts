@@ -174,6 +174,15 @@ export class Enemy {
   onGround = false
   justShot = false
   justStruck = false
+  stunTimer = 0
+
+  stun(seconds: number): void {
+    this.stunTimer = Math.max(this.stunTimer, seconds)
+    this.vx = 0
+    this.attackKind = null
+    this.attackElapsed = 0
+    this.animator.play('hurt')
+  }
 
   private stats: Stats
   public speed: number
@@ -345,6 +354,7 @@ export class Enemy {
     this.justStruck = false
     this.hurt = Math.max(0, this.hurt - dt)
     this.invuln = Math.max(0, this.invuln - dt)
+    this.stunTimer = Math.max(0, this.stunTimer - dt)
 
     if (!this.alive) {
       this.deathTimer = Math.max(0, this.deathTimer - dt)
@@ -355,7 +365,9 @@ export class Enemy {
     this.animator.update(dt)
     this.attackCooldown = Math.max(0, this.attackCooldown - dt)
 
-    if (this.attackKind) {
+    if (this.stunTimer > 0) {
+      this.vx = 0
+    } else if (this.attackKind) {
       this.updateAttack(dt)
       this.vx = 0
     } else if (this.hurt <= 0) {

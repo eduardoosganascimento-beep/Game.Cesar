@@ -119,6 +119,13 @@ class Sfx {
     this.tone({ freq: 150, endFreq: 60, duration: 0.2, type: 'sawtooth', volume: 0.16 })
   }
 
+  guard(): void {
+    // Metal que ecoa: parry bem-sucedido, estilo Sons of Sparta.
+    this.tone({ freq: 880, endFreq: 440, duration: 0.16, type: 'square', volume: 0.14 })
+    this.tone({ freq: 1320, duration: 0.1, type: 'triangle', volume: 0.1, delay: 0.02 })
+    this.noise(0.08, 0.1, 1800)
+  }
+
   stomp(): void {
     this.tone({ freq: 420, endFreq: 90, duration: 0.14, type: 'triangle', volume: 0.2 })
     this.noise(0.1, 0.12, 900)

@@ -108,6 +108,9 @@ class Game {
   private hinted = false
   private goalHintCooldown = 0
   private parryTimer = 0
+  private riposte = 0
+  private combo = 0
+  private comboTimer = 0
   private runTime = 0
   private winTimer = 0
   private hudKey = ''
@@ -329,15 +332,7 @@ class Game {
       return
     }
 
-    // Sistema de parry/block: jogador pode temporariamente bloquear ataques
-    // se pressionar o botão de ataque no momento certo (frames de invulnerabilidade).
-    // O parry consume stamina e deixa o jogador vulnerável após o uso.
-    if (this.parryTimer > 0) {
-      this.parryTimer = Math.max(0, this.parryTimer - safeDt)
-      // Durante o parry, o jogador é invulnerável a ataques normais
-      // mas não pode atacar de volta
-    }
-
+    // Sistema de parry ativado no loop do jogador (abaixo).
     if (!this.paused) this.effects.update(safeDt)
     this.damageFlash = Math.max(0, this.damageFlash - safeDt * 3.2)
     this.killFlash = Math.max(0, this.killFlash - safeDt * 2.4)
@@ -385,6 +380,20 @@ class Game {
     // caindo sobre o inimigo (e não apenas encostando nele).
     const fallVy = player.vy
     player.update(safeDt, this.input)
+
+    // Parry do jogador (F): janela curta de bloqueio. Se um golpe chegar nela,
+    // o inimigo fica atordoado e o próximo ataque é um riposte (dano dobrado).
+    if (this.input.parryPressed && this.parryTimer <= 0 && this.riposte <= 0 && player.hurt <= 0) {
+      this.parryTimer = 0.28
+      sfx.guard?.()
+      this.effects.burst(player.x + player.w/2, player.y + 10, 'spark', 5, 26)
+    }
+    if (this.parryTimer > 0) this.parryTimer = Math.max(0, this.parryTimer - safeDt)
+    if (this.riposte > 0) this.riposte = Math.max(0, this.riposte - safeDt)
+    if (this.comboTimer > 0) {
+      this.comboTimer = Math.max(0, this.comboTimer - safeDt)
+      if (this.comboTimer === 0) this.combo = 0
+    }
 
     if (player.justJumped) {
       sfx.jump()
@@ -442,14 +451,17 @@ class Game {
         this.effects.burst(enemy.x + enemy.w / 2, enemy.y + 5, 'ooze', 2, 14)
       }
 
-      // Sistema de parry: se jogador tem parry ativo, inimigos não causam dano
+      // Parry bem-sucedido (Sons of Sparta): o golpe é desviado, o inimigo
+      // fica atordoado e o próximo ataque do Sand é um riposte (dano x2).
       if (this.parryTimer > 0 && overlaps(enemy.attackBox, player.hurtbox)) {
-        // Player está bloqueando! O inimigo não causa dano normal,
-        // mas o parry consome o timer e deixa o jogador vulnerável depois.
-        this.parryTimer = 0 // Acaba o parry após o uso
-        // Efeito visual de parry bem-sucedido
-        this.effects.burst(enemy.x + enemy.w / 2, enemy.y + enemy.h / 2, 'spark', 3, 16)
-        continue // Pula o dano normal
+        this.parryTimer = 0
+        this.riposte = 1.2
+        enemy.stun(0.9)
+        sfx.guard()
+        this.effects.addShake(3.2)
+        this.effects.burst(enemy.x + enemy.w / 2, enemy.y + enemy.h / 2, 'spark', 12, 60)
+        this.effects.text(enemy.x + enemy.w / 2, enemy.y - 6, 'PARRY!', '#ffe9a8')
+        continue
       }
 
       // Nova mecânica: Perry do índio.
@@ -673,6 +685,26 @@ class Game {
       h: VIEW_H,
     })
 
+    // Combo: contador estilo Sons of Sparta, some quando o timer acaba.
+    if (this.combo >= 2 && this.comboTimer > 0) {
+      ctx.save()
+      const alpha = Math.min(1, this.comboTimer)
+      const scale = 1 + Math.sin(time * 12) * 0.04 + (this.combo - 2) * 0.03
+      ctx.globalAlpha = alpha
+      ctx.translate(VIEW_W - 44, 54)
+      ctx.scale(scale, scale)
+      ctx.textAlign = 'right'
+      ctx.font = 'bold 16px "Courier New", monospace'
+      ctx.fillStyle = '#1a110a'
+      ctx.fillText(`${this.combo}x`, 2, 2)
+      ctx.fillStyle = this.combo >= 5 ? '#ff6b5c' : this.combo >= 3 ? '#ff9f43' : '#ffd166'
+      ctx.fillText(`${this.combo}x`, 0, 0)
+      ctx.font = 'bold 6px "Courier New", monospace'
+      ctx.fillStyle = '#fff1dd'
+      ctx.fillText('COMBO', 0, 9)
+      ctx.restore()
+    }
+
     ctx.restore()
     this.paintVignette()
 
@@ -828,7 +860,17 @@ class Game {
   ): void {
     const cx = enemy.x + enemy.w / 2
     const cy = enemy.y + enemy.h / 2
-    const killed = enemy.damage(amount, fromX)
+    // Riposte: golpe após parry bem-sucedido causa dano dobrado.
+    const riposteHit = this.riposte > 0
+    const dealt = riposteHit ? amount * 2 : amount
+    if (riposteHit) {
+      this.riposte = 0
+      this.effects.text(cx, cy - 8, 'RIPOSTE!', '#ff9f43')
+      this.effects.addShake(3)
+    }
+    this.combo += 1
+    this.comboTimer = 2.4
+    const killed = enemy.damage(dealt, fromX)
     const dir = fromX < cx ? 1 : -1
     // Cada arma pinta o impacto do seu jeito.
     const impact = weapon === 'spear' ? 'spear' : weapon === 'stomp' ? 'hit' : 'blade'
