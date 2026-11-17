@@ -141,8 +141,9 @@ const STATS: Record<EnemyKind, Stats> = {
 
 type AttackKind = 'shoot' | 'slash'
 
-const SHOOT_FIRE_AT = 0.12
-const SLASH_HIT_AT = 0.18
+const SHOOT_FIRE_AT = 0.14
+// O impacto do golpe acontece no 4º quadro do clipe de slash (11 fps ≈ 0,36s).
+const SLASH_HIT_AT = 0.34
 const HURT_TIME = 0.24
 const DEATH_TIME = 0.72
 
@@ -175,6 +176,8 @@ export class Enemy {
   justShot = false
   justStruck = false
   stunTimer = 0
+  guardTimer = 0
+  counterWindow = 0
 
   stun(seconds: number): void {
     this.stunTimer = Math.max(this.stunTimer, seconds)
@@ -182,6 +185,30 @@ export class Enemy {
     this.attackKind = null
     this.attackElapsed = 0
     this.animator.play('hurt')
+  }
+
+  // O índio levanta o machado para defender. Se um golpe chegar durante a
+  // janela, ele desvia (sem dano) e abre uma janela de contra-ataque.
+  startGuard(): void {
+    if (this.kind !== 'indio' || !this.alive || this.stunTimer > 0 || this.guardTimer > 0) return
+    this.guardTimer = 0.42
+    this.counterWindow = 0.3
+    this.vx = 0
+    this.attackKind = null
+    this.animator.play('guard')
+  }
+
+  get isGuarding(): boolean {
+    return this.kind === 'indio' && this.alive && this.guardTimer > 0
+  }
+
+  // Retorna true se o golpe foi desviado.
+  blockedByGuard(): boolean {
+    if (!this.isGuarding) return false
+    this.guardTimer = 0
+    this.counterWindow = 0.55
+    this.animator.play('guard')
+    return true
   }
 
   private stats: Stats
@@ -305,12 +332,15 @@ export class Enemy {
   }
 
   get attackBox(): Rect {
-    const reach = this.isBoss ? 34 : this.kind === 'feitor' ? 30 : this.isZombie ? 20 : 25
+    // O golpe só tem caixa enquanto o ataque está ativo. Fora disso, o
+    // inimigo não causa dano só por existir (isso quebrava o parry).
+    if (!this.attackKind) return { x: 0, y: 0, w: 0, h: 0 }
+    const reach = this.isBoss ? 34 : this.kind === 'feitor' ? 30 : this.isZombie ? 22 : 25
     return {
       x: this.facing > 0 ? this.x + this.w - 2 : this.x - reach + 2,
-      y: this.y + 2,
+      y: this.y + this.h * 0.25,
       w: reach,
-      h: Math.max(14, this.h - 4),
+      h: Math.max(12, this.h * 0.5),
     }
   }
 
@@ -355,6 +385,8 @@ export class Enemy {
     this.hurt = Math.max(0, this.hurt - dt)
     this.invuln = Math.max(0, this.invuln - dt)
     this.stunTimer = Math.max(0, this.stunTimer - dt)
+    this.guardTimer = Math.max(0, this.guardTimer - dt)
+    this.counterWindow = Math.max(0, this.counterWindow - dt)
 
     if (!this.alive) {
       this.deathTimer = Math.max(0, this.deathTimer - dt)
@@ -367,6 +399,14 @@ export class Enemy {
 
     if (this.stunTimer > 0) {
       this.vx = 0
+    } else if (this.guardTimer > 0) {
+      this.vx = 0
+    } else if (this.counterWindow > 0 && this.kind === 'indio' && player) {
+      // Janela de contra-ataque após defender (sem som/luz piscando).
+      const dx = player.x + player.w / 2 - (this.x + this.w / 2)
+      this.guardTimer = 0
+      this.counterWindow = 0
+      this.startAttack('slash', dx)
     } else if (this.attackKind) {
       this.updateAttack(dt)
       this.vx = 0

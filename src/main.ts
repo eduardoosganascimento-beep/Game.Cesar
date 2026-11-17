@@ -439,6 +439,13 @@ class Game {
       enemy.update(safeDt, this.map, player.hurtbox)
       if (!enemy.alive) continue
 
+      // O índio levanta o machado quando o Sand ataca por perto (defesa
+      // reativa, sem som nem luz piscando).
+      if (enemy.kind === 'indio' && enemy.guardTimer <= 0 && enemy.counterWindow <= 0) {
+        const dx = Math.abs(player.x + player.w / 2 - (enemy.x + enemy.w / 2))
+        if (player.attack > 0 && dx < 34) enemy.startGuard()
+      }
+
       if (enemy.justShot) this.spawnShot(enemy)
 
       // Poeira dos passos: só quando o colono realmente anda.
@@ -478,18 +485,14 @@ class Game {
         }
       }
 
-      // Nova mecânica: Perry do índio.
-      // Quando o índio usa o ataque parry no momento certo,
-      // ele bloqueia o golpe entrante e contra-ataca imediatamente.
-      if (enemy.kind === 'indio' && enemy.alive && enemy.animator.state === 'parry') {
-        // Durante o estado parry, o índio está imune a danos do jogador
-        // mas contra-ataca após o frame de parry.
+      // Índio: defesa com machado. Quando o jogador ataca e o índio está em
+      // guarda, o golpe é desviado (sem dano) e ele contra-ataca em seguida.
+      if (enemy.kind === 'indio' && enemy.isGuarding && enemy.invuln <= 0) {
         if (player.attackActive && overlaps(player.attackBox, enemy.rect)) {
-          // Contra-ataque do índio: danifica o jogador mas o índio permanece vivo
-          this.hurtPlayer(enemy.x, 'blade', enemy.attackDamage)
-          // Retorna o índio ao estado idle após o parry
-          enemy.animator.play('idle')
-          enemy.justStruck = false
+          enemy.blockedByGuard()
+          enemy.invuln = 0.25
+          this.effects.burst(enemy.x + enemy.w / 2, enemy.y + 10, 'spark', 6, 30)
+          this.effects.text(enemy.x + enemy.w / 2, enemy.y - 4, 'BLOQUEADO', '#c9d6c9')
           continue
         }
       }
@@ -535,11 +538,16 @@ class Game {
 
       if (overlaps(player.hurtbox, enemy.rect)) {
         if (enemy.isZombie) {
-          this.zombieBite(enemy)
-          this.input.endFrame()
-          return
+          // A mordida só mata quando o ataque está ativo — e o parry já foi
+          // checado acima. Encostar de leve não é morte instantânea.
+          if (enemy.justStruck || enemy.isAttacking) {
+            this.zombieBite(enemy)
+            this.input.endFrame()
+            return
+          }
+        } else if (this.parryTimer <= 0) {
+          this.hurtPlayer(enemy.x, 'blade', enemy.attackDamage)
         }
-        this.hurtPlayer(enemy.x, 'blade', enemy.attackDamage)
       }
     }
 

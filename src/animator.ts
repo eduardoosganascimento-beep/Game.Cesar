@@ -13,7 +13,7 @@ export type Clip = {
 }
 
 export type ClipName = 'idle' | 'run' | 'jump' | 'fall' | 'attack' | 'throw' | 'hurt' | 'death' | 'guard'
-export type EnemyClipName = 'idle' | 'walk' | 'shoot' | 'slash' | 'hurt' | 'death'
+export type EnemyClipName = 'idle' | 'walk' | 'shoot' | 'slash' | 'hurt' | 'death' | 'guard'
 
 // ============================================================
 // CLIPS DO PLAYER (Sand)
@@ -60,6 +60,7 @@ export const COLONIST_CLIPS: Record<EnemyClipName, Clip> = {
     loop: false,
   },
   hurt: { frames: ['hurt-1'], fps: 1, loop: false },
+  guard: { frames: ['idle-1'], fps: 1, loop: false },
   // Morte: 4 quadros desenhados (recuo → joelhos → queda → no chão).
   // Ritmo acelerado no início e pausa no último quadro, que é o corpo caído.
   death: { frames: ['death-1', 'death-2', 'death-3', 'death-4'], fps: 8, loop: false },
@@ -89,6 +90,8 @@ export const INDIO_CLIPS: Record<EnemyClipName, Clip> = {
   slash: { frames: ['melee-1', 'melee-2', 'melee-3', 'melee-4', 'melee-5'], fps: 18, loop: false },
   // Hurt: 3 quadros, fps 10.
   hurt: { frames: ['hurt-2', 'hurt-3', 'hurt-4'], fps: 10, loop: false },
+  // Defesa: o índio ergue o machado (frame melee-1), pose limpa e constante.
+  guard: { frames: ['melee-1'], fps: 1, loop: false },
   // Morte: os 5 quadros de queda do Sand (recoil → joelhos → deitado), agora
   // com clipe próprio em vez de reaproveitar o dano.
   death: { frames: ['death-1', 'death-2', 'death-3', 'death-4', 'death-5'], fps: 8, loop: false },
@@ -103,6 +106,7 @@ export const WOLF_CLIPS: Record<EnemyClipName, Clip> = {
   shoot: { frames: ['slash-1', 'slash-2', 'slash-3', 'slash-4'], fps: 12, loop: false },
   slash: { frames: ['slash-1', 'slash-2', 'slash-3', 'slash-4'], fps: 13, loop: false },
   hurt: { frames: ['hurt-1', 'hurt-2'], fps: 8, loop: false },
+  guard: { frames: ['idle-1'], fps: 1, loop: false },
   death: { frames: ['death-1', 'death-2', 'death-3', 'death-4'], fps: 6, loop: false },
 }
 
@@ -130,6 +134,7 @@ export const ZOMBIE_CLIPS: Record<EnemyClipName, Clip> = {
     loop: false,
   },
   hurt: { frames: ['idle-1'], fps: 1, loop: false },
+  guard: { frames: ['idle-1'], fps: 1, loop: false },
   // Morte: usa as poses inclinadas do ataque (zumbi perdendo o equilíbrio),
   // combinadas com a queda procedural. Os frames de bite eram todos em pé.
   death: { frames: ['attack-4', 'attack-5', 'attack-6', 'attack-7', 'attack-8'], fps: 9, loop: false },
