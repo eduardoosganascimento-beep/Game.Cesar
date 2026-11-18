@@ -75,7 +75,7 @@ export const CHAPTERS: ChapterDef[] = [
     kicker: 'Capítulo três',
     endText: 'O acampamento caiu. Atrás da paliçada, um caminho de pedra leva ao coração da mata.',
     tint: 'rgba(44, 64, 140, 0.09)',
-    lockGoalUntilBoss: false,
+    lockGoalUntilBoss: true,
     tag: 'Ruínas',
     cutscene: {
       title: 'As ruínas',
@@ -103,7 +103,7 @@ export const CHAPTERS: ChapterDef[] = [
     kicker: 'Capítulo cinco',
     endText: 'O guardião retorna à aldeia. O povo está livre, e a floresta respira de novo.',
     tint: 'rgba(255, 214, 140, 0.06)',
-    lockGoalUntilBoss: false,
+    lockGoalUntilBoss: true,
     tag: 'Fim',
     cutscene: {
       title: 'O regresso',

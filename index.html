@@ -42,6 +42,10 @@
               <span id="mute-icon" aria-hidden="true">♪</span>
             </button>
           </div>
+          <div id="boss-bar" class="boss-bar is-hidden">
+            <span id="boss-name" class="boss-name">Guardião</span>
+            <div class="boss-track"><i id="boss-fill" class="boss-fill"></i></div>
+          </div>
         </div>
 
         <div id="chapter-card" class="chapter-card is-hidden" aria-live="polite">
@@ -161,13 +165,16 @@
             </p>
             <div class="difficulty-panel difficulty-panel-large" role="group" aria-label="Dificuldade">
               <button class="difficulty-item difficulty-big" type="button" data-action="difficulty" data-difficulty="facil">
-                <b>Fácil</b><small>Inimigos mais lentos, golpes mais leves e menos resistência. Para conhecer a história.</small>
+                <i class="difficulty-num">I</i>
+                <span class="difficulty-copy"><b>Fácil</b><small>Inimigos mais lentos, golpes mais leves e menos resistência. Para conhecer a história.</small></span>
               </button>
               <button class="difficulty-item difficulty-big is-selected" type="button" data-action="difficulty" data-difficulty="normal">
-                <b>Normal</b><small>O ritmo da lenda: velocidade, dano e vida no ponto certo.</small>
+                <i class="difficulty-num">II</i>
+                <span class="difficulty-copy"><b>Normal</b><small>O ritmo da lenda: velocidade, dano e vida no ponto certo.</small></span>
               </button>
               <button class="difficulty-item difficulty-big" type="button" data-action="difficulty" data-difficulty="dificil">
-                <b>Difícil</b><small>Inimigos rápidos, dano maior e mais vida. A mata não perdoa erros.</small>
+                <i class="difficulty-num">III</i>
+                <span class="difficulty-copy"><b>Difícil</b><small>Inimigos rápidos, dano maior e mais vida. A mata não perdoa erros.</small></span>
               </button>
             </div>
             <button class="menu-back" type="button" data-action="back">Voltar</button>

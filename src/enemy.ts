@@ -235,7 +235,7 @@ export class Enemy {
     this.kind = (Object.keys(STATS) as EnemyKind[]).includes(this.kind) ? this.kind : 'capanga'
     this.label = this.stats.label
     this.animator =
-      this.kind === 'indio'
+      this.kind === 'indio' || this.kind === 'guardiao'
         ? new IndioAnimator()
         : this.kind === 'lobisomem'
           ? new WolfAnimator()

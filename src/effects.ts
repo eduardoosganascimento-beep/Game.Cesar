@@ -24,6 +24,9 @@ type Particle = {
   color: string
   gravity: number
   drift: number
+  kind?: 'slash' | 'ring'
+  dir?: number
+  radius?: number
 }
 
 type Stain = { x: number; y: number; r: number; life: number; color: string }
@@ -89,6 +92,42 @@ export class Effects {
     }
   }
 
+  // Rastro curvo da lança/tacape no instante do golpe.
+  slash(x: number, y: number, dir: number): void {
+    this.particles.push({
+      x,
+      y,
+      vx: 0,
+      vy: 0,
+      life: 0.16,
+      max: 0.16,
+      size: 1,
+      color: '#fff3c4',
+      gravity: 0,
+      drift: 0,
+      kind: 'slash',
+      dir,
+    })
+  }
+
+  // Anel de choque para parry e impactos especiais.
+  ring(x: number, y: number, color = '#ffe9a8'): void {
+    this.particles.push({
+      x,
+      y,
+      vx: 0,
+      vy: 0,
+      life: 0.28,
+      max: 0.28,
+      size: 1,
+      color,
+      gravity: 0,
+      drift: 0,
+      kind: 'ring',
+      radius: 3,
+    })
+  }
+
   // Respingo direcional de sangue (golpe com peso).
   bloodSpray(x: number, y: number, dir: number, count = 12): void {
     this.burst(x, y, 'blood', count, 90)
@@ -151,6 +190,7 @@ export class Effects {
       particle.vy += particle.gravity * dt
       particle.x += (particle.vx + particle.drift) * dt
       particle.y += particle.vy * dt
+      if (particle.kind === 'ring') particle.radius = (particle.radius ?? 3) + 52 * dt
     }
     for (let i = this.stains.length - 1; i >= 0; i -= 1) {
       this.stains[i].life -= dt
@@ -175,7 +215,29 @@ export class Effects {
     }
     for (const particle of this.particles) {
       const alpha = Math.min(1, particle.life / particle.max)
+      const x = Math.round(particle.x - camera.x)
+      const y = Math.round(particle.y - camera.y)
       ctx.globalAlpha = alpha
+      if (particle.kind === 'slash') {
+        const dir = particle.dir ?? 1
+        ctx.fillStyle = '#fff3c4'
+        for (let i = 0; i < 5; i += 1) {
+          ctx.fillRect(Math.round(x + dir * i * 3), Math.round(y - i * 2), 2, 1)
+        }
+        ctx.globalAlpha = alpha * 0.45
+        ctx.fillStyle = '#ffb347'
+        ctx.fillRect(Math.round(x + dir * 10), Math.round(y - 7), 3, 1)
+        continue
+      }
+      if (particle.kind === 'ring') {
+        const r = particle.radius ?? 3
+        ctx.strokeStyle = particle.color
+        ctx.lineWidth = 1
+        ctx.beginPath()
+        ctx.ellipse(x, y, r, r * 0.55, 0, 0, Math.PI * 2)
+        ctx.stroke()
+        continue
+      }
       ctx.fillStyle = particle.color
       ctx.fillRect(
         Math.round(particle.x - camera.x),

@@ -166,6 +166,14 @@
       "y": 8,
       "left": 104,
       "right": 114
+    },
+    {
+      "type": "enemy",
+      "kind": "capitao",
+      "x": 152,
+      "left": 148,
+      "right": 164,
+      "y": 8
     }
   ]
 }

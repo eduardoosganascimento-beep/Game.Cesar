@@ -406,6 +406,29 @@ function recolorSprite(
     data[i + 1] = ng
     data[i + 2] = nb
   }
+  // Bevel de pixel art: borda superior/esquerda mais clara e inferior/direita
+  // mais escura. Dá volume a todos os sprites sem desenhar contorno falso.
+  const original = new Uint8ClampedArray(data)
+  for (let y = 0; y < h; y += 1) {
+    for (let x = 0; x < w; x += 1) {
+      const i = (y * w + x) * 4
+      if (original[i + 3] < 16) continue
+      const topEmpty = y > 0 && original[((y - 1) * w + x) * 4 + 3] < 16
+      const leftEmpty = x > 0 && original[(y * w + x - 1) * 4 + 3] < 16
+      const bottomEmpty = y < h - 1 && original[((y + 1) * w + x) * 4 + 3] < 16
+      const rightEmpty = x < w - 1 && original[(y * w + x + 1) * 4 + 3] < 16
+      if (topEmpty || leftEmpty) {
+        data[i] = Math.min(255, data[i] + 16)
+        data[i + 1] = Math.min(255, data[i + 1] + 14)
+        data[i + 2] = Math.min(255, data[i + 2] + 10)
+      }
+      if (bottomEmpty || rightEmpty) {
+        data[i] = Math.max(0, data[i] - 18)
+        data[i + 1] = Math.max(0, data[i + 1] - 16)
+        data[i + 2] = Math.max(0, data[i + 2] - 12)
+      }
+    }
+  }
   context.putImageData(image, 0, 0)
   return canvas
 }

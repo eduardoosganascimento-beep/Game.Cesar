@@ -140,6 +140,46 @@ body {
   backdrop-filter: blur(3px);
 }
 
+.boss-bar {
+  position: absolute;
+  top: clamp(56px, 6.6vw, 84px);
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 5px;
+  width: min(420px, 58%);
+}
+
+.boss-bar.is-hidden {
+  display: none;
+}
+
+.boss-name {
+  font-family: var(--display);
+  font-size: clamp(8px, 0.9vw, 11px);
+  letter-spacing: 0.32em;
+  text-transform: uppercase;
+  color: #e8c98f;
+  text-shadow: 0 2px 8px #000;
+}
+
+.boss-track {
+  width: 100%;
+  height: 7px;
+  border: 1px solid rgba(201, 161, 90, 0.45);
+  background: rgba(4, 6, 5, 0.72);
+  box-shadow: 0 3px 14px rgba(0, 0, 0, 0.7);
+}
+
+.boss-fill {
+  display: block;
+  height: 100%;
+  background: linear-gradient(90deg, #7e1d15, #cf5230 62%, #f0a45a);
+  transition: width 0.18s ease;
+}
+
 .hud-group {
   display: flex;
   align-items: center;
@@ -1103,16 +1143,44 @@ body {
 }
 
 .difficulty-panel-large {
-  gap: 8px;
-  margin: 14px 0 10px;
+  gap: 9px;
+  margin: 16px 0 12px;
 }
 
 .difficulty-big {
-  flex-direction: column;
-  align-items: flex-start;
-  gap: 4px;
+  display: grid;
+  grid-template-columns: 34px 1fr;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
   padding: 12px 14px;
   text-align: left;
+  background: linear-gradient(90deg, rgba(12, 16, 13, 0.82), rgba(8, 11, 9, 0.45));
+  border: 1px solid rgba(201, 161, 90, 0.22);
+  transition: border-color 0.2s ease, background 0.2s ease, transform 0.2s ease;
+}
+
+.difficulty-big:hover {
+  border-color: rgba(201, 161, 90, 0.5);
+  transform: translateX(2px);
+}
+
+.difficulty-num {
+  display: grid;
+  place-items: center;
+  width: 30px;
+  height: 30px;
+  border: 1px solid rgba(201, 161, 90, 0.35);
+  font-family: var(--display);
+  font-size: 11px;
+  font-style: normal;
+  color: var(--gold);
+}
+
+.difficulty-copy {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
 }
 
 .difficulty-big b {
@@ -1123,14 +1191,20 @@ body {
 
 .difficulty-big small {
   max-width: 46ch;
-  font-size: clamp(10px, 1.1vw, 12px);
-  line-height: 1.45;
-  color: #9b937e;
+  font-size: clamp(11px, 1.3vw, 14px);
+  line-height: 1.5;
+  color: #a89f88;
 }
 
 .difficulty-big.is-selected {
-  border-color: rgba(201, 161, 90, 0.7);
-  background: linear-gradient(90deg, rgba(163, 58, 42, 0.18), rgba(201, 161, 90, 0.05));
+  border-color: rgba(201, 161, 90, 0.75);
+  background: linear-gradient(90deg, rgba(163, 58, 42, 0.22), rgba(201, 161, 90, 0.06));
+  box-shadow: inset 3px 0 0 var(--urucum-bright);
+}
+
+.difficulty-big.is-selected .difficulty-num {
+  border-color: var(--gold-bright);
+  color: var(--gold-bright);
 }
 
 /* ---------- dificuldade ---------- */
@@ -1421,15 +1495,18 @@ kbd {
 .cutscene-inner {
   position: relative;
   z-index: 2;
-  width: min(640px, 88%);
-  max-height: 74%;
+  width: min(780px, 92%);
+  max-height: 86%;
   overflow: hidden;
+  padding: clamp(16px, 2.2vw, 28px) clamp(20px, 3vw, 36px);
+  border-left: 2px solid rgba(201, 161, 90, 0.45);
+  background: linear-gradient(90deg, rgba(6, 9, 7, 0.66), rgba(6, 9, 7, 0.18) 78%, transparent);
 }
 
 .cutscene-kicker {
-  margin: 0 0 8px;
+  margin: 0 0 10px;
   font-family: var(--display);
-  font-size: clamp(8px, 0.95vw, 10px);
+  font-size: clamp(10px, 1.1vw, 13px);
   letter-spacing: 0.5em;
   text-transform: uppercase;
   color: var(--gold);
@@ -1439,7 +1516,7 @@ kbd {
 .cutscene-title {
   margin: 0;
   font-family: var(--display);
-  font-size: clamp(28px, 4.2vw, 52px);
+  font-size: clamp(36px, 5.2vw, 68px);
   font-weight: 500;
   line-height: 1.02;
   letter-spacing: 0.06em;
@@ -1473,11 +1550,11 @@ kbd {
 }
 
 .cutscene-line {
-  max-width: 46ch;
+  max-width: 54ch;
   margin: 0;
   font-family: var(--serif);
   font-style: italic;
-  font-size: clamp(16px, 2.1vw, 24px);
+  font-size: clamp(19px, 2.6vw, 30px);
   line-height: 1.42;
   color: #e6dcc6;
   text-shadow: 0 2px 18px rgba(0, 0, 0, 0.95), 0 1px 0 #000;
@@ -1690,7 +1767,8 @@ kbd {
 
   .cutscene-inner {
     width: 100%;
-    max-height: 64%;
+    max-height: 82%;
+    padding: 16px 18px;
   }
 
   .cutscene-hint {

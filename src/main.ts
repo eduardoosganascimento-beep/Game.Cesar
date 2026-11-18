@@ -29,7 +29,7 @@ const SPRITE_SCALE = characterScale('player')
 function enemyScale(enemy: Enemy): number {
   if (enemy.isZombie) return characterScale('zombie')
   if (enemy.kind === 'lobisomem') return characterScale('wolf')
-  if (enemy.kind === 'indio') return characterScale('indio')
+  if (enemy.kind === 'indio' || enemy.kind === 'guardiao') return characterScale('indio')
   return characterScale('colonist')
 }
 
@@ -456,6 +456,7 @@ class Game {
     if (this.input.parryPressed && this.parryTimer <= 0 && this.riposte <= 0 && player.hurt <= 0) {
       this.parryTimer = 0.34
       sfx.guard()
+      this.effects.ring(player.x + player.w / 2, player.y + 12, '#ffe9a8')
       this.effects.burst(player.x + player.w/2, player.y + 10, 'spark', 5, 26)
     }
     if (this.parryTimer > 0) this.parryTimer = Math.max(0, this.parryTimer - safeDt)
@@ -477,6 +478,11 @@ class Game {
     if (player.justAttacked) {
       sfx.attack()
       // Faísca no ar acompanha o avanço da lança, mesmo sem acertar ninguém.
+      this.effects.slash(
+        player.x + player.w / 2 + player.facing * 14,
+        player.y + player.h * 0.45,
+        player.facing,
+      )
       this.effects.burst(
         player.x + player.w / 2 + player.facing * 20,
         player.y + player.h * 0.48,
@@ -517,6 +523,13 @@ class Game {
       }
 
       if (enemy.justShot) this.spawnShot(enemy)
+      if (enemy.justStruck) {
+        this.effects.slash(
+          enemy.x + enemy.w / 2 + enemy.facing * 10,
+          enemy.y + enemy.h * 0.42,
+          enemy.facing,
+        )
+      }
 
       // Poeira dos passos: só quando o colono realmente anda.
       if (enemy.alive && enemy.onGround && Math.abs(enemy.vx) > 8 && Math.random() < 0.09) {
@@ -543,10 +556,12 @@ class Game {
             enemy.stun(1.1)
             sfx.guard()
             this.effects.addShake(3.6)
+            this.effects.ring(enemy.x + enemy.w / 2, enemy.y + enemy.h / 2, '#ffd166')
             this.effects.burst(enemy.x + enemy.w / 2, enemy.y + enemy.h / 2, 'spark', 16, 72)
             this.effects.text(enemy.x + enemy.w / 2, enemy.y - 8, 'PERFECT PARRY!', '#ffe9a8')
           } else {
             this.effects.addShake(1.6)
+            this.effects.ring(player.x + player.w / 2, player.y + 12, '#c9d6c9')
             this.effects.burst(player.x + player.w/2, player.y + 10, 'spark', 6, 30)
             this.effects.text(player.x + player.w/2, player.y - 6, 'BLOCK', '#c9d6c9')
           }
@@ -708,6 +723,11 @@ class Game {
   }
 
   render = (): void => {
+    const bosses = this.enemies.filter((enemy) => enemy.isBoss && enemy.alive)
+    const boss = bosses.sort((a, b) => b.maxHp - a.maxHp)[0]
+    if (boss) this.hud.setBoss(boss.label, boss.hp, boss.maxHp)
+    else this.hud.hideBoss()
+
     const time = performance.now() / 1000
     const shake = this.effects.shake
     const shakeX = shake > 0 ? Math.round((Math.random() * 2 - 1) * shake) : 0
@@ -884,7 +904,7 @@ class Game {
   }
 
   private get goalLocked(): boolean {
-    return false
+    return this.chapter.lockGoalUntilBoss && this.enemies.some((enemy) => enemy.isBoss && enemy.alive)
   }
 
   private get collected(): number {
