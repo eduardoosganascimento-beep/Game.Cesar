@@ -1102,6 +1102,37 @@ body {
   color: #8f8874;
 }
 
+.difficulty-panel-large {
+  gap: 8px;
+  margin: 14px 0 10px;
+}
+
+.difficulty-big {
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 4px;
+  padding: 12px 14px;
+  text-align: left;
+}
+
+.difficulty-big b {
+  font-size: clamp(15px, 1.8vw, 19px);
+  letter-spacing: 0.12em;
+  color: var(--bone);
+}
+
+.difficulty-big small {
+  max-width: 46ch;
+  font-size: clamp(10px, 1.1vw, 12px);
+  line-height: 1.45;
+  color: #9b937e;
+}
+
+.difficulty-big.is-selected {
+  border-color: rgba(201, 161, 90, 0.7);
+  background: linear-gradient(90deg, rgba(163, 58, 42, 0.18), rgba(201, 161, 90, 0.05));
+}
+
 /* ---------- dificuldade ---------- */
 
 .difficulty-panel {

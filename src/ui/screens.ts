@@ -30,7 +30,7 @@ export type ScreenHandlers = {
   onDifficulty: (difficulty: Difficulty) => void
 }
 
-type ScreenName = 'main' | 'chapters' | 'how' | 'credits'
+type ScreenName = 'main' | 'chapters' | 'difficulty' | 'how' | 'credits'
 type Visible = 'menu' | 'pause' | 'end' | 'none'
 
 export class Screens {
@@ -275,6 +275,14 @@ export class Screens {
       case 'tutorial':
         this.handlers.onTutorial()
         break
+      case 'difficulty-screen': {
+        const current = document.querySelector<HTMLButtonElement>('.difficulty-item.is-selected')?.dataset.difficulty
+        this.setScreen('difficulty')
+        const active = this.activeButtons()
+        const index = active.findIndex((item) => item.dataset.difficulty === current)
+        if (index >= 0) this.select(index)
+        break
+      }
       case 'difficulty': {
         const difficulty = button.dataset.difficulty
         if (difficulty === 'facil' || difficulty === 'normal' || difficulty === 'dificil') {

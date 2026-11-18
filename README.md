@@ -48,8 +48,9 @@ caverna e castelo ainda não têm cenário próprio.
 - **Inimigos**: capangas, soldados, feitores, capitães, índios, lobisomens,
   guardiões e zumbis — cada um com alcance e comportamento próprios.
 - **Chefão guardião** com barra de vida no HUD.
-- **Três dificuldades** (Fácil, Normal, Difícil) que escalam velocidade e dano
-  dos inimigos. A escolha fica salva no navegador.
+- **Três dificuldades** (Fácil, Normal, Difícil) com tela própria no menu,
+  velocidade, dano e resistência dos inimigos ajustados. A escolha fica salva
+  no navegador e aparece no HUD.
 - **Memórias e checkpoints** com progresso salvo durante a fase.
 - **Cenários** de dia, noite e floresta, com parallax em camadas, água, espinhos
   e fogo.

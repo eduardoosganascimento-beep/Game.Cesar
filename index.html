@@ -117,6 +117,11 @@
                 <span class="menu-label">Créditos</span>
                 <span class="menu-note">a memória</span>
               </button>
+              <button class="menu-item" type="button" data-action="difficulty-screen">
+                <span class="menu-index">V</span>
+                <span class="menu-label">Dificuldade</span>
+                <span class="menu-note">fácil · normal · difícil</span>
+              </button>
             </nav>
 
             <p class="menu-hint">↑ ↓ navegar <span>·</span> Enter escolher</p>
@@ -143,6 +148,27 @@
                   <b>Difícil</b><small>sem perdão</small>
                 </button>
               </div>
+            </div>
+            <button class="menu-back" type="button" data-action="back">Voltar</button>
+          </div>
+
+          <div class="menu-screen menu-panel is-hidden" data-screen="difficulty">
+            <p class="eyebrow">O peso da trilha</p>
+            <h2 class="menu-title">Dificuldade</h2>
+            <p class="menu-lead">
+              Escolha como a floresta vai te receber. A mudança vale para todos os capítulos e
+              continua depois da morte.
+            </p>
+            <div class="difficulty-panel difficulty-panel-large" role="group" aria-label="Dificuldade">
+              <button class="difficulty-item difficulty-big" type="button" data-action="difficulty" data-difficulty="facil">
+                <b>Fácil</b><small>Inimigos mais lentos, golpes mais leves e menos resistência. Para conhecer a história.</small>
+              </button>
+              <button class="difficulty-item difficulty-big is-selected" type="button" data-action="difficulty" data-difficulty="normal">
+                <b>Normal</b><small>O ritmo da lenda: velocidade, dano e vida no ponto certo.</small>
+              </button>
+              <button class="difficulty-item difficulty-big" type="button" data-action="difficulty" data-difficulty="dificil">
+                <b>Difícil</b><small>Inimigos rápidos, dano maior e mais vida. A mata não perdoa erros.</small>
+              </button>
             </div>
             <button class="menu-back" type="button" data-action="back">Voltar</button>
           </div>

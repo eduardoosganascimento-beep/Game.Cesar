@@ -438,7 +438,7 @@ class Game {
     this.runTime += safeDt
     this.goalHintCooldown = Math.max(0, this.goalHintCooldown - safeDt)
     const player = this.player
-
+    player.update(safeDt, this.input)
 
     // Parry do jogador (F): janela curta de bloqueio. Se um golpe chegar nela,
     // o inimigo fica atordoado e o próximo ataque é um riposte (dano dobrado).
@@ -1831,8 +1831,8 @@ if (import.meta.env.DEV) {
   if (view === 'chapters') {
     screens.showChapters()
   }
-  if (view === 'how' || view === 'credits') {
-    document.querySelector<HTMLButtonElement>(`[data-action="${view}"]`)?.click()
+  if (view === 'how' || view === 'credits' || view === 'difficulty') {
+    document.querySelector<HTMLButtonElement>(`[data-action="${view === 'difficulty' ? 'difficulty-screen' : view}"]`)?.click()
   }
   if (view === 'pause') {
     game.start(chapterParam)
