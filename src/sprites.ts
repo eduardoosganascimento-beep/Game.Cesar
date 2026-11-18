@@ -185,30 +185,31 @@ const PLAYER_RAMPS: RampSet = {
 // dentro da mata, mantendo o mesmo estilo de pixel art.
 const INDIO_SKIN_RAMP: Ramp = [
   [0, '#100b08'],
-  [0.16, '#24160d'],
-  [0.3, '#432712'],
-  [0.44, '#653a1c'],
-  [0.58, '#8a5228'],
-  [0.72, '#a86c38'],
-  [0.86, '#c38a4c'],
-  [1, '#d8a766'],
+  [0.16, '#2e1a0f'],
+  [0.3, '#5a3218'],
+  [0.44, '#8c5026'],
+  [0.58, '#b8773b'],
+  [0.72, '#d89a54'],
+  [0.86, '#eab877'],
+  [1, '#f6d39a'],
 ]
 
 const INDIO_HAIR_RAMP: Ramp = [
-  [0, '#080706'],
-  [0.3, '#100c09'],
-  [0.6, '#1b1410'],
-  [0.85, '#2a1d14'],
-  [1, '#3d2a1c'],
+  [0, '#07080a'],
+  [0.28, '#10131a'],
+  [0.52, '#1a1a22'],
+  [0.76, '#2a2530'],
+  [0.9, '#3d3034'],
+  [1, '#58433c'],
 ]
 
 const INDIO_PAINT_RAMP: Ramp = [
-  [0, '#0d0504'],
-  [0.25, '#1f0b07'],
-  [0.5, '#44130c'],
-  [0.7, '#70220f'],
-  [0.88, '#9d3a18'],
-  [1, '#c46228'],
+  [0, '#180604'],
+  [0.22, '#4d0f0a'],
+  [0.42, '#8a2012'],
+  [0.6, '#c23a1c'],
+  [0.8, '#e86430'],
+  [1, '#f7a45c'],
 ]
 
 const INDIO_RAMPS: RampSet = {
@@ -485,18 +486,47 @@ function paintIndioDetails(
   const [hx, hy] = headAnchor(file)
   const y = Math.round(hy + 4)
   const x = Math.round(hx)
+  const hairY = Math.round(hy + 2)
   context.imageSmoothingEnabled = false
-  // Faixa de urucum atravessando a testa.
-  context.fillStyle = '#9d3a1b'
+
+  // Cabelo negro com franja curta: muda a silhueta da cabeça.
+  context.fillStyle = '#10121a'
+  context.fillRect(x - 3, hairY, 7, 1)
+  context.fillRect(x - 2, hairY + 1, 5, 1)
+  context.fillStyle = '#2a2530'
+  context.fillRect(x - 1, hairY, 3, 1)
+
+  // Faixa de urucum com nó e duas penas curtas — detalhe, não cocar.
+  context.fillStyle = '#8a2012'
   context.fillRect(x - 4, y, 8, 1)
-  context.fillStyle = '#d8803a'
+  context.fillStyle = '#c23a1c'
   context.fillRect(x - 3, y, 6, 1)
-  // Nó e ponta da faixa na lateral.
+  context.fillStyle = '#f0c78a'
+  context.fillRect(x - 1, y, 2, 1)
   context.fillStyle = '#c9a15a'
   context.fillRect(x + 4, y, 2, 2)
-  context.fillStyle = '#1f0b07'
+  context.fillStyle = '#f0c78a'
+  context.fillRect(x - 3, y - 1, 1, 1)
+  context.fillRect(x - 4, y - 2, 1, 1)
+  context.fillStyle = '#c23a1c'
+  context.fillRect(x + 3, y - 1, 1, 1)
+  context.fillRect(x + 4, y - 2, 1, 1)
+
+  // Tinta facial: dois traços vermelhos e um ponto de osso.
+  context.fillStyle = '#8a2012'
   context.fillRect(x - 2, y + 2, 1, 1)
   context.fillRect(x + 2, y + 2, 1, 1)
+  context.fillStyle = '#f7d8a0'
+  context.fillRect(x, y + 2, 1, 1)
+
+  // No idle, uma faixa diagonal atravessa o peito.
+  if (anim === 'idle') {
+    const sashY = y + 13
+    for (let i = 0; i < 8; i += 1) {
+      context.fillStyle = i % 3 === 0 ? '#f0c78a' : '#a32818'
+      context.fillRect(x - 4 + i, sashY + Math.floor(i / 3), 1, 1)
+    }
+  }
   return canvas
 }
 
