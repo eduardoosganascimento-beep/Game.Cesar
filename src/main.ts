@@ -342,23 +342,17 @@ class Game {
     this.player.hp = MAX_HP
     this.player.respawn()
     this.spawnEnemies()
-    this.shots = []
-    this.spears = []
-    this.dashGhosts.length = 0
-    this.deathDust.clear()
-    this.dashGhostTimer = 0
-    this.hitStop = 0
-    this.landSquash = 0
+    this.clearCombatState()
     this.dying = 0
     this.deathMessage = ''
     this.won = false
-            this.goalHintCooldown = 0
+    this.goalHintCooldown = 0
     this.runTime = 0
     this.effects.clear()
     this.animator.reset()
     this.camera.snapTo(this.player.hurtbox, this.map.width, this.map.height)
     this.hud.resetHp()
-        this.syncHud(true)
+    this.syncHud(true)
   }
 
   // Recria todos os inimigos da fase. Chamado no início e a cada morte:
@@ -373,6 +367,23 @@ class Game {
         enemy.setHealthScale(DELTAS.enemies[diff] || 1)
         return enemy
       })
+  }
+
+  // Limpa estados de combate que podem sobrar de uma morte ou de um golpe.
+  private clearCombatState(): void {
+    this.shots = []
+    this.spears = []
+    this.dashGhosts.length = 0
+    this.dashGhostTimer = 0
+    this.hitStop = 0
+    this.landSquash = 0
+    this.parryTimer = 0
+    this.riposte = 0
+    this.combo = 0
+    this.comboTimer = 0
+    this.damageFlash = 0
+    this.killFlash = 0
+    this.deathDust.clear()
   }
 
   update = (dt: number): void => {
@@ -1203,8 +1214,7 @@ class Game {
     this.player.vx = 0
     this.player.attack = 0
     this.player.throw = 0
-    this.spears = []
-    this.shots = []
+    this.clearCombatState()
     this.effects.clear()
     this.effects.text(Math.max(80, this.player.x + this.player.w / 2), Math.max(60, this.player.y - 12), message, '#ffd166')
     this.camera.snapTo(this.player.hurtbox, this.map.width, this.map.height)
@@ -1217,8 +1227,7 @@ class Game {
     this.player.hp = MAX_HP
     this.player.respawn()
     this.spawnEnemies()
-    this.shots = []
-    this.spears = []
+    this.clearCombatState()
     this.animator.reset()
     this.effects.clear()
     this.effects.text(Math.max(60, x), Math.max(40, y), message, '#ffd166')
