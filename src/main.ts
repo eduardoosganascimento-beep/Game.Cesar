@@ -1360,6 +1360,16 @@ class Game {
       const sx = feetX + dir * 11
       const sy = feetY - 17
       ctx.save()
+      if (sprite) {
+        ctx.globalAlpha = 0.32
+        ctx.drawImage(
+          sprite.white,
+          Math.round(feetX - sprite.ax * scale),
+          Math.round(feetY - sprite.ay * scale),
+          Math.max(1, Math.round(sprite.w * scale)),
+          Math.max(1, Math.round(sprite.h * scale)),
+        )
+      }
       ctx.globalAlpha = 0.8
       ctx.fillStyle = '#fff0c4'
       for (let i = 0; i < 4; i += 1) {

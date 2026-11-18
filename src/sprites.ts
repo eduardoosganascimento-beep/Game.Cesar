@@ -217,9 +217,115 @@ const INDIO_RAMPS: RampSet = {
   accent: INDIO_PAINT_RAMP,
 }
 
-const RAMPS: Record<'player' | 'indio', RampSet> = {
+const COLONIST_SKIN_RAMP: Ramp = [
+  [0, '#1a0f0a'],
+  [0.16, '#3a2013'],
+  [0.32, '#6b4026'],
+  [0.48, '#9b6a3f'],
+  [0.66, '#c08c58'],
+  [0.84, '#d8ab74'],
+  [1, '#efd0a0'],
+]
+
+const COLONIST_DARK_RAMP: Ramp = [
+  [0, '#060606'],
+  [0.22, '#151313'],
+  [0.44, '#2a2623'],
+  [0.64, '#3c3630'],
+  [0.84, '#5a5045'],
+  [1, '#7d6f5c'],
+]
+
+const COLONIST_COAT_RAMP: Ramp = [
+  [0, '#1a0505'],
+  [0.22, '#4a0d0b'],
+  [0.42, '#7e1d15'],
+  [0.6, '#a83220'],
+  [0.8, '#cf5230'],
+  [1, '#e6814a'],
+]
+
+const ZOMBIE_SKIN_RAMP: Ramp = [
+  [0, '#0c1109'],
+  [0.18, '#1c2816'],
+  [0.36, '#334425'],
+  [0.54, '#4f6331'],
+  [0.74, '#6f8040'],
+  [0.9, '#96a152'],
+  [1, '#bdc06a'],
+]
+
+const ZOMBIE_DARK_RAMP: Ramp = [
+  [0, '#080a07'],
+  [0.24, '#141810'],
+  [0.46, '#222a1b'],
+  [0.68, '#333d28'],
+  [0.86, '#4a5536'],
+  [1, '#64704a'],
+]
+
+const ZOMBIE_ROT_RAMP: Ramp = [
+  [0, '#121408'],
+  [0.24, '#2c3210'],
+  [0.46, '#4d5a1c'],
+  [0.66, '#74832c'],
+  [0.86, '#9ba83e'],
+  [1, '#c8c25c'],
+]
+
+const WOLF_SKIN_RAMP: Ramp = [
+  [0, '#050605'],
+  [0.2, '#10140f'],
+  [0.4, '#1c2319'],
+  [0.6, '#2c3527'],
+  [0.8, '#3e4a36'],
+  [1, '#58634a'],
+]
+
+const WOLF_DARK_RAMP: Ramp = [
+  [0, '#040504'],
+  [0.26, '#0b0d0a'],
+  [0.5, '#151a12'],
+  [0.72, '#20271c'],
+  [0.88, '#2e3828'],
+  [1, '#414c38'],
+]
+
+const WOLF_WARM_RAMP: Ramp = [
+  [0, '#1a1108'],
+  [0.24, '#342411'],
+  [0.46, '#55391b'],
+  [0.68, '#7a5428'],
+  [0.86, '#a2753c'],
+  [1, '#c69a55'],
+]
+
+const COLONIST_RAMPS: RampSet = {
+  skin: COLONIST_SKIN_RAMP,
+  hair: COLONIST_DARK_RAMP,
+  accent: COLONIST_COAT_RAMP,
+}
+
+const ZOMBIE_RAMPS: RampSet = {
+  skin: ZOMBIE_SKIN_RAMP,
+  hair: ZOMBIE_DARK_RAMP,
+  accent: ZOMBIE_ROT_RAMP,
+}
+
+const WOLF_RAMPS: RampSet = {
+  skin: WOLF_SKIN_RAMP,
+  hair: WOLF_DARK_RAMP,
+  accent: WOLF_WARM_RAMP,
+}
+
+type RecolorMode = 'player' | 'indio' | 'colonist' | 'zombie' | 'wolf'
+
+const RAMPS: Record<RecolorMode, RampSet> = {
   player: PLAYER_RAMPS,
   indio: INDIO_RAMPS,
+  colonist: COLONIST_RAMPS,
+  zombie: ZOMBIE_RAMPS,
+  wolf: WOLF_RAMPS,
 }
 
 function sampleRamp(ramp: Ramp, t: number): [number, number, number] {
@@ -242,6 +348,7 @@ function recolorSprite(
   w: number,
   h: number,
   ramps: RampSet,
+  mode: RecolorMode,
 ): HTMLCanvasElement {
   const canvas = document.createElement('canvas')
   canvas.width = w
@@ -260,14 +367,40 @@ function recolorSprite(
     const b = data[i + 2]
     const l = (0.299 * r + 0.587 * g + 0.114 * b) / 255
     const t = Math.max(0, Math.min(0.999, l * 1.18 + 0.05))
-    // Tons frios/arroxeados viram cabelo e sombra; os quentes viram pele;
-    // os muito avermelhados recebem tinta de urucum.
-    const ramp =
-      b > r * 0.92 && b > g * 1.02
-        ? ramps.hair
-        : r > g * 1.78 && r > b * 1.55 && l > 0.24 && l < 0.62
+    let ramp: Ramp
+    if (mode === 'player' || mode === 'indio') {
+      // Tons frios viram cabelo; os muito avermelhados viram urucum/tinta.
+      ramp =
+        b > r * 0.92 && b > g * 1.02
+          ? ramps.hair
+          : r > g * 1.78 && r > b * 1.55 && l > 0.24 && l < 0.62
+            ? ramps.accent
+            : ramps.skin
+    } else if (mode === 'colonist') {
+      // Casaco vermelho, couro escuro e pele quente.
+      ramp =
+        l < 0.22 || b > r * 1.1
+          ? ramps.hair
+          : r > g * 1.35 && r > b * 1.25 && l > 0.18
+            ? ramps.accent
+            : ramps.skin
+    } else if (mode === 'zombie') {
+      // Pele apodrecida: verde-oliva, sombras escuras e manchas de podridão.
+      ramp =
+        g > r * 1.12 && g > b * 1.05
           ? ramps.accent
-          : ramps.skin
+          : l < 0.24
+            ? ramps.hair
+            : ramps.skin
+    } else {
+      // Lobo: pelo escuro, sombra quase preta e realces quentes no dorso.
+      ramp =
+        l < 0.28
+          ? ramps.hair
+          : r > g * 1.12 && l > 0.22
+            ? ramps.accent
+            : ramps.skin
+    }
     const [nr, ng, nb] = sampleRamp(ramp, t)
     data[i] = nr
     data[i + 1] = ng
@@ -368,8 +501,7 @@ async function loadAtlas(
   directory: string,
   cache: Map<string, Sprite>,
   outlineColor: string,
-  brightness: number,
-  saturation: number,
+  mode: RecolorMode,
 ): Promise<void> {
   const atlasUrl = publicAssetUrl(`${directory}atlas.json`)
   let atlas: AtlasData
@@ -390,9 +522,7 @@ async function loadAtlas(
       const w = img.naturalWidth || frame.w
       const h = img.naturalHeight || frame.h
       const isPlayer = directory === PLAYER_DIR
-      const lit = isPlayer
-        ? recolorSprite(img, w, h, RAMPS.player)
-        : lighten(img, w, h, brightness, saturation)
+      const lit = recolorSprite(img, w, h, RAMPS[mode], mode)
 
       // Âncoras antigas de Sand apontavam para fora do quadro (31 em um
       // sprite de 26 px), o que deixava o personagem flutuando. Quando isso
@@ -418,7 +548,7 @@ async function loadAtlas(
       // de pano: animação completa e silhueta diferente sem assets extras.
       if (isPlayer) {
         const indioArt = paintIndioDetails(
-          recolorSprite(img, w, h, RAMPS.indio),
+          recolorSprite(img, w, h, RAMPS.indio, 'indio'),
           frame.file,
         )
         indioCache.set(name, {
@@ -471,13 +601,13 @@ async function loadSpear(): Promise<void> {
 export async function loadSprites(): Promise<void> {
   try {
     await Promise.all([
-      loadAtlas(PLAYER_DIR, playerCache, '#140f0b', 1.32, 1.22),
-      // Colonos mais vibrantes: casaco vermelho e chapéu branco saltam da mata.
-      loadAtlas(COLONIST_DIR, colonistCache, '#0d0907', 1.3, 1.24),
-// O índio é gerado a partir da folha do Sand em loadAtlas.
-      loadAtlas(WOLF_DIR, wolfCache, '#120d14', 1.18, 1.16),
-      // Zumbi: mais luz e saturação para o verde doentio aparecer no fundo.
-      loadAtlas(ZOMBIE_DIR, zombieCache, '#0d1a0b', 1.26, 1.2),
+      loadAtlas(PLAYER_DIR, playerCache, '#140f0b', 'player'),
+      // Colono: casaco vermelho, couro escuro e pele quente.
+      loadAtlas(COLONIST_DIR, colonistCache, '#0d0907', 'colonist'),
+      // O índio é gerado a partir da folha do Sand dentro de loadAtlas.
+      loadAtlas(WOLF_DIR, wolfCache, '#120d14', 'wolf'),
+      // Zumbi: pele apodrecida esverdeada e manchas de podridão.
+      loadAtlas(ZOMBIE_DIR, zombieCache, '#0d1a0b', 'zombie'),
       loadSpear(),
     ])
     console.info(
