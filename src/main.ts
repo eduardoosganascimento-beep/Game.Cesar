@@ -43,6 +43,9 @@ const gradeCtx = gradeCanvas.getContext('2d')
 const WIN_DELAY = 1100
 // Tempo do esmagamento do corpo ao aterrissar.
 const LAND_SQUASH_TIME = 0.2
+// Janela de defesa: 0,36 s no total; os primeiros 0,16 s são PERFECT.
+const PARRY_WINDOW = 0.36
+const PARRY_PERFECT = 0.16
 
 type Shot = {
   x: number
@@ -129,6 +132,7 @@ class Game {
   private hinted = false
   private goalHintCooldown = 0
   private parryTimer = 0
+  private parryCooldown = 0
   private riposte = 0
   private combo = 0
   private comboTimer = 0
@@ -378,6 +382,7 @@ class Game {
     this.hitStop = 0
     this.landSquash = 0
     this.parryTimer = 0
+    this.parryCooldown = 0
     this.riposte = 0
     this.combo = 0
     this.comboTimer = 0
@@ -453,13 +458,21 @@ class Game {
 
     // Parry do jogador (F): janela curta de bloqueio. Se um golpe chegar nela,
     // o inimigo fica atordoado e o próximo ataque é um riposte (dano dobrado).
-    if (this.input.parryPressed && this.parryTimer <= 0 && this.riposte <= 0 && player.hurt <= 0) {
-      this.parryTimer = 0.34
+    if (
+      this.input.parryPressed &&
+      this.parryTimer <= 0 &&
+      this.parryCooldown <= 0 &&
+      this.riposte <= 0 &&
+      player.hurt <= 0
+    ) {
+      this.parryTimer = PARRY_WINDOW
+      this.parryCooldown = 0.62
       sfx.guard()
       this.effects.ring(player.x + player.w / 2, player.y + 12, '#ffe9a8')
       this.effects.burst(player.x + player.w/2, player.y + 10, 'spark', 5, 26)
     }
     if (this.parryTimer > 0) this.parryTimer = Math.max(0, this.parryTimer - safeDt)
+    if (this.parryCooldown > 0) this.parryCooldown = Math.max(0, this.parryCooldown - safeDt)
     if (this.riposte > 0) this.riposte = Math.max(0, this.riposte - safeDt)
     if (this.comboTimer > 0) {
       this.comboTimer = Math.max(0, this.comboTimer - safeDt)
@@ -549,7 +562,7 @@ class Game {
           overlaps(enemy.attackBox, player.hurtbox) ||
           overlaps(enemy.rect, player.hurtbox)
         if (threat) {
-          const perfect = this.parryTimer > 0.14
+          const perfect = this.parryTimer > PARRY_WINDOW - PARRY_PERFECT
           this.parryTimer = 0
           if (perfect) {
             this.riposte = 1.5
@@ -1096,6 +1109,24 @@ class Game {
       const hitWall =
         this.map.solidsIn(rect).length > 0 || this.map.platformsIn(rect).length > 0
       const hitPlayer = overlaps(this.player.hurtbox, rect) && this.player.invuln <= 0
+      const deflect = this.parryTimer > 0 && overlaps(this.player.hurtbox, rect)
+
+      if (deflect) {
+        const perfect = this.parryTimer > PARRY_WINDOW - PARRY_PERFECT
+        this.parryTimer = 0
+        this.parryCooldown = 0.32
+        this.player.invuln = 0.35
+        shot.vx *= -1
+        shot.vy *= -1
+        shot.life = 1.2
+        shot.boss = false
+        this.effects.ring(shot.x, shot.y, perfect ? '#ffd166' : '#c9d6c9')
+        this.effects.burst(shot.x, shot.y, 'spark', perfect ? 14 : 8, 56)
+        this.effects.addShake(perfect ? 3 : 1.6)
+        this.effects.text(shot.x, shot.y - 8, perfect ? 'DEVOLVIDO!' : 'BLOQUEADO!', perfect ? '#ffe9a8' : '#c9d6c9')
+        if (perfect) this.riposte = 1.5
+        continue
+      }
 
       if (shot.life <= 0 || hitWall) {
         if (hitWall) {
@@ -1525,29 +1556,41 @@ class Game {
     ctx.fillStyle = halo
     ctx.fillRect(feetX - 32, feetY - 48, 64, 52)
 
-    // Defesa com o cajado: uma haste diagonal na frente do Sand, com faíscas
-    // no perfect parry. Sem escudo mágico — é o tacape que desvia o golpe.
+    // Defesa com o cajado: haste em pixels na diagonal e arco de luz na frente.
+    // Desenhado sem rotação, para manter o pixel art nítido em qualquer escala.
     if (this.parryTimer > 0) {
-      const t = this.parryTimer / 0.34
-      const perfect = t > 0.45
+      const t = this.parryTimer / PARRY_WINDOW
+      const perfect = t > 0.55
+      const dir = player.facing
       ctx.save()
-      ctx.translate(feetX, feetY - 14)
-      ctx.scale(player.facing, 1)
-      // Cajado erguido na diagonal, apoio no ombro.
-      ctx.rotate(-0.5)
-      ctx.globalAlpha = 0.75 + t * 0.25
-      ctx.fillStyle = '#6b4526'
-      ctx.fillRect(-2, -16, 4, 30)
-      ctx.fillStyle = perfect ? '#ffe9a8' : '#a8845c'
-      ctx.fillRect(-3, -18, 6, 5)
+      ctx.globalAlpha = 0.7 + t * 0.3
+      // Cajado: 20 px subindo do quadril até acima do ombro.
+      for (let i = 0; i < 20; i += 1) {
+        const sx = feetX + dir * (1 + i * 0.34)
+        const sy = feetY - 3 - i
+        ctx.fillStyle = i < 3 ? '#4a3018' : '#7d5530'
+        ctx.fillRect(Math.round(sx), Math.round(sy), 2, 1)
+        if (i % 4 === 0) {
+          ctx.fillStyle = '#a8845c'
+          ctx.fillRect(Math.round(sx), Math.round(sy), 1, 1)
+        }
+      }
+      // Ponta do cajado.
       ctx.fillStyle = perfect ? '#fff6d0' : '#c9a36a'
-      ctx.fillRect(-2, -18, 2, 3)
+      ctx.fillRect(Math.round(feetX + dir * 8), Math.round(feetY - 24), 2, 2)
+      // Arco de luz: três segmentos em frente ao corpo.
+      ctx.fillStyle = perfect ? '#ffe9a8' : '#c9d6c9'
+      for (let i = 0; i < 4; i += 1) {
+        const ax = feetX + dir * (12 + Math.round(Math.sin(i * 0.7) * 2))
+        const ay = feetY - 8 - i * 4
+        ctx.fillRect(Math.round(ax), Math.round(ay), 1, 3)
+      }
       ctx.restore()
       if (perfect) {
-        ctx.globalAlpha = (t - 0.45) * 1.4
+        ctx.globalAlpha = Math.min(1, (t - 0.55) * 2.4)
         ctx.fillStyle = '#fff6d0'
         for (let i = 0; i < 3; i += 1) {
-          const sx = feetX + player.facing * (10 + i * 4)
+          const sx = feetX + dir * (11 + i * 4)
           const sy = feetY - 26 - i * 3
           ctx.fillRect(Math.round(sx), Math.round(sy), 2, 2)
         }
@@ -1615,6 +1658,15 @@ class Game {
       ctx.globalAlpha = 0.16
       ctx.fillStyle = '#ffe9a8'
       ctx.fillRect(feetX - dir * 13 - 4, feetY - 20, 10, 18)
+    }
+
+    if (this.riposte > 0) {
+      const dir = player.facing
+      ctx.globalAlpha = 0.45 + 0.35 * (0.5 + 0.5 * Math.sin(time * 14))
+      ctx.fillStyle = '#ffd166'
+      for (let i = 0; i < 3; i += 1) {
+        ctx.fillRect(Math.round(feetX + dir * (7 + i * 5)), Math.round(feetY - 30 - i * 2), 1, 1)
+      }
     }
 
     ctx.globalAlpha = 1

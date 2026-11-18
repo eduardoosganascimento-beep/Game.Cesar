@@ -1,3 +1,9 @@
+const DIFFICULTY_SUMMARY: Record<Difficulty, string> = {
+  facil: 'para conhecer a floresta e sua história',
+  normal: 'a lenda como foi escrita',
+  dificil: 'a mata não perdoa erros',
+}
+
 export type RunStats = {
   memories: number
   total: number
@@ -18,7 +24,7 @@ export type ChapterOption = {
   detail: string
 }
 
-import type { Difficulty } from '../difficulty'
+import { DIFFICULTY_LABELS, type Difficulty } from '../difficulty'
 
 export type ScreenHandlers = {
   onChapter: (index: number) => void
@@ -43,7 +49,7 @@ export class Screens {
   private readonly endStats = document.querySelector<HTMLElement>('#end-stats')
   private readonly endNext = document.querySelector<HTMLButtonElement>('#end-next')
   private readonly chapterList = document.querySelector<HTMLElement>('#chapter-list')
-  private readonly difficultyList = document.querySelector<HTMLElement>('#difficulty-list')
+  private readonly difficultySummary = document.querySelector<HTMLElement>('#difficulty-summary')
   private readonly chapterDetail = document.querySelector<HTMLElement>('#chapter-detail')
 
   private chapters: ChapterOption[] = []
@@ -97,9 +103,12 @@ export class Screens {
   }
 
   setDifficultySelection(difficulty: Difficulty): void {
-    this.difficultyList
+    this.menu
       ?.querySelectorAll<HTMLButtonElement>('.difficulty-item')
       .forEach((item) => item.classList.toggle('is-selected', item.dataset.difficulty === difficulty))
+    if (this.difficultySummary) {
+      this.difficultySummary.textContent = `${DIFFICULTY_LABELS[difficulty]} · ${DIFFICULTY_SUMMARY[difficulty]}`
+    }
   }
 
   showMenu(): void {
@@ -287,11 +296,7 @@ export class Screens {
         const difficulty = button.dataset.difficulty
         if (difficulty === 'facil' || difficulty === 'normal' || difficulty === 'dificil') {
           this.handlers.onDifficulty(difficulty)
-          this.difficultyList
-            ?.querySelectorAll<HTMLButtonElement>('.difficulty-item')
-            .forEach((item) =>
-              item.classList.toggle('is-selected', item.dataset.difficulty === difficulty),
-            )
+          this.setDifficultySelection(difficulty)
         }
         break
       }

@@ -1183,6 +1183,36 @@ body {
   gap: 3px;
 }
 
+.difficulty-bars {
+  display: flex;
+  gap: 4px;
+  margin-top: 5px;
+}
+
+.difficulty-bars i {
+  position: relative;
+  display: block;
+  width: 28px;
+  height: 3px;
+  background: rgba(201, 161, 90, 0.16);
+}
+
+.difficulty-bars i::after {
+  content: '';
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: var(--v, 50%);
+  background: var(--gold);
+}
+
+.difficulty-summary {
+  margin: 0 0 4px;
+  font-family: var(--serif);
+  font-style: italic;
+  font-size: clamp(11px, 1.2vw, 14px);
+  color: #b9ae93;
+}
+
 .difficulty-big b {
   font-size: clamp(15px, 1.8vw, 19px);
   letter-spacing: 0.12em;
