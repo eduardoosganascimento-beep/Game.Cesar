@@ -247,31 +247,31 @@ const COLONIST_COAT_RAMP: Ramp = [
 ]
 
 const ZOMBIE_SKIN_RAMP: Ramp = [
-  [0, '#0c1109'],
-  [0.18, '#1c2816'],
-  [0.36, '#334425'],
-  [0.54, '#4f6331'],
-  [0.74, '#6f8040'],
-  [0.9, '#96a152'],
-  [1, '#bdc06a'],
+  [0, '#10150d'],
+  [0.16, '#26351a'],
+  [0.34, '#40572a'],
+  [0.52, '#607a3a'],
+  [0.7, '#8aa152'],
+  [0.86, '#b3c06a'],
+  [1, '#d8d69a'],
 ]
 
 const ZOMBIE_DARK_RAMP: Ramp = [
-  [0, '#080a07'],
-  [0.24, '#141810'],
-  [0.46, '#222a1b'],
-  [0.68, '#333d28'],
-  [0.86, '#4a5536'],
-  [1, '#64704a'],
+  [0, '#0b0a0c'],
+  [0.24, '#18151b'],
+  [0.46, '#272130'],
+  [0.68, '#3a3040'],
+  [0.86, '#51435a'],
+  [1, '#6b5a72'],
 ]
 
 const ZOMBIE_ROT_RAMP: Ramp = [
-  [0, '#121408'],
-  [0.24, '#2c3210'],
-  [0.46, '#4d5a1c'],
-  [0.66, '#74832c'],
-  [0.86, '#9ba83e'],
-  [1, '#c8c25c'],
+  [0, '#1c2410'],
+  [0.22, '#3a4a18'],
+  [0.42, '#5f7628'],
+  [0.62, '#8aa63c'],
+  [0.8, '#b4c65a'],
+  [1, '#d8dd86'],
 ]
 
 const WOLF_SKIN_RAMP: Ramp = [
@@ -530,6 +530,36 @@ function paintIndioDetails(
   return canvas
 }
 
+// Olhos escuros com brilho podre, costelas expostas e goteira de podridão.
+// Coordenadas fixas na folha 36×53 (o zumbi sempre nasce de pé no mesmo ponto).
+function paintZombieDetails(canvas: HTMLCanvasElement, file: string): HTMLCanvasElement {
+  const context = canvas.getContext('2d')
+  if (!context) return canvas
+  const name = file.replace('.png', '')
+  if (name.startsWith('death')) return canvas
+  context.imageSmoothingEnabled = false
+  // Órbitas.
+  context.fillStyle = '#0a0d08'
+  context.fillRect(13, 7, 4, 2)
+  context.fillRect(19, 7, 4, 2)
+  context.fillStyle = '#c8e86a'
+  context.fillRect(14, 7, 1, 1)
+  context.fillRect(20, 7, 1, 1)
+  // Costelas e osso exposto.
+  context.fillStyle = '#d8d6a4'
+  for (let i = 0; i < 3; i += 1) {
+    context.fillRect(13 + i, 19 + i * 2, 6 - i * 2, 1)
+  }
+  context.fillStyle = '#8aa63c'
+  context.fillRect(11, 24, 2, 1)
+  context.fillRect(23, 22, 2, 1)
+  // Goteira.
+  context.fillStyle = '#b4c65a'
+  context.fillRect(17, 31, 1, 3)
+  context.fillRect(18, 34, 1, 1)
+  return canvas
+}
+
 function makeOutline(
   source: HTMLImageElement | HTMLCanvasElement,
   w: number,
@@ -575,7 +605,8 @@ async function loadAtlas(
       const w = img.naturalWidth || frame.w
       const h = img.naturalHeight || frame.h
       const isPlayer = directory === PLAYER_DIR
-      const lit = recolorSprite(img, w, h, RAMPS[mode], mode)
+      let lit = recolorSprite(img, w, h, RAMPS[mode], mode)
+      if (mode === 'zombie') lit = paintZombieDetails(lit, frame.file)
 
       // Âncoras antigas de Sand apontavam para fora do quadro (31 em um
       // sprite de 26 px), o que deixava o personagem flutuando. Quando isso

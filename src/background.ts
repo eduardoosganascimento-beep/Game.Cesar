@@ -1256,7 +1256,7 @@ export function drawBackground(
   // Vinheta suave.
   const v = ctx.createRadialGradient(W / 2, H / 2, H * 0.42, W / 2, H / 2, H * 0.98)
   v.addColorStop(0, 'rgba(0,0,0,0)')
-  v.addColorStop(1, 'rgba(0,0,4,0.24)')
+  v.addColorStop(1, 'rgba(0,0,4,0.12)')
   ctx.fillStyle = v
   ctx.fillRect(0, 0, W, H)
 }

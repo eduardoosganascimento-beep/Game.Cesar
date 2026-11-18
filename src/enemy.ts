@@ -222,6 +222,7 @@ export class Enemy {
   private healthScale = 1
   private attackKind: AttackKind | null = null
   private attackElapsed = 0
+  private jumpCooldown = 0
   private attackCooldown = 0
   private fired = false
   private struck = false
@@ -304,6 +305,7 @@ export class Enemy {
     this.speed = this.stats.speed * this.levelFactor * this.speedScale
     this.vx = 0
     this.vy = 0
+    this.jumpCooldown = 0
     this.attackKind = null
     this.attackElapsed = 0
     this.attackCooldown = 0.45
@@ -384,6 +386,7 @@ export class Enemy {
     this.justStruck = false
     this.hurt = Math.max(0, this.hurt - dt)
     this.invuln = Math.max(0, this.invuln - dt)
+    this.jumpCooldown = Math.max(0, this.jumpCooldown - dt)
     this.stunTimer = Math.max(0, this.stunTimer - dt)
     this.guardTimer = Math.max(0, this.guardTimer - dt)
     this.counterWindow = Math.max(0, this.counterWindow - dt)
@@ -481,10 +484,17 @@ export class Enemy {
           this.vx = 0
         }
 
-        // Se o alvo está numa plataforma, o inimigo salta para alcançá-lo.
-        if (this.onGround && player.y + player.h < this.y - 6 && Math.abs(distance) < 72) {
-          this.vy = -285
+        // Se o alvo está numa plataforma, o inimigo salta para alcançá-lo,
+        // com intervalo para não ficar quicando no mesmo lugar.
+        if (
+          this.onGround &&
+          this.jumpCooldown <= 0 &&
+          player.y + player.h < this.y - 12 &&
+          Math.abs(distance) < 60
+        ) {
+          this.vy = -300
           this.onGround = false
+          this.jumpCooldown = 0.7
         }
       } else {
         this.patrol()

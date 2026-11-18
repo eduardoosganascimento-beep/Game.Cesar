@@ -542,6 +542,9 @@ class Game {
           enemy.y + enemy.h * 0.42,
           enemy.facing,
         )
+        if (enemy.isZombie) {
+          this.effects.burst(enemy.x + enemy.w / 2, enemy.y + 6, 'ooze', 10, 48)
+        }
       }
 
       // Poeira dos passos: só quando o colono realmente anda.
@@ -776,9 +779,9 @@ class Game {
     // À noite a floresta recebe um véu azul: o luar entra, a cor some.
     if (this.isNight) {
       const veil = ctx.createLinearGradient(0, 0, 0, VIEW_H)
-      veil.addColorStop(0, 'rgba(18, 28, 66, 0.16)')
-      veil.addColorStop(0.55, 'rgba(16, 26, 60, 0.09)')
-      veil.addColorStop(1, 'rgba(8, 14, 38, 0.18)')
+      veil.addColorStop(0, 'rgba(18, 28, 66, 0.09)')
+      veil.addColorStop(0.55, 'rgba(16, 26, 60, 0.05)')
+      veil.addColorStop(1, 'rgba(8, 14, 38, 0.1)')
       ctx.fillStyle = veil
       ctx.fillRect(0, 0, VIEW_W, VIEW_H)
     }
@@ -1762,25 +1765,25 @@ class Game {
 
     ctx.clearRect(0, 0, VIEW_W, VIEW_H)
     ctx.save()
-    ctx.filter = 'saturate(0.74) contrast(1.12) brightness(0.94)'
+    ctx.filter = 'saturate(0.9) contrast(1.04) brightness(1.16)'
     ctx.drawImage(gradeCanvas, 0, 0)
     ctx.filter = 'none'
 
     ctx.globalCompositeOperation = 'soft-light'
     const tone = ctx.createLinearGradient(0, 0, 0, VIEW_H)
-    tone.addColorStop(0, 'rgba(46, 78, 92, 0.42)')
-    tone.addColorStop(0.5, 'rgba(28, 40, 34, 0.2)')
-    tone.addColorStop(1, 'rgba(128, 74, 30, 0.34)')
+    tone.addColorStop(0, 'rgba(46, 78, 92, 0.26)')
+    tone.addColorStop(0.5, 'rgba(28, 40, 34, 0.12)')
+    tone.addColorStop(1, 'rgba(128, 74, 30, 0.2)')
     ctx.fillStyle = tone
     ctx.fillRect(0, 0, VIEW_W, VIEW_H)
 
-    // Escurece topo e base como uma lente antiga; o centro permanece legível.
+    // Escurece levemente topo e base; o centro fica bem legível.
     ctx.globalCompositeOperation = 'multiply'
     const shade = ctx.createLinearGradient(0, 0, 0, VIEW_H)
-    shade.addColorStop(0, 'rgba(9, 15, 19, 0.4)')
+    shade.addColorStop(0, 'rgba(9, 15, 19, 0.18)')
     shade.addColorStop(0.42, 'rgba(255, 255, 255, 0)')
     shade.addColorStop(0.72, 'rgba(255, 255, 255, 0)')
-    shade.addColorStop(1, 'rgba(20, 12, 8, 0.32)')
+    shade.addColorStop(1, 'rgba(20, 12, 8, 0.16)')
     ctx.fillStyle = shade
     ctx.fillRect(0, 0, VIEW_W, VIEW_H)
     ctx.globalCompositeOperation = 'source-over'
@@ -1797,13 +1800,13 @@ class Game {
       205,
     )
     gradient.addColorStop(0, 'rgba(0, 0, 0, 0)')
-    gradient.addColorStop(1, 'rgba(2, 4, 5, 0.52)')
+    gradient.addColorStop(1, 'rgba(2, 4, 5, 0.26)')
     ctx.fillStyle = gradient
     ctx.fillRect(0, 0, VIEW_W, VIEW_H)
 
     const bottom = ctx.createLinearGradient(0, VIEW_H - 40, 0, VIEW_H)
     bottom.addColorStop(0, 'rgba(0, 0, 0, 0)')
-    bottom.addColorStop(1, 'rgba(0, 0, 0, 0.28)')
+    bottom.addColorStop(1, 'rgba(0, 0, 0, 0.12)')
     ctx.fillStyle = bottom
     ctx.fillRect(0, VIEW_H - 40, VIEW_W, 40)
   }
