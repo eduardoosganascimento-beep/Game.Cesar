@@ -800,7 +800,15 @@ class Game {
   }
 
   render = (): void => {
-    const bosses = this.enemies.filter((enemy) => enemy.isBoss && enemy.alive)
+    // A barra só entra quando o chefe aparece na tela: o nome dele é uma
+    // revelação da arena, não um spoiler do começo da fase.
+    const bosses = this.enemies
+      .filter((enemy) => enemy.isBoss && enemy.alive)
+      .filter(
+        (enemy) =>
+          enemy.x + enemy.w > this.camera.px - 24 &&
+          enemy.x < this.camera.px + VIEW_W + 24,
+      )
     const boss = bosses.sort((a, b) => b.maxHp - a.maxHp)[0]
     if (boss) this.hud.setBoss(boss.bossName, boss.hp, boss.maxHp, boss.bossTitle)
     else this.hud.hideBoss()
