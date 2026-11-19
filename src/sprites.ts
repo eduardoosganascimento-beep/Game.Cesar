@@ -19,7 +19,14 @@ export type Sprite = {
   ay: number
   outline: HTMLCanvasElement
   white: HTMLCanvasElement
+  // Ponto mais alto da arte (usado pelo nome flutuante e pela coroa dos chefes).
+  topX?: number
+  topY?: number
 }
+
+// Cada chefe usa a mesma base de animação, mas com paleta, coroa e aura
+// próprias. São cinco presenças diferentes sem precisar de novas folhas.
+export type BossSkin = 'sy' | 'tuba' | 'kypyy' | 'kybykuera' | 'guardiao'
 
 // Altura visível média de cada folha (em px de arte). Todas as pessoas do
 // jogo são desenhadas na mesma altura final, para ninguém parecer gigante
@@ -54,6 +61,22 @@ const colonistCache = new Map<string, Sprite>()
 const indioCache = new Map<string, Sprite>()
 const wolfCache = new Map<string, Sprite>()
 const zombieCache = new Map<string, Sprite>()
+
+// Chefes derivados da folha do capitão (capítulos 1–5).
+const COLONIST_BOSS_SKINS: readonly Exclude<BossSkin, 'guardiao'>[] = [
+  'sy',
+  'tuba',
+  'kypyy',
+  'kybykuera',
+]
+const bossCaches: Record<Exclude<BossSkin, 'guardiao'>, Map<string, Sprite>> = {
+  sy: new Map<string, Sprite>(),
+  tuba: new Map<string, Sprite>(),
+  kypyy: new Map<string, Sprite>(),
+  kybykuera: new Map<string, Sprite>(),
+}
+// O chefão final nasce da folha do Sand, com coroa e paleta de brasa.
+const guardiaoCache = new Map<string, Sprite>()
 let spearSprite: Sprite | undefined
 
 export function getFrame(name: string): Sprite | undefined {
@@ -76,17 +99,25 @@ export function getZombieFrame(name: string): Sprite | undefined {
   return zombieCache.get(name)
 }
 
+export function getBossFrame(skin: BossSkin, name: string): Sprite | undefined {
+  if (skin === 'guardiao') return guardiaoCache.get(name)
+  return bossCaches[skin].get(name)
+}
+
 export function getSpearSprite(): Sprite | undefined {
   return spearSprite
 }
 
 export function loadedFrameCount(): number {
+  let bossCount = guardiaoCache.size
+  for (const cache of Object.values(bossCaches)) bossCount += cache.size
   return (
     playerCache.size +
     colonistCache.size +
     indioCache.size +
     wolfCache.size +
-    zombieCache.size
+    zombieCache.size +
+    bossCount
   )
 }
 
@@ -317,6 +348,168 @@ const WOLF_RAMPS: RampSet = {
   skin: WOLF_SKIN_RAMP,
   hair: WOLF_DARK_RAMP,
   accent: WOLF_WARM_RAMP,
+}
+
+// ============================================================
+// PALETAS DOS CHEFES
+// ============================================================
+// Os nomes vêm da família de Sandman (tupi antigo), e cada chefe veste uma
+// variação da farda do invasor como uma pele espiritual. As paletas mantêm
+// contraste alto para o chefe se destacar na mata e no templo à noite.
+const BOSS_RAMPS: Record<BossSkin, RampSet> = {
+  // Sy, a mãe: osso, urucum e vermelho profundo.
+  sy: {
+    skin: [
+      [0, '#12090a'],
+      [0.16, '#32151a'],
+      [0.32, '#672a2a'],
+      [0.48, '#9b4a3f'],
+      [0.64, '#c8755c'],
+      [0.8, '#e3a184'],
+      [1, '#f7d3b0'],
+    ],
+    hair: [
+      [0, '#08060a'],
+      [0.24, '#140f18'],
+      [0.48, '#221a28'],
+      [0.72, '#37283a'],
+      [0.88, '#503b4a'],
+      [1, '#6d5260'],
+    ],
+    accent: [
+      [0, '#1c0506'],
+      [0.2, '#4a0a0c'],
+      [0.4, '#7d1114'],
+      [0.58, '#a81d1c'],
+      [0.74, '#d02f24'],
+      [0.88, '#e85a36'],
+      [1, '#f49a5a'],
+    ],
+  },
+  // Tuba, o pai: verde-mata, bronze e osso.
+  tuba: {
+    skin: [
+      [0, '#0b100a'],
+      [0.16, '#22301a'],
+      [0.32, '#425a2a'],
+      [0.48, '#6b7d3d'],
+      [0.64, '#95a45a'],
+      [0.8, '#bcc47a'],
+      [1, '#e2d9a2'],
+    ],
+    hair: [
+      [0, '#050807'],
+      [0.24, '#0d1512'],
+      [0.48, '#18241d'],
+      [0.72, '#25352a'],
+      [0.88, '#354a38'],
+      [1, '#4c634a'],
+    ],
+    accent: [
+      [0, '#1a1206'],
+      [0.2, '#3d2a08'],
+      [0.4, '#6e4a0d'],
+      [0.58, '#9c6d16'],
+      [0.74, '#c89422'],
+      [0.88, '#e6b83a'],
+      [1, '#f6d96a'],
+    ],
+  },
+  // Kypy'y, a irmã: brasa, âmbar e vermelho-vivo.
+  kypyy: {
+    skin: [
+      [0, '#140a05'],
+      [0.16, '#3a1a0c'],
+      [0.32, '#6f3518'],
+      [0.48, '#a45a28'],
+      [0.64, '#cf8040'],
+      [0.8, '#e8a865'],
+      [1, '#f9d49a'],
+    ],
+    hair: [
+      [0, '#0a0705'],
+      [0.24, '#1a100a'],
+      [0.48, '#2a1a10'],
+      [0.72, '#402818'],
+      [0.88, '#5a3a22'],
+      [1, '#7a5230'],
+    ],
+    accent: [
+      [0, '#1e0803'],
+      [0.2, '#4f1207'],
+      [0.4, '#8a220b'],
+      [0.58, '#c23a12'],
+      [0.74, '#e8641e'],
+      [0.88, '#f59a36'],
+      [1, '#ffd166'],
+    ],
+  },
+  // Kybykuera, os irmãos: noite, gelo e azul-índigo.
+  kybykuera: {
+    skin: [
+      [0, '#090a12'],
+      [0.16, '#1a2032'],
+      [0.32, '#343f5a'],
+      [0.48, '#55627d'],
+      [0.64, '#7c8a9e'],
+      [0.8, '#a8b4c4'],
+      [1, '#d6e2e8'],
+    ],
+    hair: [
+      [0, '#04060a'],
+      [0.24, '#0b1018'],
+      [0.48, '#151d2a'],
+      [0.72, '#222c3e'],
+      [0.88, '#33405a'],
+      [1, '#4a5a78'],
+    ],
+    accent: [
+      [0, '#080a1e'],
+      [0.2, '#101a4a'],
+      [0.4, '#1c2e7a'],
+      [0.58, '#2f4aa8'],
+      [0.74, '#4a6fd0'],
+      [0.88, '#7fa4e8'],
+      [1, '#b8d4ff'],
+    ],
+  },
+  // O chefão: negro, ouro e brasa.
+  guardiao: {
+    skin: [
+      [0, '#100a05'],
+      [0.16, '#2e1c0c'],
+      [0.32, '#5a3a18'],
+      [0.48, '#8a5e28'],
+      [0.64, '#b8863c'],
+      [0.8, '#d8ad5a'],
+      [1, '#f2d89a'],
+    ],
+    hair: [
+      [0, '#050505'],
+      [0.24, '#100d0a'],
+      [0.48, '#1c1710'],
+      [0.72, '#2e2618'],
+      [0.88, '#463a22'],
+      [1, '#66522e'],
+    ],
+    accent: [
+      [0, '#1a0d04'],
+      [0.2, '#4a2606'],
+      [0.4, '#7d440a'],
+      [0.58, '#b06a12'],
+      [0.74, '#d89a24'],
+      [0.88, '#f2c44a'],
+      [1, '#ffe98a'],
+    ],
+  },
+}
+
+const BOSS_OUTLINES: Record<BossSkin, string> = {
+  sy: '#1a0709',
+  tuba: '#08120a',
+  kypyy: '#1a0803',
+  kybykuera: '#070a1a',
+  guardiao: '#1a0d03',
 }
 
 type RecolorMode = 'player' | 'indio' | 'colonist' | 'zombie' | 'wolf'
@@ -560,6 +753,161 @@ function paintZombieDetails(canvas: HTMLCanvasElement, file: string): HTMLCanvas
   return canvas
 }
 
+type CrestConfig = {
+  colors: readonly string[]
+  dark: string
+  height: number
+  count: number
+  fan: number
+}
+
+const BOSS_CRESTS: Record<BossSkin, CrestConfig> = {
+  // Coroa de osso e urucum: três penas longas.
+  sy: { colors: ['#f2e2c4', '#c4473a', '#f2e2c4'], dark: '#2a1414', height: 7, count: 3, fan: 2 },
+  // Coroa larga de penas verdes e douradas.
+  tuba: {
+    colors: ['#6fbf5a', '#d9b24a', '#3f8f4a', '#f0d166'],
+    dark: '#14200f',
+    height: 6,
+    count: 4,
+    fan: 2.4,
+  },
+  // Leque de brasa.
+  kypyy: {
+    colors: ['#ffd166', '#ff9f43', '#e8641e', '#ffe9a8', '#c23a12'],
+    dark: '#2a0e08',
+    height: 7,
+    count: 5,
+    fan: 2.2,
+  },
+  // Penas gélidas com ponta vermelha.
+  kybykuera: {
+    colors: ['#b8d4ff', '#6fa8ff', '#e8f4ff', '#c4473a'],
+    dark: '#0a0e24',
+    height: 7,
+    count: 4,
+    fan: 2.5,
+  },
+  // Coroa do chefão: alta, dourada e incandescente.
+  guardiao: {
+    colors: ['#ffe98a', '#ffb347', '#f2c44a', '#ff8b3d', '#fff6d0'],
+    dark: '#1a0e04',
+    height: 9,
+    count: 5,
+    fan: 2.4,
+  },
+}
+
+// Encontra o ponto mais alto da silhueta perto da cabeça. O leque do topo é
+// preso nesse ponto, então a coroa acompanha o chapéu em qualquer quadro.
+function measureTop(
+  canvas: HTMLCanvasElement,
+  w: number,
+  h: number,
+  centerX: number,
+  range: number,
+): { x: number; y: number } {
+  const context = canvas.getContext('2d')
+  if (!context) return { x: Math.round(centerX), y: 0 }
+  const data = context.getImageData(0, 0, w, h).data
+  const left = Math.max(0, Math.floor(centerX - range))
+  const right = Math.min(w - 1, Math.ceil(centerX + range))
+  for (let y = 0; y < h; y += 1) {
+    let sum = 0
+    let count = 0
+    for (let x = left; x <= right; x += 1) {
+      if (data[(y * w + x) * 4 + 3] > 30) {
+        sum += x
+        count += 1
+      }
+    }
+    if (count > 0) return { x: Math.round(sum / count), y }
+  }
+  return { x: Math.round(centerX), y: 0 }
+}
+
+// Pinta a coroa de penas acima do ponto mais alto do quadro. Como o desenho
+// é expandido para cima, as penas nunca são cortadas.
+function paintBossCrest(
+  canvas: HTMLCanvasElement,
+  w: number,
+  h: number,
+  centerX: number,
+  skin: BossSkin,
+): { x: number; y: number } {
+  const context = canvas.getContext('2d')
+  if (!context) return { x: Math.round(centerX), y: 0 }
+  const config = BOSS_CRESTS[skin]
+  const top = measureTop(canvas, w, h, centerX, skin === 'guardiao' ? 10 : 13)
+  const baseX = top.x
+  const baseY = Math.max(1, top.y - 1)
+  context.imageSmoothingEnabled = false
+
+  // Base escura: prende as penas no chapéu/cabeça.
+  const fanWidth = Math.round(config.count * config.fan) + 3
+  context.fillStyle = config.dark
+  context.fillRect(baseX - Math.floor(fanWidth / 2), baseY, fanWidth, 1)
+
+  for (let i = 0; i < config.count; i += 1) {
+    const offset = i - (config.count - 1) / 2
+    const fx = Math.round(baseX + offset * config.fan)
+    const fh = config.height + (i % 2 === 0 ? 2 : 0)
+    const color = config.colors[i % config.colors.length]
+    const tip = config.colors[(i + 1) % config.colors.length]
+    for (let j = 0; j < fh; j += 1) {
+      const x = Math.round(fx + offset * 0.28 * (j / Math.max(1, fh - 1)))
+      const y = baseY - 1 - j
+      if (x < 0 || x >= w || y < 0) continue
+      context.fillStyle = j === 0 ? config.dark : j >= fh - 2 ? tip : color
+      context.fillRect(x, y, 1, 1)
+    }
+  }
+
+  // Um ponto de osso no centro para dar leitura de cocar, não de chapéu.
+  context.fillStyle = config.colors[config.colors.length - 1]
+  context.fillRect(baseX, baseY - Math.min(config.height + 1, 4), 1, 1)
+
+  return { x: baseX, y: Math.max(0, baseY - config.height - 2) }
+}
+
+const BOSS_PAD_TOP = 14
+const BOSS_PAD_X = 3
+
+// Expande a moldura do sprite para cima e acrescenta a coroa. A âncora é
+// corrigida para os pés continuarem exatamente no mesmo lugar.
+function makeBossSprite(
+  base: HTMLCanvasElement,
+  w: number,
+  h: number,
+  ax: number,
+  ay: number,
+  skin: BossSkin,
+): Sprite {
+  const cw = w + BOSS_PAD_X * 2
+  const ch = h + BOSS_PAD_TOP
+  const canvas = document.createElement('canvas')
+  canvas.width = cw
+  canvas.height = ch
+  const context = canvas.getContext('2d')
+  if (!context) {
+    return { img: base, w, h, ax, ay, outline: base, white: base }
+  }
+  context.imageSmoothingEnabled = false
+  context.drawImage(base, BOSS_PAD_X, BOSS_PAD_TOP)
+  const top = paintBossCrest(canvas, cw, ch, ax + BOSS_PAD_X, skin)
+  return {
+    img: canvas,
+    w: cw,
+    h: ch,
+    ax: ax + BOSS_PAD_X,
+    ay: ay + BOSS_PAD_TOP,
+    outline: makeOutline(canvas, cw, ch, BOSS_OUTLINES[skin]),
+    white: makeOutline(canvas, cw, ch, '#fff1c8'),
+    topX: top.x,
+    topY: top.y,
+  }
+}
+
 function makeOutline(
   source: HTMLImageElement | HTMLCanvasElement,
   w: number,
@@ -644,6 +992,30 @@ async function loadAtlas(
           outline: makeOutline(indioArt, w, h, '#150c08'),
           white: makeOutline(indioArt, w, h, '#f0d9a8'),
         })
+
+        // O chefão final é uma versão negra/dourada do guardião, com coroa
+        // de brasa. Ele mantém os quadros de luta do Sand, mas com outra
+        // presença e outra paleta.
+        const guardiaoArt = paintIndioDetails(
+          recolorSprite(img, w, h, BOSS_RAMPS.guardiao, 'indio'),
+          frame.file,
+        )
+        guardiaoCache.set(
+          name,
+          makeBossSprite(guardiaoArt, w, h, anchorX, anchorY, 'guardiao'),
+        )
+      }
+
+      // Cada capítulo tem seu próprio rosto para o mesmo capitão. A base é
+      // recolorida e recebe uma coroa de penas; a animação continua idêntica.
+      if (directory === COLONIST_DIR) {
+        for (const skin of COLONIST_BOSS_SKINS) {
+          const bossArt = recolorSprite(img, w, h, BOSS_RAMPS[skin], 'colonist')
+          bossCaches[skin].set(
+            name,
+            makeBossSprite(bossArt, w, h, anchorX, anchorY, skin),
+          )
+        }
       }
     }),
   )
@@ -695,7 +1067,7 @@ export async function loadSprites(): Promise<void> {
       loadSpear(),
     ])
     console.info(
-      `[sandman] ${playerCache.size} quadros de Sand · ${colonistCache.size} de colono · ${indioCache.size} de indio · ${wolfCache.size} de lobo · ${zombieCache.size} de zumbi`,
+      `[sandman] ${playerCache.size} quadros de Sand · ${colonistCache.size} de colono · ${indioCache.size} de indio · ${wolfCache.size} de lobo · ${zombieCache.size} de zumbi · ${loadedFrameCount()} no total (com chefes)`,
     )
   } catch {
     // sem sprites: o jogo segue com a arte provisória

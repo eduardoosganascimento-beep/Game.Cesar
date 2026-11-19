@@ -1,6 +1,7 @@
 import { Animator, type ClipName } from './animator'
 import { sfx } from './audio'
 import { drawBackground } from './background'
+import { bossConfigFor } from './bosses'
 import { CHAPTERS, TUTORIAL, shortTitle, type ChapterDef } from './chapters'
 import { DELTAS, DIFFICULTY_LABELS, readCompleted, readDifficulty, readProgress, writeCompleted, writeDifficulty, writeProgress, type Difficulty } from './difficulty'
 import { Effects } from './effects'
@@ -25,6 +26,12 @@ ctx.imageSmoothingEnabled = false
 // Todos os personagens são desenhados na mesma altura visível (38 px).
 // O Sand não tem cocar: só o sprite original, recolorido com tons quentes.
 const SPRITE_SCALE = characterScale('player')
+
+// Converte a cor da aura/nome do chefe em rgba com a opacidade pedida.
+function rgba(hex: string, alpha: number): string {
+  const n = Number.parseInt(hex.replace('#', ''), 16)
+  return `rgba(${(n >> 16) & 255}, ${(n >> 8) & 255}, ${n & 255}, ${alpha})`
+}
 
 function enemyScale(enemy: Enemy): number {
   if (enemy.isZombie) return characterScale('zombie')
@@ -54,6 +61,11 @@ type Shot = {
   vy: number
   life: number
   boss: boolean
+  // Lança do chefe: haste longa, mais rápida e mais pesada que a bala.
+  spear?: boolean
+  // Projétil devolvido pelo parry: fere inimigos, não o Sand.
+  friendly?: boolean
+  damage?: number
 }
 
 type Spear = {
@@ -367,6 +379,10 @@ class Game {
       .filter((entity) => entity.type === 'enemy')
       .map((entity) => {
         const enemy = new Enemy(entity, TILE, this.chapterIndex + 1)
+        // O capitão é o mesmo corpo em todos os capítulos; a configuração
+        // troca nome, paleta, vida e agressividade. O guardião é o chefão.
+        const config = bossConfigFor(this.chapterIndex, entity.kind ?? 'capanga')
+        if (config) enemy.configureBoss(config)
         const diff = this.difficulty
         enemy.setSpeedScale(DELTAS.speed[diff] || 1)
         enemy.setHealthScale(DELTAS.enemies[diff] || 1)
@@ -537,6 +553,17 @@ class Game {
       }
 
       if (enemy.justShot) this.spawnShot(enemy)
+      if (enemy.justCharged) {
+        // Telegraph da investida: poeira e um tranco curto antes do avanço.
+        this.effects.burst(
+          enemy.x + enemy.w / 2,
+          enemy.y + enemy.h - 1,
+          'dust',
+          8,
+          38,
+        )
+        this.effects.addShake(1.4)
+      }
       if (enemy.justStruck) {
         this.effects.slash(
           enemy.x + enemy.w / 2 + enemy.facing * 10,
@@ -558,33 +585,49 @@ class Game {
         this.effects.burst(enemy.x + enemy.w / 2, enemy.y + 5, 'ooze', 2, 14)
       }
 
-      // Parry (Sons of Sparta): qualquer ameaça que encoste no Sand durante a
-      // janela é desviada. Nos primeiros 0,14s é PERFECT (riposte + dano x2);
-      // depois ainda bloqueia, mas sem contra-ataque.
-      if (this.parryTimer > 0 && enemy.alive) {
-        const threat =
-          overlaps(enemy.attackBox, player.hurtbox) ||
-          overlaps(enemy.rect, player.hurtbox)
-        if (threat) {
-          const perfect = this.parryTimer > PARRY_WINDOW - PARRY_PERFECT
-          this.parryTimer = 0
-          if (perfect) {
-            this.riposte = 1.5
-            enemy.stun(1.1)
-            sfx.guard()
-            this.effects.addShake(3.6)
-            this.effects.ring(enemy.x + enemy.w / 2, enemy.y + enemy.h / 2, '#ffd166')
-            this.effects.burst(enemy.x + enemy.w / 2, enemy.y + enemy.h / 2, 'spark', 16, 72)
-            this.effects.text(enemy.x + enemy.w / 2, enemy.y - 8, 'PERFECT PARRY!', '#ffe9a8')
-          } else {
-            this.effects.addShake(1.6)
-            this.effects.ring(player.x + player.w / 2, player.y + 12, '#c9d6c9')
-            this.effects.burst(player.x + player.w/2, player.y + 10, 'spark', 6, 30)
-            this.effects.text(player.x + player.w/2, player.y - 6, 'BLOCK', '#c9d6c9')
-          }
-          player.invuln = 0.4
-          continue
+      // O chefão exala brasas: presença constante mesmo parado.
+      if (enemy.isFinalBoss && enemy.alive && Math.random() < 0.16) {
+        this.effects.trail(
+          enemy.x + enemy.w / 2 + (Math.random() * 12 - 6),
+          enemy.y + 4 + Math.random() * 10,
+          'spark',
+        )
+      }
+
+      // Parry: só ameaças reais (golpe ou investida) acionam a defesa.
+      // PERFECT (início da janela) atordoa o chefe e abre o riposte;
+      // o bloqueio normal apenas anula o golpe.
+      if (
+        this.parryTimer > 0 &&
+        enemy.alive &&
+        enemy.threatActive &&
+        overlaps(enemy.threatBox, player.hurtbox)
+      ) {
+        const perfect = this.parryTimer > PARRY_WINDOW - PARRY_PERFECT
+        this.parryTimer = 0
+        enemy.parried(perfect)
+        player.cancelActions()
+        player.invuln = 0.45
+        if (perfect) {
+          this.riposte = 1.5
+          sfx.guard()
+          this.effects.addShake(3.8)
+          this.effects.ring(enemy.x + enemy.w / 2, enemy.y + enemy.h / 2, '#ffd166')
+          this.effects.burst(
+            enemy.x + enemy.w / 2,
+            enemy.y + enemy.h / 2,
+            'spark',
+            18,
+            76,
+          )
+          this.effects.text(enemy.x + enemy.w / 2, enemy.y - 10, 'PARRY PERFEITO!', '#ffe9a8')
+        } else {
+          this.effects.addShake(1.8)
+          this.effects.ring(player.x + player.w / 2, player.y + 12, '#c9d6c9')
+          this.effects.burst(player.x + player.w / 2, player.y + 10, 'spark', 7, 32)
+          this.effects.text(player.x + player.w / 2, player.y - 6, 'BLOQUEIO', '#c9d6c9')
         }
+        continue
       }
 
       // Índio: defesa com machado. Quando o jogador ataca e o índio está em
@@ -617,6 +660,23 @@ class Game {
         }
       }
 
+      // Investida do chefe: o corpo inteiro é a arma. O dano é consumido no
+      // primeiro toque para a mesma carga não acertar várias vezes.
+      if (enemy.isCharging && overlaps(enemy.rect, player.hurtbox)) {
+        if (this.hurtPlayer(enemy.x, 'blade', enemy.attackDamage)) {
+          enemy.consumeChargeHit()
+          this.effects.addShake(5)
+          this.effects.burst(
+            player.x + player.w / 2,
+            player.y + player.h / 2,
+            'hit',
+            12,
+            60,
+          )
+          this.effects.text(player.x + player.w / 2, player.y - 8, 'INVESTIDA!', '#ff8b73')
+        }
+      }
+
       if (
         player.attackActive &&
         enemy.invuln <= 0 &&
@@ -635,9 +695,9 @@ class Game {
             this.input.endFrame()
             return
           }
-        } else if (this.parryTimer <= 0) {
-          this.hurtPlayer(enemy.x, 'blade', enemy.attackDamage)
         }
+        // Corpos comuns não machucam por encostar: só golpes, disparos e a
+        // investida do chefe tiram vida. Isso deixa o parry justo e legível.
       }
     }
 
@@ -742,7 +802,7 @@ class Game {
   render = (): void => {
     const bosses = this.enemies.filter((enemy) => enemy.isBoss && enemy.alive)
     const boss = bosses.sort((a, b) => b.maxHp - a.maxHp)[0]
-    if (boss) this.hud.setBoss(boss.label, boss.hp, boss.maxHp)
+    if (boss) this.hud.setBoss(boss.bossName, boss.hp, boss.maxHp, boss.bossTitle)
     else this.hud.hideBoss()
 
     const time = performance.now() / 1000
@@ -954,7 +1014,7 @@ class Game {
 
     if (this.running && !this.won) {
       if (this.dying > 0 || player.hp <= 0) state = 'death'
-      else if (this.parryTimer > 0 || this.riposte > 0) state = 'guard'
+      else if (this.parryTimer > 0) state = 'guard'
       else if (player.hurt > 0) state = 'hurt'
       else if (player.throw > 0) state = 'throw'
       else if (player.attack > 0) state = 'attack'
@@ -1011,12 +1071,25 @@ class Game {
     }
 
     sfx.stomp()
-    this.effects.text(
-      cx,
-      enemy.y - 3,
-      enemy.isBoss ? `${enemy.label.toUpperCase()} CAIU!` : 'ABATIDO!',
-      enemy.isBoss ? '#ffd166' : '#ffe9a8',
-    )
+    if (enemy.isBoss) {
+      // Queda de chefe: mais luz, mais tremor e uma explosão de brasas para
+      // marcar o fim de um capítulo.
+      this.killFlash = 1
+      this.effects.addShake(7)
+      this.hitStop = Math.max(this.hitStop, 0.14)
+      this.effects.ring(cx, cy, enemy.bossNameColor)
+      for (let i = 0; i < 4; i += 1) {
+        this.effects.burst(cx, cy, 'spark', 12, 70 + i * 14)
+      }
+      this.effects.text(
+        cx,
+        enemy.y - 16,
+        `${enemy.bossName.toUpperCase()} CAIU!`,
+        enemy.bossNameColor,
+      )
+    } else {
+      this.effects.text(cx, enemy.y - 3, 'ABATIDO!', '#ffe9a8')
+    }
   }
 
   // A mordida do zumbi mata Sand na hora: não é dano, é fim de fase.
@@ -1045,6 +1118,9 @@ class Game {
       for (const other of this.enemies) {
         if (other === zombie || !other.alive || other.isZombie) continue
         if (!isArmedColonist(other.kind)) continue
+        // Chefe tem nome e história: não vira zumbi. Sem isso, um zumbi
+        // perdido dentro da arena transformava o chefe em inimigo comum.
+        if (other.bossSkin) continue
         if (!overlaps(zombie.rect, other.rect)) continue
         if (!other.convertToZombie()) continue
 
@@ -1059,7 +1135,12 @@ class Game {
     }
   }
 
-  private hurtPlayer(fromX: number, kind: 'bullet' | 'blade' = 'bullet', damage: number = 1): boolean {    const diff = this.difficulty as 'facil' | 'normal' | 'dificil'
+  private hurtPlayer(
+    fromX: number,
+    kind: 'bullet' | 'blade' = 'bullet',
+    damage: number = 1,
+  ): boolean {
+    const diff = this.difficulty as 'facil' | 'normal' | 'dificil'
     const finalDamage = Math.max(1, Math.round(damage * DELTAS.damage[diff]))
     const before = this.player.hp
     this.player.hit(fromX, finalDamage)
@@ -1085,19 +1166,24 @@ class Game {
     const dx = targetX - origin.x
     const dy = targetY - origin.y
     const length = Math.max(1, Math.hypot(dx, dy))
-    const speed = enemy.isBoss ? 232 : 208
+    const spear = enemy.isBoss
+    const speed = spear ? 252 : 208
 
     this.shots.push({
       x: origin.x,
       y: origin.y,
       vx: (dx / length) * speed,
       vy: (dy / length) * speed,
-      life: 1.8,
+      // A lança do chefe é mais rápida e some só depois de atravessar a tela.
+      life: spear ? 2.1 : 1.8,
       boss: enemy.isBoss,
+      spear,
+      friendly: false,
+      damage: enemy.attackDamage,
     })
     sfx.shot()
-    this.effects.addShake(1.1)
-    this.effects.burst(origin.x, origin.y, 'spark', 11, 64)
+    this.effects.addShake(spear ? 1.8 : 1.1)
+    this.effects.burst(origin.x, origin.y, 'spark', spear ? 14 : 11, spear ? 74 : 64)
   }
 
   private updateShots(dt: number): void {
@@ -1107,43 +1193,79 @@ class Game {
       shot.x += shot.vx * dt
       shot.y += shot.vy * dt
 
+      const hostile = !shot.friendly
       // Projétil um pouco maior que o desenho: o dano fica confiável mesmo
-      // com o passo variável do quadro.
-      const rect = { x: shot.x - 2, y: shot.y - 2, w: 4, h: 4 }
+      // com o passo variável do quadro. A lança tem alcance maior.
+      const rect = shot.spear
+        ? { x: shot.x - 7, y: shot.y - 2, w: 14, h: 4 }
+        : { x: shot.x - 2, y: shot.y - 2, w: 4, h: 4 }
       const hitWall =
         this.map.solidsIn(rect).length > 0 || this.map.platformsIn(rect).length > 0
-      const hitPlayer = overlaps(this.player.hurtbox, rect) && this.player.invuln <= 0
-      const deflect = this.parryTimer > 0 && overlaps(this.player.hurtbox, rect)
+      const hitPlayer =
+        hostile && overlaps(this.player.hurtbox, rect) && this.player.invuln <= 0
+      const deflect =
+        hostile && this.parryTimer > 0 && overlaps(this.player.hurtbox, rect)
 
       if (deflect) {
         const perfect = this.parryTimer > PARRY_WINDOW - PARRY_PERFECT
         this.parryTimer = 0
         this.parryCooldown = 0.32
         this.player.invuln = 0.35
-        shot.vx *= -1
-        shot.vy *= -1
-        shot.life = 1.2
-        shot.boss = false
-        this.effects.ring(shot.x, shot.y, perfect ? '#ffd166' : '#c9d6c9')
-        this.effects.burst(shot.x, shot.y, 'spark', perfect ? 14 : 8, 56)
-        this.effects.addShake(perfect ? 3 : 1.6)
-        this.effects.text(shot.x, shot.y - 8, perfect ? 'DEVOLVIDO!' : 'BLOQUEADO!', perfect ? '#ffe9a8' : '#c9d6c9')
-        if (perfect) this.riposte = 1.5
+        this.player.cancelActions()
+        if (perfect) {
+          // Devolve a lança na direção oposta, agora ferindo os inimigos.
+          shot.vx *= -1.55
+          shot.vy *= -1.55
+          shot.life = 1.5
+          shot.friendly = true
+          shot.boss = false
+          shot.damage = 2
+          this.riposte = 1.2
+          this.effects.ring(shot.x, shot.y, '#ffd166')
+          this.effects.burst(shot.x, shot.y, 'spark', 16, 64)
+          this.effects.addShake(3)
+          this.effects.text(shot.x, shot.y - 8, 'DEVOLVIDO!', '#ffe9a8')
+          continue
+        }
+        // Bloqueio normal: a lança se parte na guarda, sem refletir.
+        this.effects.ring(shot.x, shot.y, '#c9d6c9')
+        this.effects.burst(shot.x, shot.y, 'spark', 9, 44)
+        this.effects.addShake(1.6)
+        this.effects.text(shot.x, shot.y - 8, 'BLOQUEIO', '#c9d6c9')
+        this.shots.splice(i, 1)
         continue
       }
 
       if (shot.life <= 0 || hitWall) {
         if (hitWall) {
-          this.effects.burst(shot.x, shot.y, 'dust', 6, 30)
+          this.effects.burst(shot.x, shot.y, 'dust', shot.spear ? 8 : 6, 34)
           this.effects.addShake(0.4)
         }
         this.shots.splice(i, 1)
         continue
       }
 
+      // Lança devolvida: atravessa o campo ferindo quem estiver na frente.
+      if (shot.friendly) {
+        let hit: Enemy | undefined
+        for (const enemy of this.enemies) {
+          if (!enemy.alive || enemy.invuln > 0) continue
+          if (overlaps(rect, enemy.rect)) {
+            hit = enemy
+            break
+          }
+        }
+        if (hit) {
+          this.damageEnemy(hit, shot.damage ?? 2, shot.x, 'spear')
+          this.effects.burst(shot.x, shot.y, 'spear', 12, 56)
+          this.shots.splice(i, 1)
+        }
+        continue
+      }
+
       if (hitPlayer) {
-        this.hurtPlayer(shot.x, 'bullet')
-        this.effects.burst(shot.x, shot.y, 'bullet', 9, 52)
+        this.hurtPlayer(shot.x, 'bullet', shot.damage ?? 1)
+        this.effects.burst(shot.x, shot.y, shot.spear ? 'spear' : 'bullet', 9, 52)
         this.shots.splice(i, 1)
       }
     }
@@ -1350,11 +1472,25 @@ class Game {
     ctx.fillRect(feetX - 7, shadowY - 2, 14, 2)
 
     if (enemy.isBoss && enemy.alive) {
-      const aura = ctx.createRadialGradient(feetX, feetY - 18, 2, feetX, feetY - 18, 34)
-      aura.addColorStop(0, 'rgba(196, 71, 58, 0.16)')
-      aura.addColorStop(1, 'rgba(196, 71, 58, 0)')
+      const pulse = 0.75 + Math.sin(time * 3.2 + enemy.x * 0.05) * 0.25
+      const aura = ctx.createRadialGradient(feetX, feetY - 18, 2, feetX, feetY - 18, 36)
+      aura.addColorStop(0, rgba(enemy.bossAura, 0.2 * pulse))
+      aura.addColorStop(0.55, rgba(enemy.bossAura, 0.07 * pulse))
+      aura.addColorStop(1, rgba(enemy.bossAura, 0))
       ctx.fillStyle = aura
-      ctx.fillRect(feetX - 36, feetY - 54, 72, 58)
+      ctx.fillRect(feetX - 38, feetY - 56, 76, 60)
+    }
+
+    // Rastro da investida: riscos na direção contrária ao avanço.
+    if (enemy.isCharging) {
+      const dir = Math.sign(enemy.vx) || enemy.facing
+      ctx.globalAlpha = 0.45
+      ctx.fillStyle = enemy.bossRim
+      for (let i = 0; i < 3; i += 1) {
+        const ly = feetY - 8 - i * 8
+        ctx.fillRect(Math.round(feetX - dir * (10 + i * 4)), Math.round(ly), 2 + i, 1)
+      }
+      ctx.globalAlpha = 1
     }
 
     // Aura doentia ao redor dos zumbis vivos.
@@ -1471,12 +1607,52 @@ class Game {
     }
 
     if (enemy.isBoss && enemy.alive) {
-      const pulse = 0.4 + Math.sin(time * 3) * 0.2
+      const pulse = 0.42 + Math.sin(time * 3) * 0.2
       ctx.globalAlpha = pulse
-      ctx.fillStyle = '#ffd166'
+      ctx.fillStyle = enemy.bossRim
       ctx.fillRect(feetX - 1, feetY - 46, 2, 2)
       ctx.globalAlpha = 1
+
+      // Nome em tupi antigo flutuando acima da coroa, legível contra a mata.
+      if (sprite) {
+        const crownTop = feetY - (sprite.ay - (sprite.topY ?? 0)) * scale
+        this.paintBossName(enemy, feetX, crownTop, time)
+      }
     }
+  }
+
+  // Placa flutuante com o nome do chefe. A letra é pequena, mas o fundo
+  // escuro e a sombra garantem leitura no meio do cenário.
+  private paintBossName(enemy: Enemy, centerX: number, crownTop: number, time: number): void {
+    const name = enemy.bossName
+    const y = Math.round(crownTop) - 9
+    ctx.save()
+    ctx.textAlign = 'center'
+    ctx.textBaseline = 'alphabetic'
+    ctx.font = 'bold 7px "Courier New", monospace'
+    const textWidth = Math.ceil(ctx.measureText(name).width)
+    const plateWidth = textWidth + 10
+    const plateX = Math.round(centerX - plateWidth / 2)
+    const plateY = y - 7
+
+    ctx.globalAlpha = 0.62
+    ctx.fillStyle = '#050403'
+    ctx.fillRect(plateX, plateY, plateWidth, 10)
+    ctx.fillStyle = rgba(enemy.bossNameColor, 0.35)
+    ctx.fillRect(plateX, plateY, 1, 10)
+    ctx.fillRect(plateX + plateWidth - 1, plateY, 1, 10)
+
+    // Haste curta ligando a placa à coroa.
+    ctx.globalAlpha = 0.5
+    ctx.fillStyle = enemy.bossNameColor
+    ctx.fillRect(Math.round(centerX), plateY + 10, 1, 3)
+
+    ctx.globalAlpha = 0.95 + Math.sin(time * 4) * 0.05
+    ctx.fillStyle = '#120a06'
+    ctx.fillText(name, centerX + 1, y + 1)
+    ctx.fillStyle = enemy.bossNameColor
+    ctx.fillText(name, centerX, y)
+    ctx.restore()
   }
 
   private paintShots(time: number): void {
@@ -1486,30 +1662,54 @@ class Game {
       const length = Math.max(1, Math.hypot(shot.vx, shot.vy))
       const nx = shot.vx / length
       const ny = shot.vy / length
+      const cool = shot.friendly ? '#a8d8ff' : shot.boss ? '#ff8b73' : '#ffe9a8'
 
       // Rastro luminoso: três segmentos para trás, cada vez mais fracos.
       for (let i = 1; i <= 3; i += 1) {
         const tx = Math.round(x - nx * i * 5)
         const ty = Math.round(y - ny * i * 5)
         ctx.globalAlpha = 0.5 - i * 0.12
-        ctx.fillStyle = shot.boss ? '#ff8b73' : '#ffe9a8'
+        ctx.fillStyle = cool
         ctx.fillRect(tx, ty, 2, 1)
       }
       ctx.globalAlpha = 1
 
       const glow = ctx.createRadialGradient(x + 1, y + 1, 0.5, x + 1, y + 1, 9)
-      glow.addColorStop(0, shot.boss ? 'rgba(255, 139, 115, 0.5)' : 'rgba(255, 233, 168, 0.44)')
+      glow.addColorStop(
+        0,
+        shot.friendly
+          ? 'rgba(168, 216, 255, 0.5)'
+          : shot.boss
+            ? 'rgba(255, 139, 115, 0.5)'
+            : 'rgba(255, 233, 168, 0.44)',
+      )
       glow.addColorStop(1, 'rgba(255, 209, 102, 0)')
       ctx.fillStyle = glow
       ctx.fillRect(x - 8, y - 8, 18, 18)
 
-      // Bala de mosquete: núcleo claro, aro quente e um brilho que pisca.
-      ctx.fillStyle = shot.boss ? '#c4473a' : '#c98a3c'
-      ctx.fillRect(x - 1, y - 1, 4, 4)
-      ctx.fillStyle = shot.boss ? '#ff8b73' : '#ffd166'
-      ctx.fillRect(x, y, 3, 3)
-      ctx.fillStyle = '#fff6d0'
-      ctx.fillRect(x + 1, y + 1, 1, 1)
+      if (shot.spear) {
+        // Lança do chefe: haste de madeira e ponta clara na direção do voo.
+        for (let i = 0; i < 12; i += 1) {
+          const sx = Math.round(x - nx * (4 + i))
+          const sy = Math.round(y - ny * (4 + i))
+          ctx.fillStyle = i === 0 ? '#c9a36a' : i % 4 === 0 ? '#8a5a2e' : '#5f3d1e'
+          ctx.fillRect(sx, sy, 2, 1)
+        }
+        const tipX = Math.round(x + nx * 4)
+        const tipY = Math.round(y + ny * 4)
+        ctx.fillStyle = shot.friendly ? '#d8f0ff' : '#ffd166'
+        ctx.fillRect(tipX, tipY, 2, 2)
+        ctx.fillStyle = '#fff6d0'
+        ctx.fillRect(tipX, tipY, 1, 1)
+      } else {
+        // Bala de mosquete: núcleo claro, aro quente e um brilho que pisca.
+        ctx.fillStyle = shot.friendly ? '#4a7ab8' : shot.boss ? '#c4473a' : '#c98a3c'
+        ctx.fillRect(x - 1, y - 1, 4, 4)
+        ctx.fillStyle = cool
+        ctx.fillRect(x, y, 3, 3)
+        ctx.fillStyle = '#fff6d0'
+        ctx.fillRect(x + 1, y + 1, 1, 1)
+      }
 
       ctx.globalAlpha = 0.35 + Math.sin(time * 16 + shot.x * 0.4) * 0.16
       ctx.fillStyle = '#fff6d0'

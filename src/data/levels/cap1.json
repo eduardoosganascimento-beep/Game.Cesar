@@ -90,10 +90,18 @@
     {
       "type": "enemy",
       "kind": "zumbi",
-      "x": 146,
+      "x": 140,
       "y": 8,
-      "left": 140,
-      "right": 152
+      "left": 136,
+      "right": 145
+    },
+    {
+      "type": "enemy",
+      "kind": "capitao",
+      "x": 150,
+      "y": 8,
+      "left": 146,
+      "right": 155
     }
   ]
 }

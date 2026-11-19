@@ -7,6 +7,7 @@ export class Hud {
   private readonly difficulty = document.querySelector<HTMLElement>('#difficulty')
   private readonly bossBar = document.querySelector<HTMLDivElement>('#boss-bar')
   private readonly bossName = document.querySelector<HTMLElement>('#boss-name')
+  private readonly bossSub = document.querySelector<HTMLElement>('#boss-sub')
   private readonly bossFill = document.querySelector<HTMLElement>('#boss-fill')
   private bossKey = ''
   private readonly muteButton = document.querySelector<HTMLButtonElement>('#mute')
@@ -56,13 +57,17 @@ export class Hud {
     if (this.difficulty) this.difficulty.textContent = label
   }
 
-  setBoss(name: string, hp: number, maxHp: number): void {
+  setBoss(name: string, hp: number, maxHp: number, title = ''): void {
     if (!this.bossBar || !this.bossFill || !this.bossName) return
-    const key = `${name}:${hp}:${maxHp}`
+    const key = `${name}:${title}:${hp}:${maxHp}`
     if (key === this.bossKey) return
     this.bossKey = key
     this.bossBar.classList.remove('is-hidden')
     this.bossName.textContent = name.toUpperCase()
+    if (this.bossSub) {
+      this.bossSub.textContent = title ? title.toUpperCase() : ''
+      this.bossSub.classList.toggle('is-hidden', !title)
+    }
     this.bossFill.style.width = `${Math.max(0, Math.min(100, (hp / Math.max(1, maxHp)) * 100))}%`
   }
 

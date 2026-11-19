@@ -140,6 +140,32 @@ export const ZOMBIE_CLIPS: Record<EnemyClipName, Clip> = {
 }
 
 // ============================================================
+// CLIPS DOS CHEFES
+// ============================================================
+// Os chefes usam os mesmos quadros, mas com ritmo próprio: corrida mais
+// rápida e golpes curtos, no compasso do jogador. Isso evita a sensação de
+// "congelou no último quadro" que acontecia ao herdar os tempos do colono.
+export const BOSS_COLONIST_CLIPS: Record<EnemyClipName, Clip> = {
+  idle: { ...COLONIST_CLIPS.idle, fps: 3 },
+  walk: { ...COLONIST_CLIPS.walk, fps: 12 },
+  shoot: { ...COLONIST_CLIPS.shoot, fps: 12 },
+  slash: { ...COLONIST_CLIPS.slash, fps: 15 },
+  hurt: { ...COLONIST_CLIPS.hurt, fps: 8 },
+  guard: { ...COLONIST_CLIPS.guard, fps: 1 },
+  death: { ...COLONIST_CLIPS.death, fps: 8 },
+}
+
+export const BOSS_GUARDIAO_CLIPS: Record<EnemyClipName, Clip> = {
+  idle: { ...INDIO_CLIPS.idle, fps: 3.2 },
+  walk: { ...INDIO_CLIPS.walk, fps: 14 },
+  shoot: { ...INDIO_CLIPS.shoot, fps: 14 },
+  slash: { ...INDIO_CLIPS.slash, fps: 20 },
+  hurt: { ...INDIO_CLIPS.hurt, fps: 12 },
+  guard: { ...INDIO_CLIPS.guard, fps: 1 },
+  death: { ...INDIO_CLIPS.death, fps: 9 },
+}
+
+// ============================================================
 // ANIMADOR DE CLIPS (base para Sand, Colonista e Índio)
 // ============================================================
 export type ResolveSprite = (name: string) => Sprite | undefined
@@ -216,6 +242,14 @@ export class SpriteClipAnimator {
     return this.elapsed * clip.fps >= clip.frames.length
   }
 
+  // Duração real do clipe no ritmo atual. Os inimigos usam isso para acertar
+  // o quadro de impacto em vez de chutar um tempo fixo (que congelava o
+  // guardião e o índio no fim do golpe).
+  duration(state: string = this.state): number {
+    const clip = this.clips[state] ?? this.clips[this.initial]
+    return clip.frames.length / Math.max(1, clip.fps)
+  }
+
   get frame(): Sprite | undefined {
     return (
       this.resolve(this.frameName) ??
@@ -259,5 +293,13 @@ export class WolfAnimator extends SpriteClipAnimator {
 export class ZombieAnimator extends SpriteClipAnimator {
   constructor() {
     super(ZOMBIE_CLIPS, getZombieFrame, 'idle', 'idle-1')
+  }
+}
+
+// Chefe: mesma estrutura de clipes, mas com uma folha própria de sprites
+// (paleta + coroa) e um conjunto de tempos mais rápido.
+export class BossAnimator extends SpriteClipAnimator {
+  constructor(clips: Record<string, Clip>, resolve: ResolveSprite) {
+    super(clips, resolve, 'idle', 'idle-1')
   }
 }

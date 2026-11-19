@@ -189,6 +189,20 @@ export class Player {
     this.skidCooldown = 0
   }
 
+  // Interrompe golpe, arremesso, dash e impulsos sem mexer na vida. Usado
+  // quando um chefe vence a troca ou quando o parry desarma o Sand: a
+  // animação nunca fica presa no meio de um ataque cancelado.
+  cancelActions(): void {
+    this.attack = 0
+    this.throw = 0
+    this.throwReleased = false
+    this.attackElapsed = 0
+    this.throwElapsed = 0
+    this.dash = 0
+    this.lunge = 0
+    this.vx = 0
+  }
+
   hit(fromX?: number, damage: number = 1): void {
     if (this.invuln > 0) return
     this.hp = Math.max(0, this.hp - damage)

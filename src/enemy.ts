@@ -4,7 +4,9 @@
 // O dash do indígena foi removido - o controle de dash agora só está no player.ts.
 
 import {
-  COLONIST_CLIPS,
+  BOSS_COLONIST_CLIPS,
+  BOSS_GUARDIAO_CLIPS,
+  BossAnimator,
   ColonistAnimator,
   IndioAnimator,
   WolfAnimator,
@@ -13,6 +15,7 @@ import {
 } from './animator'
 import { GRAVITY, MAX_FALL, TILE, overlaps, type Rect } from './engine'
 import { Tile, type EnemyKind, type EntitySpawn, type TileMap } from './level'
+import { getBossFrame, type BossSkin } from './sprites'
 
 type Stats = {
   w: number
@@ -29,6 +32,27 @@ type Stats = {
   // O aguaceiro só atira nessa janela: longe o suficiente para dar abertura,
   // perto o suficiente para o disparo fazer sentido.
   rangedRange?: number
+}
+
+// Configuração de um chefe. O mesmo corpo (capitão) recebe valores e uma
+// paleta diferentes por capítulo; o guardião tem a sua própria configuração.
+export type BossConfig = {
+  name: string
+  title: string
+  skin: BossSkin
+  role: 'boss' | 'guardiao'
+  hp: number
+  speed: number
+  damage: number
+  meleeRange: number
+  throwRange: number
+  chargeRange: number
+  attackCooldown: number
+  chargeCooldown: number
+  scale: number
+  aura: string
+  rim: string
+  nameColor: string
 }
 
 const STATS: Record<EnemyKind, Stats> = {
@@ -140,17 +164,18 @@ const STATS: Record<EnemyKind, Stats> = {
 }
 
 type AttackKind = 'shoot' | 'slash'
+type BossAction = 'slash' | 'throw' | 'charge'
 
-const SHOOT_FIRE_AT = 0.14
-// O impacto do golpe acontece no 4º quadro do clipe de slash (11 fps ≈ 0,36s).
-const SLASH_HIT_AT = 0.34
 const HURT_TIME = 0.24
+const BOSS_HURT_TIME = 0.18
 const DEATH_TIME = 0.72
-
-function clipDuration(kind: AttackKind): number {
-  const clip = COLONIST_CLIPS[kind]
-  return clip.frames.length / clip.fps
-}
+const BOSS_ACCEL = 760
+const BOSS_STOP_ACCEL = 1500
+const BOSS_CHARGE_WINDUP = 0.24
+const BOSS_CHARGE_DASH = 0.36
+// Janela em que o golpe do chefe ameaça de verdade (para o parry).
+const THREAT_BEFORE = 0.06
+const THREAT_AFTER = 0.09
 
 // ============================================================
 // CLASSE INimigo
@@ -178,12 +203,27 @@ export class Enemy {
   stunTimer = 0
   guardTimer = 0
   counterWindow = 0
+  justCharged = false
+  justChargeHit = false
+
+  private bossConfig: BossConfig | null = null
+  private bossAction: BossAction | null = null
+  private bossActionTime = 0
+  private bossActionDuration = 0
+  private bossHitAt = 0
+  private bossChargeDir = 1
+  private bossChargeStarted = false
+  private bossChargeCanHit = false
+  private bossChargeCooldown = 0
+  private bossJumpCooldown = 0
 
   stun(seconds: number): void {
     this.stunTimer = Math.max(this.stunTimer, seconds)
     this.vx = 0
     this.attackKind = null
     this.attackElapsed = 0
+    this.cancelBossAction()
+    this.animator.setTimeScale(1)
     this.animator.play('hurt')
   }
 
@@ -276,6 +316,67 @@ export class Enemy {
     this.hp = this.maxHp
   }
 
+  // Transforma o capitão/guardião em um chefe com nome, paleta e ritmo
+  // próprios. Chamado logo depois do construtor, antes dos escalonamentos
+  // de velocidade/vida da dificuldade.
+  configureBoss(config: BossConfig): void {
+    this.bossConfig = config
+    this.label = config.name
+    this.stats = {
+      ...this.stats,
+      hp: config.hp,
+      speed: config.speed,
+      cooldown: config.attackCooldown,
+      visualScale: config.scale,
+      label: config.name,
+      chase: Math.max(this.stats.chase, config.chargeRange + 24),
+      rangedRange: config.throwRange,
+    }
+    this.maxHp = config.hp
+    this.hp = config.hp
+    this.speed = config.speed * this.levelFactor
+    this.vx = 0
+    this.animator = new BossAnimator(
+      config.role === 'guardiao' ? BOSS_GUARDIAO_CLIPS : BOSS_COLONIST_CLIPS,
+      (name) => getBossFrame(config.skin, name),
+    )
+    this.animator.reset()
+    this.bossAction = null
+    this.bossActionTime = 0
+    this.bossChargeCanHit = false
+    this.bossChargeCooldown = 0
+    this.bossJumpCooldown = 0
+    this.attackCooldown = 0.5
+  }
+
+  get bossName(): string {
+    return this.bossConfig?.name ?? this.label
+  }
+
+  get bossTitle(): string {
+    return this.bossConfig?.title ?? ''
+  }
+
+  get bossSkin(): BossSkin | null {
+    return this.bossConfig?.skin ?? null
+  }
+
+  get bossAura(): string {
+    return this.bossConfig?.aura ?? '#c4473a'
+  }
+
+  get bossRim(): string {
+    return this.bossConfig?.rim ?? '#ffd166'
+  }
+
+  get bossNameColor(): string {
+    return this.bossConfig?.nameColor ?? '#ffd166'
+  }
+
+  get isFinalBoss(): boolean {
+    return this.bossConfig?.role === 'guardiao'
+  }
+
   get rect(): Rect {
     return { x: this.x, y: this.y, w: this.w, h: this.h }
   }
@@ -336,14 +437,66 @@ export class Enemy {
   get attackBox(): Rect {
     // O golpe só tem caixa enquanto o ataque está ativo. Fora disso, o
     // inimigo não causa dano só por existir (isso quebrava o parry).
+    if (this.bossAction === 'charge') {
+      if (!this.bossChargeCanHit) return { x: 0, y: 0, w: 0, h: 0 }
+      return { x: this.x - 2, y: this.y, w: this.w + 4, h: this.h }
+    }
     if (!this.attackKind) return { x: 0, y: 0, w: 0, h: 0 }
-    const reach = this.isBoss ? 34 : this.kind === 'feitor' ? 30 : this.isZombie ? 22 : 25
+    const reach = this.isBoss ? 38 : this.kind === 'feitor' ? 30 : this.isZombie ? 22 : 25
     return {
       x: this.facing > 0 ? this.x + this.w - 2 : this.x - reach + 2,
       y: this.y + this.h * 0.25,
       w: reach,
       h: Math.max(12, this.h * 0.5),
     }
+  }
+
+  // A ameaça real para o parry: o corpo do chefe durante a investida ou a
+  // janela de impacto do golpe. Ficar encostado no chefe não conta.
+  get threatActive(): boolean {
+    if (this.bossAction === 'charge') return this.bossChargeCanHit
+    if (this.attackKind === 'slash') {
+      const hit = this.attackHitAt
+      return (
+        this.attackElapsed >= hit - THREAT_BEFORE &&
+        this.attackElapsed <= hit + THREAT_AFTER
+      )
+    }
+    return false
+  }
+
+  get threatBox(): Rect {
+    return this.attackBox
+  }
+
+  get isCharging(): boolean {
+    return this.bossAction === 'charge' && this.bossChargeCanHit
+  }
+
+  get chargeCanHit(): boolean {
+    return this.isCharging
+  }
+
+  consumeChargeHit(): void {
+    if (!this.bossChargeCanHit) return
+    this.bossChargeCanHit = false
+    this.justChargeHit = true
+  }
+
+  // Chamado quando o jogador defende. O chefe resiste mais que um capanga.
+  parried(perfect: boolean): void {
+    const stun = this.isBoss
+      ? perfect
+        ? 0.72
+        : 0.28
+      : perfect
+        ? 1.1
+        : 0.42
+    this.stun(stun)
+    this.cancelBossAction()
+    this.attackCooldown = Math.max(this.attackCooldown, this.isBoss ? 0.55 : 0.4)
+    this.bossChargeCooldown = Math.max(this.bossChargeCooldown, 0.6)
+    this.invuln = 0.16
   }
 
   get shotOrigin(): { x: number; y: number } {
@@ -354,12 +507,24 @@ export class Enemy {
   }
 
   get isAttacking(): boolean {
-    return this.attackKind !== null
+    return this.attackKind !== null || this.bossAction === 'charge'
   }
 
   get attackDamage(): number {
     // Chefes e feitores encaram com mais força; capangas e colonos, menos.
-    return this.isBoss || this.kind === 'feitor' ? 2 : 1
+    return this.bossConfig?.damage ?? (this.isBoss || this.kind === 'feitor' ? 2 : 1)
+  }
+
+  // Quadro de impacto do golpe, calculado pelo clipe do animador atual.
+  private get attackHitAt(): number {
+    if (this.bossAction) return this.bossHitAt
+    if (this.isZombie) return 0.24
+    return this.animator.duration('slash') * 0.55
+  }
+
+  private get shootFireAt(): number {
+    if (this.isZombie) return 0.28
+    return this.animator.duration('shoot') * 0.55
   }
 
   reset(): void {
@@ -378,18 +543,35 @@ export class Enemy {
     this.fired = false
     this.struck = false
     this.deathTimer = 0
+    this.stunTimer = 0
+    this.guardTimer = 0
+    this.counterWindow = 0
+    this.justCharged = false
+    this.justChargeHit = false
+    this.bossAction = null
+    this.bossActionTime = 0
+    this.bossActionDuration = 0
+    this.bossHitAt = 0
+    this.bossChargeStarted = false
+    this.bossChargeCanHit = false
+    this.bossChargeCooldown = 0
+    this.bossJumpCooldown = 0
     this.animator.reset()
   }
 
   update(dt: number, map: TileMap, player?: Rect): void {
     this.justShot = false
     this.justStruck = false
+    this.justCharged = false
+    this.justChargeHit = false
     this.hurt = Math.max(0, this.hurt - dt)
     this.invuln = Math.max(0, this.invuln - dt)
     this.jumpCooldown = Math.max(0, this.jumpCooldown - dt)
     this.stunTimer = Math.max(0, this.stunTimer - dt)
     this.guardTimer = Math.max(0, this.guardTimer - dt)
     this.counterWindow = Math.max(0, this.counterWindow - dt)
+    this.bossChargeCooldown = Math.max(0, this.bossChargeCooldown - dt)
+    this.bossJumpCooldown = Math.max(0, this.bossJumpCooldown - dt)
 
     if (!this.alive) {
       this.deathTimer = Math.max(0, this.deathTimer - dt)
@@ -400,7 +582,9 @@ export class Enemy {
     this.animator.update(dt)
     this.attackCooldown = Math.max(0, this.attackCooldown - dt)
 
-    if (this.stunTimer > 0) {
+    if (this.bossConfig) {
+      this.updateBoss(dt, map, player)
+    } else if (this.stunTimer > 0) {
       this.vx = 0
     } else if (this.guardTimer > 0) {
       this.vx = 0
@@ -428,9 +612,10 @@ export class Enemy {
 
     this.hp = Math.max(0, this.hp - amount)
     this.invuln = 0.3
-    this.hurt = HURT_TIME
+    this.hurt = this.isBoss ? BOSS_HURT_TIME : HURT_TIME
     this.attackKind = null
     this.attackElapsed = 0
+    this.cancelBossAction()
     this.vx = 0
 
     if (this.hp <= 0) {
@@ -548,17 +733,17 @@ export class Enemy {
     if (!this.attackKind) return
     this.attackElapsed += dt
 
-    if (!this.fired && this.attackKind === 'shoot' && this.attackElapsed >= SHOOT_FIRE_AT) {
+    if (!this.fired && this.attackKind === 'shoot' && this.attackElapsed >= this.shootFireAt) {
       this.fired = true
       this.justShot = true
     }
 
-    if (!this.struck && this.attackKind === 'slash' && this.attackElapsed >= SLASH_HIT_AT) {
+    if (!this.struck && this.attackKind === 'slash' && this.attackElapsed >= this.attackHitAt) {
       this.struck = true
       this.justStruck = true
     }
 
-    if (this.attackElapsed >= this.attackDuration(this.attackKind) + 0.04) {
+    if (this.attackElapsed >= this.attackDuration(this.attackKind) + 0.03) {
       this.attackKind = null
       this.fired = false
       this.struck = false
@@ -568,15 +753,274 @@ export class Enemy {
 
   private attackDuration(kind: AttackKind): number {
     if (this.isZombie) return kind === 'slash' ? 6 / 11 : 0.35
-    return clipDuration(kind)
+    return this.animator.duration(kind)
+  }
+
+  // ============================================================
+  // CÉREBRO DOS CHEFES
+  // ============================================================
+  // Eles correm de verdade (aceleram, freiam e param na borda), atacam no
+  // mesmo compasso do jogador (golpe curto, arremesso e investida) e nunca
+  // ficam presos no último quadro de uma animação.
+  private updateBoss(dt: number, map: TileMap, player?: Rect): void {
+    const cfg = this.bossConfig
+    if (!cfg) {
+      this.think(player)
+      return
+    }
+
+    if (this.stunTimer > 0 || this.hurt > 0) {
+      this.vx = 0
+      return
+    }
+
+    if (this.bossAction) {
+      this.updateBossAction(dt)
+      return
+    }
+
+    if (!player) {
+      this.patrol()
+      return
+    }
+
+    const playerCenterX = player.x + player.w / 2
+    const enemyCenterX = this.x + this.w / 2
+    const dx = playerCenterX - enemyCenterX
+    const adx = Math.abs(dx)
+    const dy = player.y + player.h / 2 - (this.y + this.h / 2)
+    const dir = dx >= 0 ? 1 : -1
+    this.facing = dir
+
+    const arenaLeft = this.left + 4
+    const arenaRight = this.right - 4
+    const playerInside =
+      playerCenterX >= arenaLeft - 20 && playerCenterX <= arenaRight + 20
+
+    // Decisão de ataque: perto, golpe; média, arremesso ou investida; longe,
+    // investida. A escolha alterna para o chefe não repetir o mesmo padrão.
+    if (this.attackCooldown <= 0 && Math.abs(dy) < 58 && playerInside) {
+      if (adx <= cfg.meleeRange) {
+        this.startBossAction('slash', dx)
+        return
+      }
+      if (adx <= cfg.throwRange) {
+        if (
+          this.bossChargeCooldown <= 0 &&
+          adx > cfg.meleeRange + 26 &&
+          Math.random() < 0.34
+        ) {
+          this.startBossAction('charge', dx)
+        } else {
+          this.startBossAction('throw', dx)
+        }
+        return
+      }
+      if (adx <= cfg.chargeRange && this.bossChargeCooldown <= 0) {
+        this.startBossAction('charge', dx)
+        return
+      }
+    }
+
+    // Alvo em plataforma: salta para alcançar.
+    if (
+      this.onGround &&
+      this.bossJumpCooldown <= 0 &&
+      player.y + player.h < this.y - 14 &&
+      adx < 78
+    ) {
+      this.vy = -340
+      this.onGround = false
+      this.bossJumpCooldown = 1.15
+    }
+
+    const stopDistance = Math.max(14, (this.w + player.w) / 2 + 3)
+
+    if (!playerInside) {
+      const edge = playerCenterX < arenaLeft ? arenaLeft : arenaRight - this.w
+      const d = edge - this.x
+      this.accelerate(Math.abs(d) > 4 ? Math.sign(d) * this.speed * 0.6 : 0, dt)
+      return
+    }
+
+    if (adx > stopDistance) {
+      if (this.onGround && this.hasWallAhead(map, dir)) {
+        if (player.y + player.h < this.y - 8 && this.bossJumpCooldown <= 0) {
+          this.vy = -340
+          this.onGround = false
+          this.bossJumpCooldown = 1
+        } else {
+          this.accelerate(0, dt)
+          if (this.attackCooldown <= 0 && adx <= cfg.throwRange * 1.15) {
+            this.startBossAction('throw', dx)
+          }
+        }
+        return
+      }
+      if (this.onGround && !this.hasGroundAhead(map, dir)) {
+        // Não se joga de uma plataforma: para na borda e arremessa.
+        this.accelerate(0, dt)
+        if (this.attackCooldown <= 0 && adx <= cfg.throwRange * 1.15) {
+          this.startBossAction('throw', dx)
+        }
+        return
+      }
+      this.accelerate(dir * this.speed, dt)
+    } else {
+      this.accelerate(0, dt)
+    }
+  }
+
+  private startBossAction(kind: BossAction, dx: number): void {
+    this.bossAction = kind
+    this.bossActionTime = 0
+    this.facing = dx >= 0 ? 1 : -1
+    this.vx = 0
+    this.fired = false
+    this.struck = false
+    this.bossChargeStarted = false
+    this.bossChargeCanHit = false
+    this.animator.setTimeScale(1)
+
+    if (kind === 'slash') {
+      this.bossActionDuration = this.animator.duration('slash')
+      this.bossHitAt = this.bossActionDuration * 0.55
+      this.attackKind = 'slash'
+      this.attackElapsed = 0
+      this.animator.play('slash')
+      return
+    }
+
+    if (kind === 'throw') {
+      this.bossActionDuration = this.animator.duration('shoot')
+      this.bossHitAt = this.bossActionDuration * 0.58
+      this.attackKind = 'shoot'
+      this.attackElapsed = 0
+      this.animator.play('shoot')
+      return
+    }
+
+    // Investida: um breve agachamento (telegraph) e então o corpo dispara.
+    this.bossActionDuration = BOSS_CHARGE_WINDUP + BOSS_CHARGE_DASH
+    this.bossHitAt = BOSS_CHARGE_WINDUP
+    this.bossChargeDir = this.facing
+    this.attackKind = null
+    this.attackElapsed = 0
+    this.animator.play('idle')
+    this.animator.setTimeScale(0.7)
+  }
+
+  private updateBossAction(dt: number): void {
+    const action = this.bossAction
+    if (!action) return
+    this.bossActionTime += dt
+
+    if (action === 'slash') {
+      this.attackElapsed = this.bossActionTime
+      this.vx = this.bossActionTime < 0.12 ? this.facing * 95 : 0
+      if (!this.struck && this.bossActionTime >= this.bossHitAt) {
+        this.struck = true
+        this.justStruck = true
+      }
+      if (this.bossActionTime >= this.bossActionDuration) this.endBossAction(false)
+      return
+    }
+
+    if (action === 'throw') {
+      this.attackElapsed = this.bossActionTime
+      this.vx = 0
+      if (!this.fired && this.bossActionTime >= this.bossHitAt) {
+        this.fired = true
+        this.justShot = true
+      }
+      if (this.bossActionTime >= this.bossActionDuration) this.endBossAction(false)
+      return
+    }
+
+    if (this.bossActionTime < BOSS_CHARGE_WINDUP) {
+      this.vx = 0
+      if (this.animator.state !== 'idle') this.animator.play('idle')
+      this.animator.setTimeScale(0.7)
+      return
+    }
+
+    if (this.bossActionTime < BOSS_CHARGE_WINDUP + BOSS_CHARGE_DASH) {
+      if (!this.bossChargeStarted) {
+        this.bossChargeStarted = true
+        this.bossChargeCanHit = true
+        this.justCharged = true
+        this.animator.play('walk')
+        this.animator.setTimeScale(1.7)
+      }
+      this.vx = this.bossChargeDir * Math.max(170, this.speed * 3.1)
+      return
+    }
+
+    this.vx = 0
+    this.bossChargeCanHit = false
+    this.endBossAction(true)
+  }
+
+  private endBossAction(wasCharge: boolean): void {
+    const cfg = this.bossConfig
+    this.bossAction = null
+    this.bossActionTime = 0
+    this.attackKind = null
+    this.attackElapsed = 0
+    this.fired = false
+    this.struck = false
+    this.bossChargeCanHit = false
+    this.bossChargeStarted = false
+    this.vx = 0
+    this.animator.setTimeScale(1)
+    if (!cfg) return
+    this.attackCooldown = cfg.attackCooldown * (0.9 + Math.random() * 0.35)
+    if (wasCharge) {
+      this.bossChargeCooldown = cfg.chargeCooldown * (0.9 + Math.random() * 0.25)
+    }
+  }
+
+  private cancelBossAction(): void {
+    this.bossAction = null
+    this.bossActionTime = 0
+    this.bossChargeCanHit = false
+    this.bossChargeStarted = false
+    this.attackKind = null
+    this.attackElapsed = 0
+    this.fired = false
+    this.struck = false
+    this.vx = 0
+    this.animator.setTimeScale(1)
+  }
+
+  private accelerate(target: number, dt: number): void {
+    const rate =
+      Math.abs(target) < Math.abs(this.vx) ? BOSS_STOP_ACCEL : BOSS_ACCEL
+    if (this.vx < target) this.vx = Math.min(target, this.vx + rate * dt)
+    else if (this.vx > target) this.vx = Math.max(target, this.vx - rate * dt)
+  }
+
+  private hasGroundAhead(map: TileMap, dir: number): boolean {
+    const aheadX = dir > 0 ? this.x + this.w + 4 : this.x - 4
+    const footY = this.y + this.h + 4
+    const tile = map.tileAt(Math.floor(aheadX / TILE), Math.floor(footY / TILE))
+    return tile === Tile.Solid || tile === Tile.Platform
+  }
+
+  private hasWallAhead(map: TileMap, dir: number): boolean {
+    const aheadX = dir > 0 ? this.x + this.w + 2 : this.x - 2
+    const midY = this.y + this.h * 0.5
+    const tile = map.tileAt(Math.floor(aheadX / TILE), Math.floor(midY / TILE))
+    return tile === Tile.Solid
   }
 
   // ============================================================
   // ATUALIZAÇÃO DE ANIMAÇÃO
   // ============================================================
   private updateAnimation(): void {
-    // Se estiver attacking ou com hurt, não muda de estado (fica no clip atual).
-    if (this.attackKind || this.hurt > 0) return
+    // Se estiver attacking, hurt ou atordoado, não muda de estado (fica no
+    // clip atual). O atordoamento não pode sumir no quadro seguinte.
+    if (this.attackKind || this.hurt > 0 || this.stunTimer > 0) return
 
     // Estado baseado na velocidade horizontal.
     // |vx| > 4 → andando; otherwise → quieto.

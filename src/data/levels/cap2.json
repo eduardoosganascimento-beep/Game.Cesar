@@ -121,7 +121,7 @@
     },
     {
       "type": "enemy",
-      "kind": "capanga",
+      "kind": "capitao",
       "x": 148,
       "y": 8,
       "left": 145,
@@ -138,10 +138,10 @@
     {
       "type": "enemy",
       "kind": "zumbi",
-      "x": 144,
+      "x": 108,
       "y": 8,
-      "left": 140,
-      "right": 147
+      "left": 104,
+      "right": 113
     }
   ]
 }
