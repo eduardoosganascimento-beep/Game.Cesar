@@ -23,6 +23,7 @@ export const DELTAS: {
 }
 
 const STORAGE_KEY = 'sandman:difficulty'
+const PROGRESS_KEY = 'sandman:progress'
 
 function isDifficulty(value: unknown): value is Difficulty {
   return value === 'facil' || value === 'normal' || value === 'dificil'
@@ -41,6 +42,25 @@ export function readDifficulty(): Difficulty {
 export function writeDifficulty(difficulty: Difficulty): void {
   try {
     window.localStorage.setItem(STORAGE_KEY, difficulty)
+  } catch {
+    // Ignora falhas de persistência.
+  }
+}
+
+// Capítulo mais alto liberado (0 a 4). Usado por Continue e Jogos salvos.
+export function readProgress(): number {
+  try {
+    const value = Number(window.localStorage.getItem(PROGRESS_KEY))
+    if (Number.isFinite(value)) return Math.max(0, Math.min(4, Math.floor(value)))
+  } catch {
+    // localStorage indisponível: começa do primeiro capítulo.
+  }
+  return 0
+}
+
+export function writeProgress(index: number): void {
+  try {
+    window.localStorage.setItem(PROGRESS_KEY, String(Math.max(0, Math.min(4, Math.floor(index)))))
   } catch {
     // Ignora falhas de persistência.
   }

@@ -2,7 +2,7 @@ import { Animator, type ClipName } from './animator'
 import { sfx } from './audio'
 import { drawBackground } from './background'
 import { CHAPTERS, TUTORIAL, shortTitle, type ChapterDef } from './chapters'
-import { DELTAS, DIFFICULTY_LABELS, readDifficulty, writeDifficulty, type Difficulty } from './difficulty'
+import { DELTAS, DIFFICULTY_LABELS, readDifficulty, readProgress, writeDifficulty, writeProgress, type Difficulty } from './difficulty'
 import { Effects } from './effects'
 import { Camera, Loop, TILE, VIEW_H, VIEW_W, overlaps } from './engine'
 import { Enemy } from './enemy'
@@ -192,6 +192,7 @@ class Game {
     this.loadChapter(chapterIndex)
     this.reset()
     this.running = true
+    writeProgress(this.chapterIndex)
     this.paused = false
     this.input.clear()
     this.hud.show()
@@ -1292,6 +1293,7 @@ class Game {
   private win(): void {
     if (this.won) return
     this.won = true
+    writeProgress(this.nextChapterIndex)
     this.player.vx = 0
     this.player.attack = 0
     this.player.hurt = 0
@@ -1815,6 +1817,20 @@ class Game {
 const game = new Game()
 
 const screens = new Screens({
+  onContinue: () => {
+    sfx.unlock()
+    sfx.click()
+    game.start(readProgress())
+    screens.hideAll()
+  },
+  onNewGame: () => {
+    sfx.unlock()
+    sfx.click()
+    writeProgress(0)
+    screens.setProgress(0)
+    game.start(0)
+    screens.hideAll()
+  },
   onChapter: (index) => {
     sfx.unlock()
     sfx.click()
@@ -1868,6 +1884,7 @@ screens.setChapters(
     detail: chapter.detail,
   })),
 )
+screens.setProgress(readProgress())
 
 // Reflete no menu a dificuldade salva da última partida.
 screens.setDifficultySelection(readDifficulty())
@@ -1925,8 +1942,10 @@ if (import.meta.env.DEV) {
   if (view === 'chapters') {
     screens.showChapters()
   }
-  if (view === 'how' || view === 'credits' || view === 'difficulty') {
-    document.querySelector<HTMLButtonElement>(`[data-action="${view === 'difficulty' ? 'difficulty-screen' : view}"]`)?.click()
+  if (view === 'how' || view === 'credits' || view === 'difficulty' || view === 'options' || view === 'saves') {
+    const action =
+      view === 'difficulty' ? 'options' : view === 'saves' ? 'saves' : view
+    document.querySelector<HTMLButtonElement>(`[data-action="${action}"]`)?.click()
   }
   if (view === 'pause') {
     game.start(chapterParam)

@@ -1126,6 +1126,20 @@ body {
   white-space: nowrap;
 }
 
+.chapter-item.is-locked {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.chapter-lock {
+  margin-left: 6px;
+  font-family: var(--display);
+  font-size: 6px;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--urucum-bright);
+}
+
 .chapter-item.is-selected .chapter-tag {
   border-color: rgba(201, 161, 90, 0.44);
   color: var(--gold-bright);
@@ -1143,8 +1157,8 @@ body {
 }
 
 .difficulty-panel-large {
-  gap: 9px;
-  margin: 16px 0 12px;
+  gap: 7px;
+  margin: 10px 0 8px;
 }
 
 .difficulty-big {
@@ -1153,7 +1167,7 @@ body {
   align-items: center;
   gap: 12px;
   width: 100%;
-  padding: 12px 14px;
+  padding: 10px 12px;
   text-align: left;
   background: linear-gradient(90deg, rgba(12, 16, 13, 0.82), rgba(8, 11, 9, 0.45));
   border: 1px solid rgba(201, 161, 90, 0.22);
@@ -1211,6 +1225,13 @@ body {
   font-style: italic;
   font-size: clamp(11px, 1.2vw, 14px);
   color: #b9ae93;
+}
+
+.options-extras {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px;
+  margin: 7px 0 8px;
 }
 
 .difficulty-big b {

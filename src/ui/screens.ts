@@ -27,6 +27,8 @@ export type ChapterOption = {
 import { DIFFICULTY_LABELS, type Difficulty } from '../difficulty'
 
 export type ScreenHandlers = {
+  onContinue: () => void
+  onNewGame: () => void
   onChapter: (index: number) => void
   onNext: () => void
   onResume: () => void
@@ -36,7 +38,7 @@ export type ScreenHandlers = {
   onDifficulty: (difficulty: Difficulty) => void
 }
 
-type ScreenName = 'main' | 'chapters' | 'difficulty' | 'how' | 'credits'
+type ScreenName = 'main' | 'chapters' | 'options' | 'how' | 'credits'
 type Visible = 'menu' | 'pause' | 'end' | 'none'
 
 export class Screens {
@@ -53,6 +55,7 @@ export class Screens {
   private readonly chapterDetail = document.querySelector<HTMLElement>('#chapter-detail')
 
   private chapters: ChapterOption[] = []
+  private progress = 0
   private buttons: HTMLButtonElement[] = []
   private readonly bound = new WeakSet<HTMLButtonElement>()
   private visible: Visible = 'menu'
@@ -93,6 +96,14 @@ export class Screens {
       const tag = document.createElement('span')
       tag.className = 'chapter-tag'
       tag.textContent = chapter.tag
+      if (index > this.progress) {
+        button.classList.add('is-locked')
+        button.setAttribute('aria-disabled', 'true')
+        const lock = document.createElement('span')
+        lock.className = 'chapter-lock'
+        lock.textContent = 'bloqueado'
+        tag.append(lock)
+      }
 
       button.append(number, copy, tag)
       list.append(button)
@@ -100,6 +111,11 @@ export class Screens {
 
     this.bindButtons()
     if (this.visible === 'menu' && this.screen === 'chapters') this.select(0)
+  }
+
+  setProgress(index: number): void {
+    this.progress = Math.max(0, Math.min(4, index))
+    this.setChapters(this.chapters)
   }
 
   setDifficultySelection(difficulty: Difficulty): void {
@@ -224,7 +240,7 @@ export class Screens {
         this.menu?.querySelectorAll<HTMLButtonElement>(
           '.menu-screen:not(.is-hidden) .menu-item, .menu-screen:not(.is-hidden) .chapter-item, .menu-screen:not(.is-hidden) .menu-back, .menu-screen:not(.is-hidden) .difficulty-item',
         ) ?? [],
-      )
+      ).filter((item) => !item.classList.contains('is-locked'))
     }
     return []
   }
@@ -265,9 +281,17 @@ export class Screens {
 
     switch (action) {
       case 'chapters':
+      case 'saves':
         this.showChapters()
         break
+      case 'continue':
+        this.handlers.onContinue()
+        break
+      case 'new-game':
+        this.handlers.onNewGame()
+        break
       case 'chapter': {
+        if (button.classList.contains('is-locked')) break
         const index = Number(button.dataset.chapter ?? 0)
         this.handlers.onChapter(index)
         break
@@ -284,12 +308,19 @@ export class Screens {
       case 'tutorial':
         this.handlers.onTutorial()
         break
-      case 'difficulty-screen': {
+      case 'options': {
         const current = document.querySelector<HTMLButtonElement>('.difficulty-item.is-selected')?.dataset.difficulty
-        this.setScreen('difficulty')
+        this.setScreen('options')
         const active = this.activeButtons()
         const index = active.findIndex((item) => item.dataset.difficulty === current)
         if (index >= 0) this.select(index)
+        break
+      }
+      case 'toggle-sound': {
+        document.querySelector<HTMLButtonElement>('#mute')?.click()
+        const muted = document.querySelector<HTMLButtonElement>('#mute')?.getAttribute('aria-pressed') === 'true'
+        const label = document.querySelector<HTMLElement>('#options-sound')
+        if (label) label.textContent = muted ? 'Som: desligado' : 'Som: ligado'
         break
       }
       case 'difficulty': {
