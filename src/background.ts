@@ -7,6 +7,7 @@ import { VIEW_H, VIEW_W } from './engine'
 export type BgScene =
   | 'village-fire'
   | 'waterfall'
+  | 'misty-forest'
   | 'temple-night'
   | 'temple-steps'
   | 'forest-dawn'
@@ -200,6 +201,32 @@ function jungleTree(
     const fy = topY + 16 + Math.round(Math.sin(i * 1.7 + seed) * 3)
     px(ctx, fx, fy, 1, 3, leaf)
     px(ctx, fx + 1, fy + 1, 1, 2, leafLight)
+  }
+}
+
+// Pinheiro em camadas: silhueta recortada contra a névoa.
+function pineSilhouette(
+  ctx: CanvasRenderingContext2D,
+  cx: number,
+  baseY: number,
+  height: number,
+  halfW: number,
+  color: string,
+  edge: string,
+  tiers = 7,
+): void {
+  const topY = baseY - height
+  px(ctx, cx - 2, topY + height * 0.55, 4, height * 0.45, color)
+  px(ctx, cx - 2, topY + height * 0.55, 1, height * 0.45, edge)
+  for (let t = 0; t < tiers; t += 1) {
+    const tierTop = topY + (t * height * 0.66) / tiers
+    const tierH = (height * 0.66) / tiers + 1
+    const w = halfW * (0.3 + (0.7 * (t + 1)) / tiers)
+    for (let k = 0; k < tierH; k += 1) {
+      const ww = Math.max(2, Math.round(w * (0.35 + (0.65 * k) / tierH)))
+      px(ctx, cx - ww / 2, tierTop + k, ww, 1, color)
+      px(ctx, cx - ww / 2, tierTop + k, 1, 1, edge)
+    }
   }
 }
 
@@ -675,6 +702,69 @@ function paintWaterfall(ctx: CanvasRenderingContext2D): void {
   px(ctx, 0, GROUND_Y, W, H - GROUND_Y, '#07100d')
 }
 
+// Floresta de pinheiros na névoa, com luz fria filtrada entre as copas.
+function paintMistyForest(ctx: CanvasRenderingContext2D): void {
+  sky(ctx, '#cfe8c8', '#a7cc9d', '#6f9a70')
+
+  // Sol difuso no centro da clareira.
+  const sun = ctx.createRadialGradient(160, 118, 8, 160, 118, 110)
+  sun.addColorStop(0, 'rgba(255, 250, 202, 0.6)')
+  sun.addColorStop(0.45, 'rgba(220, 240, 180, 0.22)')
+  sun.addColorStop(1, 'rgba(180, 220, 170, 0)')
+  ctx.fillStyle = sun
+  ctx.fillRect(40, 10, 240, GROUND_Y)
+
+  // Névoa em faixas largas, mais forte no meio.
+  for (let i = 0; i < 7; i += 1) {
+    ctx.globalAlpha = 0.07 + (i % 3) * 0.03
+    px(ctx, 0, 34 + i * 15, W, 7, '#eaf5df')
+    ctx.globalAlpha = 1
+  }
+
+  // Pinheiros distantes: verde-água, quase dissolvidos na névoa.
+  for (let x = 6; x < W; x += 26) {
+    const h = 40 + Math.floor(hash(x * 1.7) * 34)
+    pineSilhouette(ctx, x, GROUND_Y - 6, h, 12, '#7a9c7d', '#9dbb98', 6)
+  }
+
+  // Camada média, mais escura.
+  for (const x of [24, 62, 104, 146, 190, 232, 276, 312]) {
+    const h = 72 + Math.floor(hash(x * 2.3) * 34)
+    pineSilhouette(ctx, x, GROUND_Y - 4, h, 20, '#33553e', '#4d7052')
+  }
+
+  // Faixa de névoa baixa atravessando a mata.
+  for (let i = 0; i < 4; i += 1) {
+    ctx.globalAlpha = 0.1 - i * 0.015
+    px(ctx, 0, 98 + i * 12, W, 9, '#dcefd2')
+    ctx.globalAlpha = 1
+  }
+
+  // Pinheiros em primeiro plano: quase pretos, recortados pela luz.
+  for (const [x, h, w] of [
+    [12, 132, 34],
+    [78, 104, 26],
+    [154, 142, 36],
+    [228, 112, 28],
+    [304, 128, 33],
+  ] as const) {
+    pineSilhouette(ctx, x, GROUND_Y, h, w, '#0a1710', '#1b3021', 8)
+  }
+
+  // Capim e samambaias na base.
+  for (let i = 0; i < 18; i += 1) {
+    const x = Math.floor(hash(i * 4.1) * W)
+    const h = 4 + Math.floor(hash(i * 2.7) * 7)
+    for (let y = 0; y < h; y += 1) {
+      px(ctx, x + Math.round(y * 0.2), GROUND_Y - y, 1, 1, i % 2 ? '#3d5a37' : '#6b8a4a')
+    }
+  }
+  fern(ctx, 48, GROUND_Y, 20, '#1a2c1a', '#3c5530')
+  fern(ctx, 268, GROUND_Y, 22, '#172615', '#35502c')
+
+  px(ctx, 0, GROUND_Y, W, H - GROUND_Y, '#08100a')
+}
+
 function paintTempleNight(ctx: CanvasRenderingContext2D): void {
   sky(ctx, '#050714', '#0a0f22', '#131429')
   stars(ctx, 90, 17, 0.6)
@@ -1125,6 +1215,7 @@ function drawTorchGlow(ctx: CanvasRenderingContext2D, time: number, points: Read
 const painters: Record<BgScene, (ctx: CanvasRenderingContext2D) => void> = {
   'village-fire': paintVillage,
   waterfall: paintWaterfall,
+  'misty-forest': paintMistyForest,
   'temple-night': paintTempleNight,
   'temple-steps': paintTempleSteps,
   'forest-dawn': paintForestDawn,
@@ -1179,6 +1270,10 @@ export function drawBackground(
     g.addColorStop(1, `rgba(160, 210, 210, ${sheen.toFixed(3)})`)
     ctx.fillStyle = g
     ctx.fillRect(120, 40, 86, GROUND_Y - 40)
+  }
+  if (scene === 'misty-forest') {
+    drawMist(ctx, time, 0.9, 52)
+    drawGodRays(ctx, time, false)
   }
   if (scene === 'temple-night') {
     drawMoonGlow(ctx, time)

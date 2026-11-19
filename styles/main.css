@@ -1227,6 +1227,13 @@ body {
   color: #b9ae93;
 }
 
+.menu-back:disabled,
+.menu-back[disabled] {
+  opacity: 0.45;
+  cursor: not-allowed;
+  pointer-events: none;
+}
+
 .options-extras {
   display: flex;
   flex-wrap: wrap;

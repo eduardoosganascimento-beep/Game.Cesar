@@ -134,6 +134,17 @@
             </p>
             <nav id="chapter-list" class="chapter-list" aria-label="Capítulos salvos"></nav>
             <p id="chapter-detail" class="chapter-detail" aria-live="polite"></p>
+            <button id="chapter-select-btn" class="menu-back" type="button" data-action="chapter-select" disabled>
+              Escolher capítulos (bloqueado)
+            </button>
+            <button class="menu-back" type="button" data-action="back">Voltar</button>
+          </div>
+
+          <div class="menu-screen menu-panel is-hidden" data-screen="chapter-select">
+            <p class="eyebrow">A jornada completa</p>
+            <h2 class="menu-title">Escolher capítulo</h2>
+            <p class="menu-lead">Todos os capítulos liberados. Revisite a parte que quiser.</p>
+            <nav id="chapter-select-list" class="chapter-list" aria-label="Todos os capítulos"></nav>
             <button class="menu-back" type="button" data-action="back">Voltar</button>
           </div>
 
@@ -164,6 +175,27 @@
               <button class="menu-back" type="button" data-action="how">Como jogar</button>
               <button class="menu-back" type="button" data-action="credits">Créditos</button>
               <button class="menu-back" type="button" data-action="tutorial">Tutorial</button>
+            </div>
+            <button class="menu-back" type="button" data-action="back">Voltar</button>
+          </div>
+
+          <div class="menu-screen menu-panel is-hidden" data-screen="new-difficulty">
+            <p class="eyebrow">Antes de começar</p>
+            <h2 class="menu-title">Dificuldade</h2>
+            <p class="menu-lead">Escolha o peso da floresta para esta nova jornada.</p>
+            <div class="difficulty-panel difficulty-panel-large" role="group" aria-label="Dificuldade">
+              <button class="difficulty-item difficulty-big" type="button" data-action="difficulty-start" data-difficulty="facil">
+                <i class="difficulty-num">I</i>
+                <span class="difficulty-copy"><b>Fácil</b><small>Inimigos mais lentos, golpes mais leves e menos resistência.</small></span>
+              </button>
+              <button class="difficulty-item difficulty-big is-selected" type="button" data-action="difficulty-start" data-difficulty="normal">
+                <i class="difficulty-num">II</i>
+                <span class="difficulty-copy"><b>Normal</b><small>O ritmo da lenda: velocidade, dano e vida no ponto certo.</small></span>
+              </button>
+              <button class="difficulty-item difficulty-big" type="button" data-action="difficulty-start" data-difficulty="dificil">
+                <i class="difficulty-num">III</i>
+                <span class="difficulty-copy"><b>Difícil</b><small>Inimigos rápidos, dano maior e mais vida. A mata não perdoa erros.</small></span>
+              </button>
             </div>
             <button class="menu-back" type="button" data-action="back">Voltar</button>
           </div>

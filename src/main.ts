@@ -2,7 +2,7 @@ import { Animator, type ClipName } from './animator'
 import { sfx } from './audio'
 import { drawBackground } from './background'
 import { CHAPTERS, TUTORIAL, shortTitle, type ChapterDef } from './chapters'
-import { DELTAS, DIFFICULTY_LABELS, readDifficulty, readProgress, writeDifficulty, writeProgress, type Difficulty } from './difficulty'
+import { DELTAS, DIFFICULTY_LABELS, readCompleted, readDifficulty, readProgress, writeCompleted, writeDifficulty, writeProgress, type Difficulty } from './difficulty'
 import { Effects } from './effects'
 import { Camera, Loop, TILE, VIEW_H, VIEW_W, overlaps } from './engine'
 import { Enemy } from './enemy'
@@ -1294,6 +1294,7 @@ class Game {
     if (this.won) return
     this.won = true
     writeProgress(this.nextChapterIndex)
+    if (!this.tutorialMode && this.chapterIndex >= CHAPTERS.length - 1) writeCompleted()
     this.player.vx = 0
     this.player.attack = 0
     this.player.hurt = 0
@@ -1831,6 +1832,17 @@ const screens = new Screens({
     game.start(0)
     screens.hideAll()
   },
+  onNewGameWithDifficulty: (difficulty: Difficulty) => {
+    sfx.unlock()
+    sfx.click()
+    writeProgress(0)
+    screens.setProgress(0)
+    game.setDifficulty(difficulty)
+    writeDifficulty(difficulty)
+    screens.setDifficultySelection(difficulty)
+    game.start(0)
+    screens.hideAll()
+  },
   onChapter: (index) => {
     sfx.unlock()
     sfx.click()
@@ -1875,16 +1887,17 @@ const screens = new Screens({
   },
 })
 
-screens.setChapters(
-  CHAPTERS.map((chapter) => ({
-    name: chapter.data.name,
-    shortTitle: shortTitle(chapter.data.name),
-    tag: chapter.tag,
-    subtitle: chapter.data.subtitle ?? '',
-    detail: chapter.detail,
-  })),
-)
+const chapterOptions = CHAPTERS.map((chapter) => ({
+  name: chapter.data.name,
+  shortTitle: shortTitle(chapter.data.name),
+  tag: chapter.tag,
+  subtitle: chapter.data.subtitle ?? '',
+  detail: chapter.detail,
+}))
+screens.setChapters(chapterOptions)
+screens.setChapterSelect(chapterOptions)
 screens.setProgress(readProgress())
+screens.setCompleted(readCompleted())
 
 // Reflete no menu a dificuldade salva da última partida.
 screens.setDifficultySelection(readDifficulty())

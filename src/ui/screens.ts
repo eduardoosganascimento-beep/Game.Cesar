@@ -29,6 +29,7 @@ import { DIFFICULTY_LABELS, type Difficulty } from '../difficulty'
 export type ScreenHandlers = {
   onContinue: () => void
   onNewGame: () => void
+  onNewGameWithDifficulty: (difficulty: Difficulty) => void
   onChapter: (index: number) => void
   onNext: () => void
   onResume: () => void
@@ -38,7 +39,7 @@ export type ScreenHandlers = {
   onDifficulty: (difficulty: Difficulty) => void
 }
 
-type ScreenName = 'main' | 'chapters' | 'options' | 'how' | 'credits'
+type ScreenName = 'main' | 'chapters' | 'chapter-select' | 'options' | 'new-difficulty' | 'how' | 'credits'
 type Visible = 'menu' | 'pause' | 'end' | 'none'
 
 export class Screens {
@@ -51,6 +52,8 @@ export class Screens {
   private readonly endStats = document.querySelector<HTMLElement>('#end-stats')
   private readonly endNext = document.querySelector<HTMLButtonElement>('#end-next')
   private readonly chapterList = document.querySelector<HTMLElement>('#chapter-list')
+  private readonly chapterSelectList = document.querySelector<HTMLElement>('#chapter-select-list')
+  private readonly chapterSelectBtn = document.querySelector<HTMLButtonElement>('#chapter-select-btn')
   private readonly difficultySummary = document.querySelector<HTMLElement>('#difficulty-summary')
   private readonly chapterDetail = document.querySelector<HTMLElement>('#chapter-detail')
 
@@ -116,6 +119,43 @@ export class Screens {
   setProgress(index: number): void {
     this.progress = Math.max(0, Math.min(4, index))
     this.setChapters(this.chapters)
+  }
+
+  setCompleted(completed: boolean): void {
+    if (!this.chapterSelectBtn) return
+    this.chapterSelectBtn.disabled = !completed
+    this.chapterSelectBtn.textContent = completed
+      ? 'Escolher capítulos'
+      : 'Escolher capítulos (bloqueado)'
+  }
+
+  setChapterSelect(chapters: ChapterOption[]): void {
+    const list = this.chapterSelectList
+    if (!list) return
+    list.textContent = ''
+    chapters.forEach((chapter, index) => {
+      const button = document.createElement('button')
+      button.className = 'chapter-item'
+      button.type = 'button'
+      button.dataset.action = 'chapter'
+      button.dataset.chapter = String(index)
+      const number = document.createElement('span')
+      number.className = 'chapter-number'
+      number.textContent = String(index + 1).padStart(2, '0')
+      const copy = document.createElement('span')
+      copy.className = 'chapter-copy'
+      const title = document.createElement('b')
+      title.textContent = chapter.shortTitle
+      const subtitle = document.createElement('small')
+      subtitle.textContent = chapter.detail
+      copy.append(title, subtitle)
+      const tag = document.createElement('span')
+      tag.className = 'chapter-tag'
+      tag.textContent = chapter.tag
+      button.append(number, copy, tag)
+      list.append(button)
+    })
+    this.bindButtons()
   }
 
   setDifficultySelection(difficulty: Difficulty): void {
@@ -287,9 +327,24 @@ export class Screens {
       case 'continue':
         this.handlers.onContinue()
         break
-      case 'new-game':
-        this.handlers.onNewGame()
+      case 'new-game': {
+        const current = document.querySelector<HTMLButtonElement>('.difficulty-item.is-selected')?.dataset.difficulty
+        this.setScreen('new-difficulty')
+        const active = this.activeButtons()
+        const index = active.findIndex((item) => item.dataset.difficulty === current)
+        if (index >= 0) this.select(index)
         break
+      }
+      case 'chapter-select':
+        if (!this.chapterSelectBtn?.disabled) this.setScreen('chapter-select')
+        break
+      case 'difficulty-start': {
+        const difficulty = button.dataset.difficulty
+        if (difficulty === 'facil' || difficulty === 'normal' || difficulty === 'dificil') {
+          this.handlers.onNewGameWithDifficulty(difficulty)
+        }
+        break
+      }
       case 'chapter': {
         if (button.classList.contains('is-locked')) break
         const index = Number(button.dataset.chapter ?? 0)

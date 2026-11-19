@@ -67,7 +67,7 @@ export const CHAPTERS: ChapterDef[] = [
       title: 'O rio escuro',
       lines: ['A correnteza é forte, mas Sandman atravessa.', 'Do outro lado, fumaça sobe entre as árvores.', 'Os invasores acamparam ali.', 'O rastro do seu povo termina nesse caminho.'],
     },
-    bg: 'waterfall',
+    bg: 'misty-forest',
     detail: 'Correnteza, névoa e soldados de arcabuz: o rio não perdoa quem hesita.',
   },
   {

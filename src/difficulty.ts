@@ -24,6 +24,7 @@ export const DELTAS: {
 
 const STORAGE_KEY = 'sandman:difficulty'
 const PROGRESS_KEY = 'sandman:progress'
+const COMPLETED_KEY = 'sandman:completed'
 
 function isDifficulty(value: unknown): value is Difficulty {
   return value === 'facil' || value === 'normal' || value === 'dificil'
@@ -61,6 +62,23 @@ export function readProgress(): number {
 export function writeProgress(index: number): void {
   try {
     window.localStorage.setItem(PROGRESS_KEY, String(Math.max(0, Math.min(4, Math.floor(index)))))
+  } catch {
+    // Ignora falhas de persistência.
+  }
+}
+
+// Verdadeiro depois que o capítulo final é concluído uma vez.
+export function readCompleted(): boolean {
+  try {
+    return window.localStorage.getItem(COMPLETED_KEY) === '1'
+  } catch {
+    return false
+  }
+}
+
+export function writeCompleted(): void {
+  try {
+    window.localStorage.setItem(COMPLETED_KEY, '1')
   } catch {
     // Ignora falhas de persistência.
   }
