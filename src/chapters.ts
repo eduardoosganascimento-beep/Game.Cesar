@@ -54,7 +54,7 @@ export const CHAPTERS: ChapterDef[] = [
       lines: ['Sandman volta: a aldeia foi tomada.', 'Seu povo foi levado rio abaixo.', '— Vou trazê-los de volta —, jura o guardião.'],
     },
     bg: 'village-fire',
-    detail: 'Reacenda os marcos de fogueira e atravesse a aldeia tomada antes que o rastro esfrie.',
+    detail: 'Chão aberto e plataformas de madeira: atravesse a aldeia em chamas e não deixe os mortos te alcançarem.',
   },
   {
     data: cap2 as unknown as LevelData,
