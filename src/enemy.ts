@@ -49,11 +49,29 @@ export type BossConfig = {
   chargeRange: number
   attackCooldown: number
   chargeCooldown: number
+  // Leitura da lança do jogador: chance de levantar a guarda quando o
+  // projétil entra na janela de reação (1 = sempre lê) e tempo até poder
+  // repetir a defesa. O cooldown é o que abre espaço para o arremesso.
+  parryChance: number
+  parryCooldown: number
+  // Chance de emendar um segundo golpe quando o primeiro termina com o
+  // jogador ainda ao alcance.
+  comboChance: number
   scale: number
   aura: string
   rim: string
   nameColor: string
 }
+
+// Janela de leitura da lança: o chefe ergue a guarda quando o projétil está
+// nesta faixa de distância. Perto demais não dá tempo de reagir (o arremesso
+// colado vence a defesa); longe demais a guarda terminaria antes do impacto.
+export const BOSS_PARRY_MIN_RANGE = 26
+export const BOSS_PARRY_RANGE = 92
+// Tempo em que a guarda realmente desvia a lança e tempo que ele segura a
+// pose depois de defender, antes de contra-atacar.
+const BOSS_PARRY_ACTIVE = 0.26
+const BOSS_PARRY_RECOVER = 0.2
 
 const STATS: Record<EnemyKind, Stats> = {
   capanga: {
@@ -205,6 +223,7 @@ export class Enemy {
   counterWindow = 0
   justCharged = false
   justChargeHit = false
+  justParriedSpear = false
 
   private bossConfig: BossConfig | null = null
   private bossAction: BossAction | null = null
@@ -216,6 +235,15 @@ export class Enemy {
   private bossChargeCanHit = false
   private bossChargeCooldown = 0
   private bossJumpCooldown = 0
+  // Guarda erguida para a lança: o tempo total da pose e a janela curta em
+  // que o projétil é de fato desviado.
+  private bossGuardTimer = 0
+  private bossParryWindow = 0
+  private bossParryCooldown = 0
+  // Combo: o segundo golpe é decidido quando o primeiro termina, não no
+  // início, para não emendar um golpe no vazio se o jogador recuar.
+  private bossComboQueued = false
+  private bossChain = false
 
   stun(seconds: number): void {
     this.stunTimer = Math.max(this.stunTimer, seconds)
@@ -229,8 +257,22 @@ export class Enemy {
 
   // O índio levanta o machado para defender. Se um golpe chegar durante a
   // janela, ele desvia (sem dano) e abre uma janela de contra-ataque.
-  startGuard(): void {
-    if (this.kind !== 'indio' || !this.alive || this.stunTimer > 0 || this.guardTimer > 0) return
+  // Chefes usam a mesma defesa, mas seguram a pose por mais tempo.
+  startGuard(dir?: number): void {
+    if (!this.alive || this.stunTimer > 0 || this.guardTimer > 0) return
+    if (this.isBoss && this.bossConfig) {
+      if (this.bossAction || this.bossGuardTimer > 0 || this.counterWindow > 0) return
+      if (dir !== undefined) this.facing = dir >= 0 ? 1 : -1
+      this.guardTimer = 0.34
+      this.counterWindow = 0.62
+      this.vx = 0
+      this.attackKind = null
+      this.bossComboQueued = false
+      this.animator.play('guard')
+      return
+    }
+    if (this.kind !== 'indio') return
+    if (dir !== undefined) this.facing = dir >= 0 ? 1 : -1
     this.guardTimer = 0.42
     this.counterWindow = 0.3
     this.vx = 0
@@ -239,14 +281,71 @@ export class Enemy {
   }
 
   get isGuarding(): boolean {
-    return this.kind === 'indio' && this.alive && this.guardTimer > 0
+    if (!this.alive) return false
+    if (this.isBoss) return this.guardTimer > 0 || this.bossGuardTimer > 0
+    return this.kind === 'indio' && this.guardTimer > 0
+  }
+
+  // A janela em que a lança do jogador é desviada. Fica separada da guarda
+  // corpo a corpo para o chefe não anular tudo só por estar na pose.
+  get isSpearParrying(): boolean {
+    return this.isBoss && this.alive && this.bossParryWindow > 0
   }
 
   // Retorna true se o golpe foi desviado.
   blockedByGuard(): boolean {
     if (!this.isGuarding) return false
+    if (this.isBoss) {
+      // O bloqueio corpo a corpo interrompe a leitura da lança, mas deixa o
+      // chefe na guarda por um instante antes do contra-ataque.
+      this.bossParryWindow = 0
+      this.bossGuardTimer = 0
+      this.guardTimer = 0.18
+      this.counterWindow = 0.6
+      this.bossComboQueued = false
+      this.animator.play('guard')
+      return true
+    }
     this.guardTimer = 0
     this.counterWindow = 0.55
+    this.animator.play('guard')
+    return true
+  }
+
+  // Chamado quando a lança do jogador se aproxima. O chefe ergue a guarda
+  // no tempo da reação; se o projétil chegar dentro da janela, desvia.
+  tryStartSpearParry(dir: number): boolean {
+    const cfg = this.bossConfig
+    if (!cfg || !this.alive || this.stunTimer > 0 || this.hurt > 0) return false
+    if (this.bossAction || this.bossGuardTimer > 0 || this.guardTimer > 0) return false
+    if (this.counterWindow > 0 || this.bossParryCooldown > 0) return false
+    if (Math.random() > cfg.parryChance) {
+      // Falhou a leitura: não tenta de novo no mesmo arremesso.
+      this.bossParryCooldown = 0.45
+      return false
+    }
+
+    this.cancelBossAction()
+    this.facing = dir >= 0 ? 1 : -1
+    this.vx = 0
+    this.bossGuardTimer = BOSS_PARRY_ACTIVE + BOSS_PARRY_RECOVER
+    this.bossParryWindow = BOSS_PARRY_ACTIVE
+    this.animator.setTimeScale(1)
+    this.animator.play('guard')
+    return true
+  }
+
+  // Consome a lança desviada. Só vale dentro da janela ativa; depois disso a
+  // guarda continua erguida, mas a lança já passou do ponto de defesa.
+  parrySpear(): boolean {
+    const cfg = this.bossConfig
+    if (!cfg || !this.isSpearParrying) return false
+    this.justParriedSpear = true
+    this.bossParryWindow = 0
+    this.bossGuardTimer = BOSS_PARRY_RECOVER
+    this.counterWindow = 0.62
+    this.bossParryCooldown = cfg.parryCooldown
+    this.vx = 0
     this.animator.play('guard')
     return true
   }
@@ -346,6 +445,11 @@ export class Enemy {
     this.bossChargeCanHit = false
     this.bossChargeCooldown = 0
     this.bossJumpCooldown = 0
+    this.bossGuardTimer = 0
+    this.bossParryWindow = 0
+    this.bossParryCooldown = 0
+    this.bossComboQueued = false
+    this.bossChain = false
     this.attackCooldown = 0.5
   }
 
@@ -548,6 +652,7 @@ export class Enemy {
     this.counterWindow = 0
     this.justCharged = false
     this.justChargeHit = false
+    this.justParriedSpear = false
     this.bossAction = null
     this.bossActionTime = 0
     this.bossActionDuration = 0
@@ -556,6 +661,11 @@ export class Enemy {
     this.bossChargeCanHit = false
     this.bossChargeCooldown = 0
     this.bossJumpCooldown = 0
+    this.bossGuardTimer = 0
+    this.bossParryWindow = 0
+    this.bossParryCooldown = 0
+    this.bossComboQueued = false
+    this.bossChain = false
     this.animator.reset()
   }
 
@@ -564,6 +674,7 @@ export class Enemy {
     this.justStruck = false
     this.justCharged = false
     this.justChargeHit = false
+    this.justParriedSpear = false
     this.hurt = Math.max(0, this.hurt - dt)
     this.invuln = Math.max(0, this.invuln - dt)
     this.jumpCooldown = Math.max(0, this.jumpCooldown - dt)
@@ -572,6 +683,9 @@ export class Enemy {
     this.counterWindow = Math.max(0, this.counterWindow - dt)
     this.bossChargeCooldown = Math.max(0, this.bossChargeCooldown - dt)
     this.bossJumpCooldown = Math.max(0, this.bossJumpCooldown - dt)
+    this.bossGuardTimer = Math.max(0, this.bossGuardTimer - dt)
+    this.bossParryWindow = Math.max(0, this.bossParryWindow - dt)
+    this.bossParryCooldown = Math.max(0, this.bossParryCooldown - dt)
 
     if (!this.alive) {
       this.deathTimer = Math.max(0, this.deathTimer - dt)
@@ -774,8 +888,32 @@ export class Enemy {
       return
     }
 
+    // Guarda erguida (lança ou golpe corpo a corpo): segura a pose. A janela
+    // de defesa da lança é curta; a pose em si dura um pouco mais.
+    if (this.guardTimer > 0 || this.bossGuardTimer > 0) {
+      this.vx = 0
+      return
+    }
+
+    // Contra-ataque depois de defender: se o jogador continuou perto, golpe;
+    // se recuou, lança. É a mesma punição que o índio dá ao bloquear.
+    if (this.counterWindow > 0) {
+      this.counterWindow = 0
+      if (!player) {
+        this.patrol()
+        return
+      }
+      const counterDx = player.x + player.w / 2 - (this.x + this.w / 2)
+      if (Math.abs(counterDx) <= cfg.meleeRange + 26) {
+        this.startBossAction('slash', counterDx, true)
+      } else if (Math.abs(counterDx) <= cfg.throwRange) {
+        this.startBossAction('throw', counterDx)
+      }
+      return
+    }
+
     if (this.bossAction) {
-      this.updateBossAction(dt)
+      this.updateBossAction(dt, player)
       return
     }
 
@@ -871,7 +1009,7 @@ export class Enemy {
     }
   }
 
-  private startBossAction(kind: BossAction, dx: number): void {
+  private startBossAction(kind: BossAction, dx: number, chain = false): void {
     this.bossAction = kind
     this.bossActionTime = 0
     this.facing = dx >= 0 ? 1 : -1
@@ -880,6 +1018,12 @@ export class Enemy {
     this.struck = false
     this.bossChargeStarted = false
     this.bossChargeCanHit = false
+    this.bossChain = chain
+    this.bossComboQueued = false
+    this.guardTimer = 0
+    this.bossGuardTimer = 0
+    this.bossParryWindow = 0
+    this.counterWindow = 0
     this.animator.setTimeScale(1)
 
     if (kind === 'slash') {
@@ -887,13 +1031,20 @@ export class Enemy {
       this.bossHitAt = this.bossActionDuration * 0.55
       this.attackKind = 'slash'
       this.attackElapsed = 0
+      // O segundo golpe do combo é sempre emendado; o primeiro só emenda se
+      // o jogador continuar ao alcance quando ele terminar.
+      if (!chain && this.bossConfig) {
+        this.bossComboQueued = Math.random() < this.bossConfig.comboChance
+      }
       this.animator.play('slash')
       return
     }
 
     if (kind === 'throw') {
       this.bossActionDuration = this.animator.duration('shoot')
-      this.bossHitAt = this.bossActionDuration * 0.58
+      // O quadro 4 do arremesso é o primeiro sem a lança na mão. Ele começa
+      // em 3/4 do clipe; soltar antes fazia o projétil nascer "na mão".
+      this.bossHitAt = this.bossActionDuration * 0.75
       this.attackKind = 'shoot'
       this.attackElapsed = 0
       this.animator.play('shoot')
@@ -910,19 +1061,33 @@ export class Enemy {
     this.animator.setTimeScale(0.7)
   }
 
-  private updateBossAction(dt: number): void {
+  private updateBossAction(dt: number, player?: Rect): void {
     const action = this.bossAction
     if (!action) return
     this.bossActionTime += dt
 
     if (action === 'slash') {
       this.attackElapsed = this.bossActionTime
-      this.vx = this.bossActionTime < 0.12 ? this.facing * 95 : 0
+      const lunge = this.bossChain ? 132 : 95
+      this.vx = this.bossActionTime < 0.12 ? this.facing * lunge : 0
       if (!this.struck && this.bossActionTime >= this.bossHitAt) {
         this.struck = true
         this.justStruck = true
       }
-      if (this.bossActionTime >= this.bossActionDuration) this.endBossAction(false)
+      if (this.bossActionTime >= this.bossActionDuration) {
+        // Emenda o segundo golpe só se o jogador ainda estiver na frente e
+        // ao alcance; assim o combo não vira um golpe no vazio.
+        if (this.bossComboQueued && player) {
+          const cfg = this.bossConfig
+          const dx = player.x + player.w / 2 - (this.x + this.w / 2)
+          const dy = Math.abs(player.y + player.h / 2 - (this.y + this.h / 2))
+          if (Math.abs(dx) <= (cfg?.meleeRange ?? 46) + 30 && dy < 56) {
+            this.startBossAction('slash', dx, true)
+            return
+          }
+        }
+        this.endBossAction(false)
+      }
       return
     }
 
@@ -971,6 +1136,8 @@ export class Enemy {
     this.struck = false
     this.bossChargeCanHit = false
     this.bossChargeStarted = false
+    this.bossComboQueued = false
+    this.bossChain = false
     this.vx = 0
     this.animator.setTimeScale(1)
     if (!cfg) return
@@ -989,6 +1156,12 @@ export class Enemy {
     this.attackElapsed = 0
     this.fired = false
     this.struck = false
+    this.bossComboQueued = false
+    this.bossChain = false
+    this.bossGuardTimer = 0
+    this.bossParryWindow = 0
+    this.guardTimer = 0
+    this.counterWindow = 0
     this.vx = 0
     this.animator.setTimeScale(1)
   }
@@ -1018,9 +1191,16 @@ export class Enemy {
   // ATUALIZAÇÃO DE ANIMAÇÃO
   // ============================================================
   private updateAnimation(): void {
-    // Se estiver attacking, hurt ou atordoado, não muda de estado (fica no
+    // Se estiver atacando, ferido ou atordoado, não muda de estado (fica no
     // clip atual). O atordoamento não pode sumir no quadro seguinte.
     if (this.attackKind || this.hurt > 0 || this.stunTimer > 0) return
+
+    // A guarda precisa segurar o quadro do machado erguido: sem isso o
+    // animador voltava para idle no mesmo quadro e a defesa não aparecia.
+    if (this.guardTimer > 0 || this.bossGuardTimer > 0) {
+      this.animator.play('guard')
+      return
+    }
 
     // Estado baseado na velocidade horizontal.
     // |vx| > 4 → andando; otherwise → quieto.

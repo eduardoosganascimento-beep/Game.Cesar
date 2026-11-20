@@ -6,7 +6,7 @@ import { CHAPTERS, TUTORIAL, shortTitle, type ChapterDef } from './chapters'
 import { DELTAS, DIFFICULTY_LABELS, readCompleted, readDifficulty, readProgress, writeCompleted, writeDifficulty, writeProgress, type Difficulty } from './difficulty'
 import { Effects } from './effects'
 import { Camera, Loop, TILE, VIEW_H, VIEW_W, overlaps } from './engine'
-import { Enemy } from './enemy'
+import { BOSS_PARRY_MIN_RANGE, BOSS_PARRY_RANGE, Enemy } from './enemy'
 import { Input } from './input'
 import { TileMap, Tile, type EnemyKind, type LevelData } from './level'
 import { MAX_HP, Player } from './player'
@@ -547,11 +547,19 @@ class Game {
       enemy.update(safeDt, this.map, player.hurtbox)
       if (!enemy.alive) continue
 
-      // O índio levanta o machado quando o Sand ataca por perto (defesa
-      // reativa, sem som nem luz piscando).
-      if (enemy.kind === 'indio' && enemy.guardTimer <= 0 && enemy.counterWindow <= 0) {
-        const dx = Math.abs(player.x + player.w / 2 - (enemy.x + enemy.w / 2))
-        if (player.attack > 0 && dx < 34) enemy.startGuard()
+      // Índio e chefes levantam o machado quando o Sand ataca por perto
+      // (defesa reativa, sem som nem luz piscando). O chefe usa a mesma
+      // leitura do índio e responde com um contra-ataque logo em seguida.
+      if (
+        (enemy.kind === 'indio' || enemy.isBoss) &&
+        !enemy.isGuarding &&
+        enemy.guardTimer <= 0 &&
+        enemy.counterWindow <= 0
+      ) {
+        const dir = player.x + player.w / 2 - (enemy.x + enemy.w / 2)
+        const dist = Math.abs(dir)
+        const reach = enemy.isBoss ? 42 : 34
+        if (player.attack > 0 && dist < reach) enemy.startGuard(dir)
       }
 
       if (enemy.justShot) this.spawnShot(enemy)
@@ -632,9 +640,10 @@ class Game {
         continue
       }
 
-      // Índio: defesa com machado. Quando o jogador ataca e o índio está em
+      // Defesa com machado: quando o jogador ataca e o inimigo está em
       // guarda, o golpe é desviado (sem dano) e ele contra-ataca em seguida.
-      if (enemy.kind === 'indio' && enemy.isGuarding && enemy.invuln <= 0) {
+      // Chefes usam a mesma reação do índio com uma punição mais forte.
+      if (enemy.isGuarding && enemy.invuln <= 0) {
         if (player.attackActive && overlaps(player.attackBox, enemy.rect)) {
           enemy.blockedByGuard()
           enemy.invuln = 0.25
@@ -1327,7 +1336,38 @@ class Game {
         continue
       }
 
+      // O chefe lê a lança quando ela entra na janela de reação e ergue a
+      // guarda. Se o arremesso for colado ou ele estiver ocupado/cooldown,
+      // não há leitura e a lança segue até o alvo.
+      let guardRead = false
+      for (const enemy of this.enemies) {
+        if (!enemy.alive || !enemy.isBoss || guardRead) continue
+        const cx = enemy.x + enemy.w / 2
+        const cy = enemy.y + enemy.h * 0.42
+        const dx = cx - spear.x
+        if (dx * spear.vx <= 0) continue
+        const dist = Math.abs(dx)
+        if (dist < BOSS_PARRY_MIN_RANGE || dist > BOSS_PARRY_RANGE) continue
+        if (Math.abs(cy - spear.y) > 30) continue
+        if (enemy.tryStartSpearParry(spear.vx)) {
+          guardRead = true
+          this.effects.ring(cx + enemy.facing * 8, cy, '#ffe9a8')
+          this.effects.burst(cx + enemy.facing * 8, cy, 'spark', 5, 22)
+        }
+      }
+
       if (hitEnemy) {
+        if (hitEnemy.parrySpear()) {
+          const cx = hitEnemy.x + hitEnemy.w / 2
+          const cy = hitEnemy.y + hitEnemy.h * 0.42
+          sfx.guard()
+          this.effects.addShake(2.4)
+          this.effects.ring(cx, cy, '#ffe9a8')
+          this.effects.burst(cx, cy, 'spark', 18, 72)
+          this.effects.text(cx, cy - 14, 'PARRY!', '#ffe9a8')
+          this.spears.splice(i, 1)
+          continue
+        }
         // Chefes aguentam mais: a lança tira 1, os capangas caem com 2.
         this.damageEnemy(hitEnemy, hitEnemy.isBoss ? 1 : 2, spear.x, 'spear')
         this.spears.splice(i, 1)
