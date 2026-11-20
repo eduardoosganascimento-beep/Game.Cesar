@@ -142,17 +142,17 @@ export const ZOMBIE_CLIPS: Record<EnemyClipName, Clip> = {
 // ============================================================
 // CLIPS DOS CHEFES
 // ============================================================
-// Os chefes usam os mesmos quadros, mas com ritmo próprio: corrida mais
-// rápida e golpes curtos, no compasso do jogador. Isso evita a sensação de
-// "congelou no último quadro" que acontecia ao herdar os tempos do colono.
-export const BOSS_COLONIST_CLIPS: Record<EnemyClipName, Clip> = {
-  idle: { ...COLONIST_CLIPS.idle, fps: 3 },
-  walk: { ...COLONIST_CLIPS.walk, fps: 12 },
-  shoot: { ...COLONIST_CLIPS.shoot, fps: 12 },
-  slash: { ...COLONIST_CLIPS.slash, fps: 15 },
-  hurt: { ...COLONIST_CLIPS.hurt, fps: 8 },
-  guard: { ...COLONIST_CLIPS.guard, fps: 1 },
-  death: { ...COLONIST_CLIPS.death, fps: 8 },
+// Os chefes da família usam os mesmos quadros e o mesmo ritmo do índio:
+// corrida, arremesso de lança e golpe do próprio Sandman. Isso evita a
+// sensação de "congelou no último quadro" dos antigos tempos de colono.
+export const BOSS_FAMILY_CLIPS: Record<EnemyClipName, Clip> = {
+  idle: { ...INDIO_CLIPS.idle, fps: 3 },
+  walk: { ...INDIO_CLIPS.walk, fps: 14 },
+  shoot: { ...INDIO_CLIPS.shoot, fps: 14 },
+  slash: { ...INDIO_CLIPS.slash, fps: 20 },
+  hurt: { ...INDIO_CLIPS.hurt, fps: 12 },
+  guard: { ...INDIO_CLIPS.guard, fps: 1 },
+  death: { ...INDIO_CLIPS.death, fps: 9 },
 }
 
 export const BOSS_GUARDIAO_CLIPS: Record<EnemyClipName, Clip> = {

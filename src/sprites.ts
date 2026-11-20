@@ -24,8 +24,8 @@ export type Sprite = {
   topY?: number
 }
 
-// Cada chefe usa a mesma base de animação, mas com paleta, coroa e aura
-// próprias. São cinco presenças diferentes sem precisar de novas folhas.
+// Cada chefe usa o corpo indígena do próprio Sandman como base, com paleta,
+// pintura, coroa e aura próprias. É a família do protagonista, não o invasor.
 export type BossSkin = 'sy' | 'tuba' | 'kypyy' | 'kybykuera' | 'guardiao'
 
 // Altura visível média de cada folha (em px de arte). Todas as pessoas do
@@ -62,8 +62,8 @@ const indioCache = new Map<string, Sprite>()
 const wolfCache = new Map<string, Sprite>()
 const zombieCache = new Map<string, Sprite>()
 
-// Chefes derivados da folha do capitão (capítulos 1–5).
-const COLONIST_BOSS_SKINS: readonly Exclude<BossSkin, 'guardiao'>[] = [
+// Chefes da família: todos nascem da folha de Sand no loadAtlas.
+const FAMILY_BOSS_SKINS: readonly Exclude<BossSkin, 'guardiao'>[] = [
   'sy',
   'tuba',
   'kypyy',
@@ -75,7 +75,8 @@ const bossCaches: Record<Exclude<BossSkin, 'guardiao'>, Map<string, Sprite>> = {
   kypyy: new Map<string, Sprite>(),
   kybykuera: new Map<string, Sprite>(),
 }
-// O chefão final nasce da folha do Sand, com coroa e paleta de brasa.
+// A família inteira nasce da folha do Sand. As paletas e os adornos mudam
+// por capítulo; o chefão final recebe a coroa de brasa e a paleta preto/ouro.
 const guardiaoCache = new Map<string, Sprite>()
 let spearSprite: Sprite | undefined
 
@@ -353,28 +354,28 @@ const WOLF_RAMPS: RampSet = {
 // ============================================================
 // PALETAS DOS CHEFES
 // ============================================================
-// Os nomes vêm da família de Sandman (tupi antigo), e cada chefe veste uma
-// variação da farda do invasor como uma pele espiritual. As paletas mantêm
-// contraste alto para o chefe se destacar na mata e no templo à noite.
+// A família de Sandman usa tons de pele humanos e pintura corporal de urucum,
+// jenipapo e penas. Cada capítulo tem uma cor ritual própria; o chefão final
+// mantém o preto e ouro da brasa.
 const BOSS_RAMPS: Record<BossSkin, RampSet> = {
-  // Sy, a mãe: osso, urucum e vermelho profundo.
+  // Sy, a mãe: pele quente, urucum e osso.
   sy: {
     skin: [
-      [0, '#12090a'],
-      [0.16, '#32151a'],
-      [0.32, '#672a2a'],
-      [0.48, '#9b4a3f'],
-      [0.64, '#c8755c'],
-      [0.8, '#e3a184'],
-      [1, '#f7d3b0'],
+      [0, '#170d09'],
+      [0.16, '#382016'],
+      [0.32, '#643a24'],
+      [0.48, '#925838'],
+      [0.64, '#bd7a50'],
+      [0.8, '#dba274'],
+      [1, '#f2cda2'],
     ],
     hair: [
-      [0, '#08060a'],
-      [0.24, '#140f18'],
-      [0.48, '#221a28'],
-      [0.72, '#37283a'],
-      [0.88, '#503b4a'],
-      [1, '#6d5260'],
+      [0, '#080507'],
+      [0.24, '#171018'],
+      [0.48, '#261a24'],
+      [0.72, '#3a2838'],
+      [0.88, '#543e50'],
+      [1, '#705468'],
     ],
     accent: [
       [0, '#1c0506'],
@@ -386,24 +387,24 @@ const BOSS_RAMPS: Record<BossSkin, RampSet> = {
       [1, '#f49a5a'],
     ],
   },
-  // Tuba, o pai: verde-mata, bronze e osso.
+  // Tuba, o pai: bronze profundo, jenipapo verde e ouro.
   tuba: {
     skin: [
-      [0, '#0b100a'],
-      [0.16, '#22301a'],
-      [0.32, '#425a2a'],
-      [0.48, '#6b7d3d'],
-      [0.64, '#95a45a'],
-      [0.8, '#bcc47a'],
-      [1, '#e2d9a2'],
+      [0, '#150d08'],
+      [0.16, '#352014'],
+      [0.32, '#5d3820'],
+      [0.48, '#88552f'],
+      [0.64, '#b27344'],
+      [0.8, '#d29a67'],
+      [1, '#edc294'],
     ],
     hair: [
-      [0, '#050807'],
-      [0.24, '#0d1512'],
-      [0.48, '#18241d'],
-      [0.72, '#25352a'],
-      [0.88, '#354a38'],
-      [1, '#4c634a'],
+      [0, '#060705'],
+      [0.24, '#11150f'],
+      [0.48, '#1d2419'],
+      [0.72, '#2c3523'],
+      [0.88, '#404c30'],
+      [1, '#5a6642'],
     ],
     accent: [
       [0, '#1a1206'],
@@ -415,24 +416,24 @@ const BOSS_RAMPS: Record<BossSkin, RampSet> = {
       [1, '#f6d96a'],
     ],
   },
-  // Kypy'y, a irmã: brasa, âmbar e vermelho-vivo.
+  // Kypy'y, a irmã: pele clara, urucum vivo e âmbar.
   kypyy: {
     skin: [
-      [0, '#140a05'],
-      [0.16, '#3a1a0c'],
-      [0.32, '#6f3518'],
-      [0.48, '#a45a28'],
-      [0.64, '#cf8040'],
-      [0.8, '#e8a865'],
-      [1, '#f9d49a'],
+      [0, '#190f09'],
+      [0.16, '#402314'],
+      [0.32, '#6f3e22'],
+      [0.48, '#a05f35'],
+      [0.64, '#c98350'],
+      [0.8, '#e4a978'],
+      [1, '#f7d2a4'],
     ],
     hair: [
-      [0, '#0a0705'],
-      [0.24, '#1a100a'],
-      [0.48, '#2a1a10'],
-      [0.72, '#402818'],
-      [0.88, '#5a3a22'],
-      [1, '#7a5230'],
+      [0, '#0a0605'],
+      [0.24, '#19100b'],
+      [0.48, '#2a1a11'],
+      [0.72, '#3f2819'],
+      [0.88, '#583a24'],
+      [1, '#745032'],
     ],
     accent: [
       [0, '#1e0803'],
@@ -444,16 +445,16 @@ const BOSS_RAMPS: Record<BossSkin, RampSet> = {
       [1, '#ffd166'],
     ],
   },
-  // Kybykuera, os irmãos: noite, gelo e azul-índigo.
+  // Kybykuera, os irmãos: bronze frio, jenipapo azul e penas de garça.
   kybykuera: {
     skin: [
-      [0, '#090a12'],
-      [0.16, '#1a2032'],
-      [0.32, '#343f5a'],
-      [0.48, '#55627d'],
-      [0.64, '#7c8a9e'],
-      [0.8, '#a8b4c4'],
-      [1, '#d6e2e8'],
+      [0, '#120d0b'],
+      [0.16, '#2f211b'],
+      [0.32, '#553b2c'],
+      [0.48, '#7e5a42'],
+      [0.64, '#a47a5a'],
+      [0.8, '#c39a76'],
+      [1, '#e0c09a'],
     ],
     hair: [
       [0, '#04060a'],
@@ -473,16 +474,16 @@ const BOSS_RAMPS: Record<BossSkin, RampSet> = {
       [1, '#b8d4ff'],
     ],
   },
-  // O chefão: negro, ouro e brasa.
+  // O chefão: bronze escuro, negro e ouro incandescente.
   guardiao: {
     skin: [
-      [0, '#100a05'],
-      [0.16, '#2e1c0c'],
-      [0.32, '#5a3a18'],
-      [0.48, '#8a5e28'],
-      [0.64, '#b8863c'],
-      [0.8, '#d8ad5a'],
-      [1, '#f2d89a'],
+      [0, '#0f0a06'],
+      [0.16, '#2b1c10'],
+      [0.32, '#4f321b'],
+      [0.48, '#754a26'],
+      [0.64, '#9c6634'],
+      [0.8, '#bf8a4e'],
+      [1, '#e2b878'],
     ],
     hair: [
       [0, '#050505'],
@@ -637,6 +638,9 @@ const HEAD_ANCHORS: Record<string, readonly [number, number]> = {
   'throw-2': [25.5, 8.5],
   'throw-3': [24, 9],
   'throw-4': [26, 7.5],
+  'hurt-1': [22, 3],
+  'hurt-2': [21, 5],
+  'hurt-3': [22, 4],
   'hurt-4': [17.5, 9.5],
 }
 
@@ -662,10 +666,341 @@ function headAnchor(file: string): readonly [number, number] {
   }
 }
 
+// ============================================================
+// FERIMENTOS DOS CHEFES
+// ============================================================
+// A família foi atacada: todos chegam mutilados. O braço esquerdo (o braço
+// de trás, já que o Sand olha para a direita) é removido do sprite e vira um
+// coto enfaixado; cada um ainda carrega um ferimento próprio no rosto/peito.
+type WoundConfig = {
+  eye: 'socket' | 'scar' | 'none'
+  gash: boolean
+  bandage: string
+  bandageDark: string
+  blood: string
+  bloodDark: string
+  burnt?: boolean
+}
+
+const BOSS_WOUNDS: Record<BossSkin, WoundConfig> = {
+  sy: {
+    eye: 'scar',
+    gash: true,
+    bandage: '#e8d8b8',
+    bandageDark: '#8a6a48',
+    blood: '#a32418',
+    bloodDark: '#4a0a08',
+  },
+  tuba: {
+    eye: 'socket',
+    gash: true,
+    bandage: '#d8c08a',
+    bandageDark: '#7a5a30',
+    blood: '#8f1f12',
+    bloodDark: '#3d0806',
+  },
+  kypyy: {
+    eye: 'scar',
+    gash: true,
+    bandage: '#f0c78a',
+    bandageDark: '#8a5a2e',
+    blood: '#b02a12',
+    bloodDark: '#4f0a06',
+  },
+  kybykuera: {
+    eye: 'socket',
+    gash: true,
+    bandage: '#c8d8e8',
+    bandageDark: '#5a6a7a',
+    blood: '#8a1a1e',
+    bloodDark: '#3a080c',
+  },
+  guardiao: {
+    eye: 'socket',
+    gash: true,
+    bandage: '#d8b46a',
+    bandageDark: '#6a4a22',
+    blood: '#a33a14',
+    bloodDark: '#3f0e04',
+    burnt: true,
+  },
+}
+
+type Stump = { x: number; y: number; horizontal: boolean }
+
+// Remove o braço de trás e devolve a ponta do coto para o curativo.
+// Com o braço pendurado (parado), raspa a borda do ombro até a mão; com o
+// braço estendido (correr, arremessar, golpear), corta a mão e o antebraço
+// na ponta. A lança fica sempre à direita, então o lado esquerdo é seguro.
+function carveMissingArm(canvas: HTMLCanvasElement, file: string): Stump | null {
+  const context = canvas.getContext('2d')
+  if (!context) return null
+  const name = file.replace('.png', '')
+  const anim = name.split('-')[0]
+  if (anim === 'death') return null
+
+  const w = canvas.width
+  const h = canvas.height
+  const [hx, hy] = headAnchor(file)
+  const scanTop = Math.max(1, Math.round(hy + 2))
+  const scanBottom = Math.min(h - 8, Math.round(hy + 26))
+  const image = context.getImageData(0, 0, w, h)
+  const data = image.data
+
+  const firstOpaque = (y: number): number => {
+    for (let x = 0; x < w; x += 1) {
+      if (data[(y * w + x) * 4 + 3] > 24) return x
+    }
+    return -1
+  }
+  const erase = (x0: number, y: number, count: number): void => {
+    const end = Math.min(w, x0 + count)
+    for (let x = Math.max(0, x0); x < end; x += 1) {
+      data[(y * w + x) * 4 + 3] = 0
+    }
+  }
+
+  // Ponta mais à esquerda na faixa do braço.
+  let tipX = w
+  let tipY = scanTop
+  for (let y = scanTop; y <= scanBottom; y += 1) {
+    const minX = firstOpaque(y)
+    if (minX >= 0 && minX < tipX) {
+      tipX = minX
+      tipY = y
+    }
+  }
+  if (tipX >= w) return null
+
+  let stump: Stump
+  if (tipX > hx - 7) {
+    // Braço pendurado: raspa a borda do ombro até a mão, sem deixar um
+    // antebraço solto embaixo do coto.
+    const y0 = Math.max(1, Math.round(hy + 9))
+    const y1 = Math.min(h - 8, Math.round(hy + 25))
+    let edge = -1
+    for (let y = y0; y <= y1; y += 1) {
+      const minX = firstOpaque(y)
+      if (minX < 0 || Math.abs(minX - hx) > 9) continue
+      erase(minX, y, 3)
+      if (minX + 3 > edge) edge = minX + 3
+    }
+    if (edge < 0) return null
+    stump = { x: Math.min(w - 1, edge), y: y0, horizontal: false }
+  } else {
+    // Braço estendido: corta a mão e o antebraço, mantendo o coto na
+    // altura exata do membro.
+    for (let y = Math.max(1, tipY - 2); y <= Math.min(h - 1, tipY + 2); y += 1) {
+      const minX = firstOpaque(y)
+      if (minX < 0 || minX > tipX + 3) continue
+      erase(minX, y, 4)
+    }
+    stump = { x: Math.min(w - 1, tipX + 4), y: tipY, horizontal: true }
+  }
+
+  context.putImageData(image, 0, 0)
+  return stump
+}
+
+function paintBossWounds(
+  canvas: HTMLCanvasElement,
+  file: string,
+  skin: BossSkin,
+): HTMLCanvasElement {
+  const context = canvas.getContext('2d')
+  if (!context) return canvas
+  const wound = BOSS_WOUNDS[skin]
+  const name = file.replace('.png', '')
+  const anim = name.split('-')[0]
+  const [hx, hy] = headAnchor(file)
+  context.imageSmoothingEnabled = false
+
+  const carved = carveMissingArm(canvas, file)
+  if (carved) {
+    const { x, y, horizontal } = carved
+    if (horizontal) {
+      // Braço estendido: capuz de gaze vertical no fim do membro, com a
+      // ferida vermelha na ponta e a tira caindo logo abaixo.
+      context.fillStyle = '#1a0c08'
+      context.fillRect(x - 3, y - 2, 4, 5)
+      context.fillStyle = wound.bandageDark
+      context.fillRect(x - 2, y - 1, 2, 3)
+      context.fillStyle = wound.bandage
+      context.fillRect(x - 2, y, 1, 2)
+      context.fillRect(x - 1, y - 1, 1, 1)
+      context.fillStyle = wound.blood
+      context.fillRect(x - 3, y - 1, 1, 2)
+      context.fillRect(x - 1, y + 2, 1, 1)
+      // Gaze pendurada.
+      for (let i = 0; i < 5; i += 1) {
+        context.fillStyle = i % 3 === 2 ? wound.bandageDark : wound.bandage
+        context.fillRect(x - 2 + (i >= 2 ? 1 : 0), y + 3 + i, 1, 1)
+      }
+      context.fillStyle = wound.bloodDark
+      context.fillRect(x - 1, y + 7, 1, 1)
+    } else {
+      // Braço pendurado, cortado no ombro: coto horizontal com gaze longa.
+      context.fillStyle = '#1a0c08'
+      context.fillRect(x - 3, y - 1, 5, 4)
+      context.fillStyle = wound.bandageDark
+      context.fillRect(x - 3, y, 5, 2)
+      context.fillStyle = wound.bandage
+      context.fillRect(x - 2, y, 4, 1)
+      context.fillRect(x - 1, y + 1, 2, 1)
+      context.fillStyle = wound.blood
+      context.fillRect(x - 3, y + 1, 1, 2)
+      context.fillRect(x + 1, y + 2, 1, 1)
+      context.fillStyle = wound.bloodDark
+      context.fillRect(x - 3, y + 3, 1, 1)
+      for (let i = 0; i < 6; i += 1) {
+        const sx = x - 1 + (i >= 4 ? 1 : 0)
+        context.fillStyle = i % 3 === 2 ? wound.bandageDark : wound.bandage
+        context.fillRect(sx, y + 3 + i, 1, 1)
+      }
+      context.fillStyle = wound.bloodDark
+      context.fillRect(x, y + 8, 1, 1)
+      context.fillStyle = wound.blood
+      context.fillRect(x + 1, y + 5, 1, 3)
+      context.fillRect(x + 2, y + 8, 1, 1)
+    }
+  }
+
+  // Ferimento no rosto: olho vazado ou corte profundo.
+  const ex = Math.round(hx + 4)
+  const ey = Math.round(hy + 7)
+  if (wound.eye === 'socket') {
+    context.fillStyle = '#120806'
+    context.fillRect(ex, ey, 2, 1)
+    context.fillStyle = wound.blood
+    context.fillRect(ex, ey + 1, 1, 1)
+    context.fillStyle = wound.bloodDark
+    context.fillRect(ex + 1, ey + 1, 1, 1)
+  } else if (wound.eye === 'scar') {
+    context.fillStyle = wound.bloodDark
+    for (let i = 0; i < 4; i += 1) context.fillRect(ex - 1 + i, ey - 1 + i, 1, 1)
+    context.fillStyle = wound.blood
+    context.fillRect(ex + 1, ey + 1, 1, 1)
+  }
+
+  // Corte no peito: uma linha diagonal escura com brilho de sangue.
+  if (wound.gash) {
+    const gx = Math.round(hx + (skin === 'guardiao' ? 2 : 1))
+    const gy = Math.round(hy + 14)
+    context.fillStyle = wound.bloodDark
+    for (let i = 0; i < 4; i += 1) context.fillRect(gx + i, gy + i, 1, 1)
+    context.fillStyle = wound.blood
+    context.fillRect(gx + 1, gy + 1, 1, 1)
+    context.fillRect(gx + 3, gy + 3, 1, 1)
+    if (wound.burnt) {
+      context.fillStyle = '#1a0d06'
+      context.fillRect(gx - 1, gy + 5, 2, 1)
+      context.fillRect(gx + 2, gy - 1, 2, 1)
+    }
+  }
+
+  // Marcas de sangue seco nos quadros de queda, onde não há corte de braço.
+  if (anim === 'hurt' || anim === 'death') {
+    context.fillStyle = wound.bloodDark
+    context.fillRect(Math.round(hx + 1), Math.round(hy + 16), 2, 1)
+    context.fillStyle = wound.blood
+    context.fillRect(Math.round(hx + 2), Math.round(hy + 17), 1, 1)
+  }
+  return canvas
+}
+type IndioPaint = {
+  hair: string
+  hairLight: string
+  bandDark: string
+  band: string
+  bandLight: string
+  bead: string
+  feather: string
+  paint: string
+  sashDark: string
+  sashLight: string
+}
+
+const INDIO_PAINT: IndioPaint = {
+  hair: '#10121a',
+  hairLight: '#2a2530',
+  bandDark: '#8a2012',
+  band: '#c23a1c',
+  bandLight: '#f0c78a',
+  bead: '#f7d8a0',
+  feather: '#c9a15a',
+  paint: '#8a2012',
+  sashDark: '#a32818',
+  sashLight: '#f0c78a',
+}
+
+const BOSS_PAINTS: Record<BossSkin, IndioPaint> = {
+  sy: {
+    hair: '#0a0608',
+    hairLight: '#241820',
+    bandDark: '#5a120f',
+    band: '#a82a1c',
+    bandLight: '#e86436',
+    bead: '#f2e2c4',
+    feather: '#f2e2c4',
+    paint: '#7d1410',
+    sashDark: '#8a1a12',
+    sashLight: '#f2e2c4',
+  },
+  tuba: {
+    hair: '#060806',
+    hairLight: '#1a2418',
+    bandDark: '#1f3a18',
+    band: '#3f7a2e',
+    bandLight: '#8fc45a',
+    bead: '#e8c15a',
+    feather: '#d9b24a',
+    paint: '#2f5a22',
+    sashDark: '#2f5a22',
+    sashLight: '#e8c15a',
+  },
+  kypyy: {
+    hair: '#0a0605',
+    hairLight: '#241810',
+    bandDark: '#5a1a08',
+    band: '#c24a14',
+    bandLight: '#ffb347',
+    bead: '#ffe9a8',
+    feather: '#ffd166',
+    paint: '#a83212',
+    sashDark: '#a83212',
+    sashLight: '#ffe9a8',
+  },
+  kybykuera: {
+    hair: '#05060a',
+    hairLight: '#161d2e',
+    bandDark: '#101a4a',
+    band: '#2f4aa8',
+    bandLight: '#7fa4e8',
+    bead: '#d6e2e8',
+    feather: '#b8d4ff',
+    paint: '#1c2e7a',
+    sashDark: '#1c2e7a',
+    sashLight: '#d6e2e8',
+  },
+  guardiao: {
+    hair: '#050505',
+    hairLight: '#1c1710',
+    bandDark: '#4a2606',
+    band: '#b06a12',
+    bandLight: '#f2c44a',
+    bead: '#ffe98a',
+    feather: '#ffb347',
+    paint: '#7d440a',
+    sashDark: '#7d440a',
+    sashLight: '#ffe98a',
+  },
+}
+
 // Faixa de pano e tinta facial: o que separa o índio do Sand em silhueta.
 function paintIndioDetails(
   canvas: HTMLCanvasElement,
   file: string,
+  palette: IndioPaint = INDIO_PAINT,
 ): HTMLCanvasElement {
   const context = canvas.getContext('2d')
   if (!context) return canvas
@@ -677,46 +1012,46 @@ function paintIndioDetails(
     return canvas
   }
   const [hx, hy] = headAnchor(file)
-  const y = Math.round(hy + 4)
+  const y = Math.round(hy + 3)
   const x = Math.round(hx)
-  const hairY = Math.round(hy + 2)
+  const hairY = Math.round(hy + 1)
   context.imageSmoothingEnabled = false
 
   // Cabelo negro com franja curta: muda a silhueta da cabeça.
-  context.fillStyle = '#10121a'
+  context.fillStyle = palette.hair
   context.fillRect(x - 3, hairY, 7, 1)
   context.fillRect(x - 2, hairY + 1, 5, 1)
-  context.fillStyle = '#2a2530'
+  context.fillStyle = palette.hairLight
   context.fillRect(x - 1, hairY, 3, 1)
 
   // Faixa de urucum com nó e duas penas curtas — detalhe, não cocar.
-  context.fillStyle = '#8a2012'
+  context.fillStyle = palette.bandDark
   context.fillRect(x - 4, y, 8, 1)
-  context.fillStyle = '#c23a1c'
+  context.fillStyle = palette.band
   context.fillRect(x - 3, y, 6, 1)
-  context.fillStyle = '#f0c78a'
+  context.fillStyle = palette.bandLight
   context.fillRect(x - 1, y, 2, 1)
-  context.fillStyle = '#c9a15a'
+  context.fillStyle = palette.feather
   context.fillRect(x + 4, y, 2, 2)
-  context.fillStyle = '#f0c78a'
+  context.fillStyle = palette.bandLight
   context.fillRect(x - 3, y - 1, 1, 1)
   context.fillRect(x - 4, y - 2, 1, 1)
-  context.fillStyle = '#c23a1c'
+  context.fillStyle = palette.band
   context.fillRect(x + 3, y - 1, 1, 1)
   context.fillRect(x + 4, y - 2, 1, 1)
 
-  // Tinta facial: dois traços vermelhos e um ponto de osso.
-  context.fillStyle = '#8a2012'
+  // Tinta facial: dois traços e um ponto de osso.
+  context.fillStyle = palette.paint
   context.fillRect(x - 2, y + 2, 1, 1)
   context.fillRect(x + 2, y + 2, 1, 1)
-  context.fillStyle = '#f7d8a0'
+  context.fillStyle = palette.bead
   context.fillRect(x, y + 2, 1, 1)
 
   // No idle, uma faixa diagonal atravessa o peito.
   if (anim === 'idle') {
     const sashY = y + 13
     for (let i = 0; i < 8; i += 1) {
-      context.fillStyle = i % 3 === 0 ? '#f0c78a' : '#a32818'
+      context.fillStyle = i % 3 === 0 ? palette.sashLight : palette.sashDark
       context.fillRect(x - 4 + i, sashY + Math.floor(i / 3), 1, 1)
     }
   }
@@ -826,8 +1161,10 @@ function measureTop(
   return { x: Math.round(centerX), y: 0 }
 }
 
-// Pinta a coroa de penas acima do ponto mais alto do quadro. Como o desenho
-// é expandido para cima, as penas nunca são cortadas.
+// Pinta o cocar: tiara presa no alto da cabeça e penas sólidas em leque.
+// A medida é feita numa janela estreita em torno do rosto (não da lança),
+// e as penas têm corpo largo — sem alternar cor a cada pixel, que parecia
+// antena em vez de adorno.
 function paintBossCrest(
   canvas: HTMLCanvasElement,
   w: number,
@@ -838,43 +1175,54 @@ function paintBossCrest(
   const context = canvas.getContext('2d')
   if (!context) return { x: Math.round(centerX), y: 0 }
   const config = BOSS_CRESTS[skin]
-  const top = measureTop(canvas, w, h, centerX, skin === 'guardiao' ? 10 : 13)
-  const baseX = top.x
-  const baseY = Math.max(1, top.y - 1)
+  const top = measureTop(canvas, w, h, centerX, 5)
+  const baseX = Math.round(centerX)
+  const baseY = Math.max(2, top.y - 1)
   context.imageSmoothingEnabled = false
 
-  // Base escura: prende as penas no chapéu/cabeça.
-  const fanWidth = Math.round(config.count * config.fan) + 3
+  // Tiara escura colada no topo da cabeça, com as pontas descendo 1 px.
+  const bandWidth = Math.round(config.count * config.fan) + 3
+  const bandLeft = baseX - Math.floor(bandWidth / 2)
   context.fillStyle = config.dark
-  context.fillRect(baseX - Math.floor(fanWidth / 2), baseY, fanWidth, 1)
+  context.fillRect(bandLeft, baseY, bandWidth, 1)
+  context.fillRect(bandLeft, baseY + 1, 1, 1)
+  context.fillRect(bandLeft + bandWidth - 1, baseY + 1, 1, 1)
 
+  // Penas: haste escura no pé, corpo sólido de 2 px e ponta clara. O leque
+  // abre para fora a cada linha, formando um cocar de verdade.
   for (let i = 0; i < config.count; i += 1) {
     const offset = i - (config.count - 1) / 2
-    const fx = Math.round(baseX + offset * config.fan)
     const fh = config.height + (i % 2 === 0 ? 2 : 0)
-    const color = config.colors[i % config.colors.length]
+    const main = config.colors[i % config.colors.length]
     const tip = config.colors[(i + 1) % config.colors.length]
     for (let j = 0; j < fh; j += 1) {
-      const x = Math.round(fx + offset * 0.28 * (j / Math.max(1, fh - 1)))
+      const t = j / Math.max(1, fh - 1)
+      const x = Math.round(baseX + offset * config.fan + offset * 1.1 * t)
       const y = baseY - 1 - j
-      if (x < 0 || x >= w || y < 0) continue
-      context.fillStyle = j === 0 ? config.dark : j >= fh - 2 ? tip : color
-      context.fillRect(x, y, 1, 1)
+      if (x < 0 || y < 0) continue
+      context.fillStyle = j === 0 ? config.dark : j >= fh - 2 ? tip : main
+      const wide = j > 1 && j < fh - 1 ? 2 : 1
+      if (x + wide <= w) context.fillRect(x, y, wide, 1)
+      else context.fillRect(x, y, 1, 1)
     }
   }
 
-  // Um ponto de osso no centro para dar leitura de cocar, não de chapéu.
-  context.fillStyle = config.colors[config.colors.length - 1]
-  context.fillRect(baseX, baseY - Math.min(config.height + 1, 4), 1, 1)
+  // Duas contas na tiara, na cor ritual — sem parecer dentes na testa.
+  const bead = config.colors[1 % config.colors.length]
+  context.fillStyle = bead
+  context.fillRect(baseX - 3, baseY + 1, 1, 1)
+  context.fillRect(baseX + 3, baseY + 1, 1, 1)
 
-  return { x: baseX, y: Math.max(0, baseY - config.height - 2) }
+  return { x: baseX, y: Math.max(0, baseY - config.height - 3) }
 }
 
 const BOSS_PAD_TOP = 14
 const BOSS_PAD_X = 3
 
 // Expande a moldura do sprite para cima e acrescenta a coroa. A âncora é
-// corrigida para os pés continuarem exatamente no mesmo lugar.
+// corrigida para os pés continuarem exatamente no mesmo lugar. O cocar é
+// preso no centro da cabeça do quadro, não na âncora dos pés, para não
+// flutuar quando o personagem corre ou arremessa.
 function makeBossSprite(
   base: HTMLCanvasElement,
   w: number,
@@ -882,6 +1230,7 @@ function makeBossSprite(
   ax: number,
   ay: number,
   skin: BossSkin,
+  file: string,
 ): Sprite {
   const cw = w + BOSS_PAD_X * 2
   const ch = h + BOSS_PAD_TOP
@@ -894,7 +1243,13 @@ function makeBossSprite(
   }
   context.imageSmoothingEnabled = false
   context.drawImage(base, BOSS_PAD_X, BOSS_PAD_TOP)
-  const top = paintBossCrest(canvas, cw, ch, ax + BOSS_PAD_X, skin)
+  const [headX] = headAnchor(file)
+  // Na queda o corpo gira: o cocar sairia flutuando longe da cabeça. Ele cai
+  // junto, então os quadros de morte ficam sem a coroa.
+  const fallen = file.replace('.png', '').startsWith('death')
+  const top = fallen
+    ? { x: Math.round(headX + BOSS_PAD_X), y: BOSS_PAD_TOP }
+    : paintBossCrest(canvas, cw, ch, headX + BOSS_PAD_X, skin)
   return {
     img: canvas,
     w: cw,
@@ -993,29 +1348,48 @@ async function loadAtlas(
           white: makeOutline(indioArt, w, h, '#f0d9a8'),
         })
 
-        // O chefão final é uma versão negra/dourada do guardião, com coroa
-        // de brasa. Ele mantém os quadros de luta do Sand, mas com outra
-        // presença e outra paleta.
-        const guardiaoArt = paintIndioDetails(
-          recolorSprite(img, w, h, BOSS_RAMPS.guardiao, 'indio'),
+        // Os chefes da família são indígenas como o Sand: mesmo corpo, mesma
+        // pintura, mesma corrida e mesmos golpes. Cada um recebe a paleta
+        // ritual do capítulo e uma coroa de penas própria.
+        for (const skin of FAMILY_BOSS_SKINS) {
+          const bossArt = paintBossWounds(
+            paintIndioDetails(
+              recolorSprite(img, w, h, BOSS_RAMPS[skin], 'indio'),
+              frame.file,
+              BOSS_PAINTS[skin],
+            ),
+            frame.file,
+            skin,
+          )
+          bossCaches[skin].set(
+            name,
+            makeBossSprite(bossArt, w, h, anchorX, anchorY, skin, frame.file),
+          )
+        }
+
+        // O chefão final é o irmão mais velho: mesma base indígena, com a
+        // coroa de brasa e a paleta negra/dourada.
+        const guardiaoArt = paintBossWounds(
+          paintIndioDetails(
+            recolorSprite(img, w, h, BOSS_RAMPS.guardiao, 'indio'),
+            frame.file,
+            BOSS_PAINTS.guardiao,
+          ),
           frame.file,
+          'guardiao',
         )
         guardiaoCache.set(
           name,
-          makeBossSprite(guardiaoArt, w, h, anchorX, anchorY, 'guardiao'),
+          makeBossSprite(
+            guardiaoArt,
+            w,
+            h,
+            anchorX,
+            anchorY,
+            'guardiao',
+            frame.file,
+          ),
         )
-      }
-
-      // Cada capítulo tem seu próprio rosto para o mesmo capitão. A base é
-      // recolorida e recebe uma coroa de penas; a animação continua idêntica.
-      if (directory === COLONIST_DIR) {
-        for (const skin of COLONIST_BOSS_SKINS) {
-          const bossArt = recolorSprite(img, w, h, BOSS_RAMPS[skin], 'colonist')
-          bossCaches[skin].set(
-            name,
-            makeBossSprite(bossArt, w, h, anchorX, anchorY, skin),
-          )
-        }
       }
     }),
   )

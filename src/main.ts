@@ -35,6 +35,8 @@ function rgba(hex: string, alpha: number): string {
 
 function enemyScale(enemy: Enemy): number {
   if (enemy.isZombie) return characterScale('zombie')
+  // Os chefes agora nascem do corpo indígena do Sandman, não do colono.
+  if (enemy.bossSkin) return characterScale('indio')
   if (enemy.kind === 'lobisomem') return characterScale('wolf')
   if (enemy.kind === 'indio' || enemy.kind === 'guardiao') return characterScale('indio')
   return characterScale('colonist')

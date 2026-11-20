@@ -4,7 +4,7 @@
 // O dash do indígena foi removido - o controle de dash agora só está no player.ts.
 
 import {
-  BOSS_COLONIST_CLIPS,
+  BOSS_FAMILY_CLIPS,
   BOSS_GUARDIAO_CLIPS,
   BossAnimator,
   ColonistAnimator,
@@ -337,7 +337,7 @@ export class Enemy {
     this.speed = config.speed * this.levelFactor
     this.vx = 0
     this.animator = new BossAnimator(
-      config.role === 'guardiao' ? BOSS_GUARDIAO_CLIPS : BOSS_COLONIST_CLIPS,
+      config.role === 'guardiao' ? BOSS_GUARDIAO_CLIPS : BOSS_FAMILY_CLIPS,
       (name) => getBossFrame(config.skin, name),
     )
     this.animator.reset()
