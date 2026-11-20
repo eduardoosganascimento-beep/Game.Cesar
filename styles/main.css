@@ -156,6 +156,22 @@ body {
   display: none;
 }
 
+/* Fase de brasa: menos de 40% de vida. A barra e o nome mudam de tom junto
+   com a aura do chefe, para o jogador ler a virada sem olhar números. */
+.boss-bar.is-enraged .boss-name {
+  color: #ffd08a;
+  text-shadow: 0 0 14px rgba(227, 96, 52, 0.65), 0 2px 4px #000;
+}
+
+.boss-bar.is-enraged .boss-sub {
+  color: rgba(255, 166, 116, 0.92);
+}
+
+.boss-bar.is-enraged .boss-track {
+  border-color: rgba(227, 96, 52, 0.8);
+  box-shadow: 0 0 12px rgba(196, 71, 58, 0.35);
+}
+
 .boss-name {
   font-family: var(--display);
   font-size: clamp(9px, 1vw, 12px);

@@ -1,4 +1,5 @@
 import { Animator, type ClipName } from './animator'
+import { paintBossArena } from './ui/arena'
 import { sfx } from './audio'
 import { drawBackground } from './background'
 import { bossConfigFor } from './bosses'
@@ -136,6 +137,10 @@ class Game {
   private damageFlash = 0
   private killFlash = 0
   private deathDust = new Set<Enemy>()
+  // Sinais de uma arena viva: chefe acordado ao entrar na arena e poeira de
+  // queda. Conjuntos por entidade evitam efeitos repetidos a cada quadro.
+  private readonly bossAwakened = new Set<Enemy>()
+  private readonly bossAirborne = new Set<Enemy>()
 
   private goalX = 0
   private goalRow = 9
@@ -408,6 +413,8 @@ class Game {
     this.damageFlash = 0
     this.killFlash = 0
     this.deathDust.clear()
+    this.bossAwakened.clear()
+    this.bossAirborne.clear()
   }
 
   update = (dt: number): void => {
@@ -546,6 +553,28 @@ class Game {
         for (const enemy of this.enemies) {
       enemy.update(safeDt, this.map, player.hurtbox)
       if (!enemy.alive) continue
+
+      // A entrada na arena é um evento único: poeira, anel e o nome do chefe.
+      // A aterrissada também ganha peso — nada de chefe flutuando no chão.
+      if (enemy.isBoss) {
+        const arena = enemy.bossArena
+        const playerX = player.x + player.w / 2
+        if (
+          !this.bossAwakened.has(enemy) &&
+          playerX > arena.left - 48 &&
+          playerX < arena.right + 48
+        ) {
+          this.bossAwakened.add(enemy)
+          const cx = enemy.x + enemy.w / 2
+          this.effects.ring(cx, enemy.y + enemy.h * 0.5, enemy.bossRim)
+          this.effects.burst(cx, enemy.y + enemy.h, 'dust', 14, 52)
+        }
+        if (!enemy.onGround) this.bossAirborne.add(enemy)
+        else if (this.bossAirborne.delete(enemy)) {
+          this.effects.burst(enemy.x + enemy.w / 2, enemy.y + enemy.h, 'dust', 9, 40)
+          this.effects.addShake(0.8)
+        }
+      }
 
       // Índio e chefes levantam o machado quando o Sand ataca por perto
       // (defesa reativa, sem som nem luz piscando). O chefe usa a mesma
@@ -821,7 +850,7 @@ class Game {
           enemy.x < this.camera.px + VIEW_W + 24,
       )
     const boss = bosses.sort((a, b) => b.maxHp - a.maxHp)[0]
-    if (boss) this.hud.setBoss(boss.bossName, boss.hp, boss.maxHp, boss.bossTitle)
+    if (boss) this.hud.setBoss(boss.bossName, boss.hp, boss.maxHp, boss.bossTitle, boss.isEnraged)
     else this.hud.hideBoss()
 
     const time = performance.now() / 1000
@@ -866,7 +895,10 @@ class Game {
       ctx.fillRect(0, 0, VIEW_W, VIEW_H)
     }
 
-        for (const enemy of this.enemies) {
+    // A arena do chefe recebe enquadramento próprio antes de qualquer sprite.
+    paintBossArena(ctx, this.enemies, this.camera, time)
+
+    for (const enemy of this.enemies) {
       if (enemy.visible) this.paintEnemy(enemy, time)
     }
 
@@ -1522,16 +1554,18 @@ class Game {
     ctx.fillRect(feetX - 7, shadowY - 2, 14, 2)
 
     if (enemy.isBoss && enemy.alive) {
-      const pulse = 0.75 + Math.sin(time * 3.2 + enemy.x * 0.05) * 0.25
-      const aura = ctx.createRadialGradient(feetX, feetY - 18, 2, feetX, feetY - 18, 36)
-      aura.addColorStop(0, rgba(enemy.bossAura, 0.2 * pulse))
+      const rage = enemy.isEnraged
+      const pulse = 0.75 + Math.sin(time * (rage ? 6.4 : 3.2) + enemy.x * 0.05) * 0.25
+      const radius = rage ? 46 : 36
+      const aura = ctx.createRadialGradient(feetX, feetY - 18, 2, feetX, feetY - 18, radius)
+      aura.addColorStop(0, rgba(enemy.bossAura, (rage ? 0.26 : 0.2) * pulse))
       aura.addColorStop(0.55, rgba(enemy.bossAura, 0.07 * pulse))
       aura.addColorStop(1, rgba(enemy.bossAura, 0))
       ctx.fillStyle = aura
-      ctx.fillRect(feetX - 38, feetY - 56, 76, 60)
+      ctx.fillRect(feetX - radius - 2, feetY - radius - 20, radius * 2 + 4, radius + 24)
     }
 
-    // Rastro da investida: riscos na direção contrária ao avanço.
+    // Rastro da investida: riscos e três silhuetas atrás do corpo.
     if (enemy.isCharging) {
       const dir = Math.sign(enemy.vx) || enemy.facing
       ctx.globalAlpha = 0.45
@@ -1539,6 +1573,22 @@ class Game {
       for (let i = 0; i < 3; i += 1) {
         const ly = feetY - 8 - i * 8
         ctx.fillRect(Math.round(feetX - dir * (10 + i * 4)), Math.round(ly), 2 + i, 1)
+      }
+      if (sprite) {
+        ctx.save()
+        ctx.translate(feetX, 0)
+        if (enemy.facing < 0) ctx.scale(-1, 1)
+        for (let i = 1; i <= 3; i += 1) {
+          ctx.globalAlpha = 0.13 - i * 0.03
+          ctx.drawImage(
+            sprite.white,
+            Math.round(-sprite.ax * scale - i * 7),
+            Math.round(feetY - sprite.ay * scale),
+            Math.max(1, Math.round(sprite.w * scale)),
+            Math.max(1, Math.round(sprite.h * scale)),
+          )
+        }
+        ctx.restore()
       }
       ctx.globalAlpha = 1
     }
@@ -1555,6 +1605,15 @@ class Game {
 
     const flash = enemy.invuln > 0 && Math.floor(enemy.invuln * 28) % 2 === 0
     if (flash) ctx.globalAlpha = 0.55
+
+    // Antecipação: o corpo comprime um pouco antes de golpear/soltar a lança
+    // e volta ao normal no impacto. É o "peso" que falta no pixel art quieto.
+    ctx.save()
+    if (enemy.isWindingUp) {
+      ctx.translate(feetX, feetY)
+      ctx.scale(1.06, 0.94)
+      ctx.translate(-feetX, -feetY)
+    }
 
     if (sprite) {
       if (!enemy.alive) {
@@ -1595,6 +1654,7 @@ class Game {
     } else {
       this.paintFallbackColonist(feetX, feetY, scale, enemy.facing)
     }
+    ctx.restore()
 
     // Rastro do golpe corpo a corpo: uma lasca clara que sai da arma no
     // instante do impacto, para o ataque ficar legível na mata escura.
@@ -1621,6 +1681,21 @@ class Game {
       ctx.globalAlpha = 0.35
       ctx.fillStyle = '#ffd166'
       ctx.fillRect(Math.round(sx + dir * 6), Math.round(sy - 4), 3, 1)
+      ctx.restore()
+    }
+
+    // O parry de lança pisca o corpo em branco: a defesa vira um evento visual,
+    // não só um texto flutuante.
+    if (enemy.justParriedSpear && enemy.alive && sprite) {
+      ctx.save()
+      ctx.globalAlpha = 0.48
+      ctx.drawImage(
+        sprite.white,
+        Math.round(feetX - sprite.ax * scale),
+        Math.round(feetY - sprite.ay * scale),
+        Math.max(1, Math.round(sprite.w * scale)),
+        Math.max(1, Math.round(sprite.h * scale)),
+      )
       ctx.restore()
     }
 

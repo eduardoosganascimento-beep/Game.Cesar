@@ -57,12 +57,13 @@ export class Hud {
     if (this.difficulty) this.difficulty.textContent = label
   }
 
-  setBoss(name: string, hp: number, maxHp: number, title = ''): void {
+  setBoss(name: string, hp: number, maxHp: number, title = '', enraged = false): void {
     if (!this.bossBar || !this.bossFill || !this.bossName) return
-    const key = `${name}:${title}:${hp}:${maxHp}`
+    const key = `${name}:${title}:${hp}:${maxHp}:${enraged}`
     if (key === this.bossKey) return
     this.bossKey = key
     this.bossBar.classList.remove('is-hidden')
+    this.bossBar.classList.toggle('is-enraged', enraged)
     this.bossName.textContent = name.toUpperCase()
     if (this.bossSub) {
       this.bossSub.textContent = title ? title.toUpperCase() : ''

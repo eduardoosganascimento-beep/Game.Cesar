@@ -489,6 +489,33 @@ export class Enemy {
     return this.bossConfig?.role === 'guardiao'
   }
 
+  // Fase de brasa: abaixo de 40% da vida o chefe fica mais agressivo. A HUD,
+  // a aura e o ritmo dos ataques usam o mesmo sinal, sem estado duplicado.
+  get isEnraged(): boolean {
+    return this.isBoss && this.alive && this.maxHp > 0 && this.hp <= Math.ceil(this.maxHp * 0.4)
+  }
+
+  // Fase do gesto atual (0 → começo, 1 → fim). Usado pela animação para dar
+  // peso de antecipação ao golpe sem inventar um timer paralelo no render.
+  get actionPhase(): number {
+    if (!this.bossAction || this.bossActionDuration <= 0) return 0
+    return Math.max(0, Math.min(1, this.bossActionTime / this.bossActionDuration))
+  }
+
+  get isWindingUp(): boolean {
+    return (
+      this.isBoss &&
+      this.alive &&
+      (this.bossAction === 'slash' || this.bossAction === 'throw') &&
+      this.actionPhase < 0.5
+    )
+  }
+
+  // Limites da arena do chefe, em coordenadas de mundo.
+  get bossArena(): { left: number; right: number } {
+    return { left: this.left, right: this.right }
+  }
+
   get rect(): Rect {
     return { x: this.x, y: this.y, w: this.w, h: this.h }
   }
@@ -1196,7 +1223,7 @@ export class Enemy {
     if (!cfg) return
     // Depois da lança ele volta a correr mais cedo: o arremesso é o ritmo
     // do índio, não um movimento pesado de atirador.
-    const tempo = quickThrow ? 0.72 : 1
+    const tempo = (quickThrow ? 0.72 : 1) * (this.isEnraged ? 0.86 : 1)
     this.attackCooldown = cfg.attackCooldown * tempo * (0.9 + Math.random() * 0.35)
     if (wasCharge) {
       this.bossChargeCooldown = cfg.chargeCooldown * (0.9 + Math.random() * 0.25)
