@@ -1,4 +1,6 @@
-const HEART_COUNT = 3
+import { MAX_HP } from '../player'
+
+const HEART_COUNT = MAX_HP
 
 export class Hud {
   private readonly root = document.querySelector<HTMLDivElement>('#hud')

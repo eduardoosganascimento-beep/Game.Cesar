@@ -56,6 +56,12 @@ const LAND_SQUASH_TIME = 0.2
 // Janela de defesa: 0,36 s no total; os primeiros 0,16 s são PERFECT.
 const PARRY_WINDOW = 0.36
 const PARRY_PERFECT = 0.16
+// Danos base: colono/zumbi/armadilha = 1, chefe = 2 (no config do chefe).
+// A dificuldade multiplica esses valores, mas a base permanece explícita.
+const HAZARD_DAMAGE = 1
+const ZOMBIE_DAMAGE = 1
+// Depois de um resgate de água/queda, um breve invuln evita dano em cadeia.
+const RESCUE_INVULN = 0.8
 
 type Shot = {
   x: number
@@ -141,6 +147,9 @@ class Game {
   // queda. Conjuntos por entidade evitam efeitos repetidos a cada quadro.
   private readonly bossAwakened = new Set<Enemy>()
   private readonly bossAirborne = new Set<Enemy>()
+  // Último chão seguro pisado. Água e queda devolvem o Sand aqui — perto de
+  // onde ele estava —, nunca no início do capítulo nem no checkpoint.
+  private lastSafe = { x: 0, y: 0 }
 
   private goalX = 0
   private goalRow = 9
@@ -365,6 +374,7 @@ class Game {
     this.input.clear()
     this.player.hp = MAX_HP
     this.player.respawn()
+    this.lastSafe = { x: this.player.x, y: this.player.y }
     this.spawnEnemies()
     this.clearCombatState()
     this.dying = 0
@@ -481,6 +491,16 @@ class Game {
     this.goalHintCooldown = Math.max(0, this.goalHintCooldown - safeDt)
     const player = this.player
     player.update(safeDt, this.input)
+
+    // Memória do último chão seguro: é para aqui que água/queda devolvem o
+    // jogador. Nunca é o início do capítulo, e sim o caminho já percorrido.
+    if (
+      player.onGround &&
+      !this.map.isWater(player.hurtbox) &&
+      this.map.spikesIn(player.hurtbox).length === 0
+    ) {
+      this.lastSafe = { x: player.x, y: player.y }
+    }
 
     // Parry do jogador (F): janela curta de bloqueio. Se um golpe chegar nela,
     // o inimigo fica atordoado e o próximo ataque é um riposte (dano dobrado).
@@ -684,9 +704,10 @@ class Game {
 
       if (enemy.justStruck && overlaps(enemy.attackBox, player.hurtbox)) {
         if (enemy.isZombie) {
-          this.zombieBite(enemy)
-          this.input.endFrame()
-          return
+          if (this.zombieBite(enemy)) {
+            this.input.endFrame()
+            return
+          }
         }
         if (this.hurtPlayer(enemy.x, 'blade', enemy.attackDamage)) {
           this.effects.addShake(2.6)
@@ -731,9 +752,10 @@ class Game {
           // A mordida só mata quando o ataque está ativo — e o parry já foi
           // checado acima. Encostar de leve não é morte instantânea.
           if (enemy.justStruck || enemy.isAttacking) {
-            this.zombieBite(enemy)
-            this.input.endFrame()
-            return
+            if (this.zombieBite(enemy)) {
+              this.input.endFrame()
+              return
+            }
           }
         }
         // Corpos comuns não machucam por encostar: só golpes, disparos e a
@@ -1143,23 +1165,27 @@ class Game {
     }
   }
 
-  // A mordida do zumbi mata Sand na hora: não é dano, é fim de fase.
-  private zombieBite(zombie: Enemy): void {
-    if (this.dying > 0 || this.won) return
+  // A mordida é um golpe como qualquer outro: 1 de vida, sem teleporte.
+  // Só mata se o Sand já estava com 1 coração — aí sim começa a animação de
+  // morte e o renascimento no checkpoint.
+  private zombieBite(zombie: Enemy): boolean {
+    if (this.dying > 0 || this.won) return false
     const cx = this.player.x + this.player.w / 2
     const cy = this.player.y + this.player.h / 2
-    this.beginDeath('Mordida de zumbi — Sandman não resistiu.')
-    this.damageFlash = 1
-    this.effects.burst(cx, cy, 'death', 20, 76)
+    this.hurtPlayer(zombie.x, 'blade', ZOMBIE_DAMAGE)
     this.effects.burst(
       zombie.x + zombie.w / 2,
       zombie.y + zombie.h / 2,
-      'hit',
-      10,
-      48,
+      'ooze',
+      8,
+      44,
     )
-    this.effects.addShake(6)
-    sfx.hit()
+    if (this.player.hp <= 0) {
+      this.beginDeath('Mordida de zumbi — Sandman não resistiu.')
+      this.effects.burst(cx, cy, 'death', 16, 70)
+      return true
+    }
+    return false
   }
 
   // Zumbi encostou em colono armado → o colono vira zumbi.
@@ -1188,7 +1214,7 @@ class Game {
 
   private hurtPlayer(
     fromX: number,
-    kind: 'bullet' | 'blade' = 'bullet',
+    kind: 'bullet' | 'blade' | 'spike' | 'water' | 'fall' = 'bullet',
     damage: number = 1,
   ): boolean {
     const diff = this.difficulty as 'facil' | 'normal' | 'dificil'
@@ -1200,10 +1226,11 @@ class Game {
     sfx.hit()
     this.effects.addShake(4)
     this.damageFlash = 1
+    const burst = kind === 'water' ? 'splash' : kind === 'bullet' ? 'bullet' : 'hit'
     this.effects.burst(
       this.player.x + this.player.w / 2,
       this.player.y + this.player.h / 2,
-      kind,
+      burst,
       10,
       52,
     )
@@ -1437,32 +1464,48 @@ class Game {
     }
   }
 
+  // Armadilhas e água tiram 1 de vida como qualquer inimigo. O resgate leva
+  // o Sand ao último chão seguro — não ao início da fase — e só acontece
+  // quando ele ainda está dentro da água/estaca (ou caiu para fora do mapa).
   private handleHazard(kind: 'water' | 'spike' | 'fall'): void {
     const splashX = this.player.x + this.player.w / 2
     const splashY = Math.min(this.player.y + this.player.h, this.goalBaseY + 4)
+
     if (kind === 'water') {
       sfx.splash()
       this.effects.burst(splashX, splashY, 'splash', 18, 70)
       this.effects.text(splashX, splashY - 8, 'A água é funda!', '#bfeaf2')
     } else if (kind === 'spike') {
-      sfx.hit()
       this.effects.burst(splashX, this.player.y + this.player.h - 4, 'hit', 13, 58)
       this.effects.text(splashX, this.player.y - 6, 'Estacas!', '#ffb38a')
     } else {
-      sfx.hit()
       this.effects.text(splashX, this.player.y - 4, 'A floresta devolve...', '#ffd166')
     }
 
-    this.effects.addShake(3)
-    this.player.hit()
+    this.hurtPlayer(splashX, kind, HAZARD_DAMAGE)
+
     if (this.player.hp <= 0) {
-      this.player.hp = MAX_HP
-      this.effects.text(splashX, splashY - 20, 'Sandman respira de novo.', '#ffd166')
+      const message =
+        kind === 'water'
+          ? 'A água engoliu Sandman.'
+          : kind === 'spike'
+            ? 'As estacas venceram Sandman.'
+            : 'A floresta devolveu Sandman.'
+      this.beginDeath(message)
+      return
     }
-    this.player.respawn()
-    this.shots = []
-    this.animator.reset()
-    this.camera.snapTo(this.player.hurtbox, this.map.width, this.map.height)
+
+    const stillUnsafe =
+      kind === 'water' ||
+      kind === 'fall' ||
+      this.map.spikesIn(this.player.hurtbox).length > 0
+    if (stillUnsafe) {
+      this.player.teleport(this.lastSafe.x, this.lastSafe.y)
+      this.player.invuln = Math.max(this.player.invuln, RESCUE_INVULN)
+      this.shots = []
+      this.animator.reset()
+      this.camera.snapTo(this.player.hurtbox, this.map.width, this.map.height)
+    }
     this.syncHud(true)
   }
 
@@ -1485,6 +1528,7 @@ class Game {
     const y = this.player.y - 6
     this.player.hp = MAX_HP
     this.player.respawn()
+    this.lastSafe = { x: this.player.x, y: this.player.y }
     this.spawnEnemies()
     this.clearCombatState()
     this.animator.reset()

@@ -6,7 +6,10 @@ import { GRAVITY, MAX_FALL, TILE, clamp, type Rect } from './engine'
 import type { Input } from './input'
 import type { TileMap } from './level'
 
-export const MAX_HP = 3
+// Seis corações: três eram poucos para um jogo com armadilhas, água e chefes
+// que batem duas vezes mais forte. O valor é a única fonte de verdade — a HUD
+// desenha exatamente esse número de corações.
+export const MAX_HP = 6
 
 // --- Tempos das animações (em segundos), baseados na folha de sprites:
 // - golpe: 5 quadros a 18 fps (0,278 s);

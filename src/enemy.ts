@@ -650,8 +650,8 @@ export class Enemy {
   }
 
   get attackDamage(): number {
-    // Chefes e feitores encaram com mais força; capangas e colonos, menos.
-    return this.bossConfig?.damage ?? (this.isBoss || this.kind === 'feitor' ? 2 : 1)
+    // Colonos, zumbis e o índio tiram 1. Só os chefes (config própria) tiram 2.
+    return this.bossConfig?.damage ?? 1
   }
 
   // Quadro de impacto do golpe, calculado pelo clipe do animador atual.

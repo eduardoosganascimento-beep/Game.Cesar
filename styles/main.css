@@ -260,7 +260,7 @@ body {
 
 .heart {
   position: relative;
-  width: clamp(13px, 1.6vw, 18px);
+  width: clamp(11px, 1.35vw, 15px);
   aspect-ratio: 1;
   background: linear-gradient(180deg, #b84835, #741f17);
   clip-path: polygon(50% 0%, 100% 50%, 50% 100%, 0% 50%);
