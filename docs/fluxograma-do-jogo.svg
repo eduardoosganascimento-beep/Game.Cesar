@@ -1,0 +1,82 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1080" height="1090" viewBox="0 0 1080 1090">
+<rect width="1080" height="1090" fill="#0b0f0d"/>
+<text x="48" y="34" fill="#ffd166" font-family="monospace" font-size="22" font-weight="bold">SANDMAN — FLUXOGRAMA DO JOGO</text>
+<g transform="scale(0.4)">
+<defs><marker id="head" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto"><path d="M0,0 L0,6 L9,3 z" fill="#d8b46a"/></marker></defs>
+<line x1="290" y1="160" x2="290" y2="230" stroke="#d8b46a" stroke-width="2"  marker-end="url(#head)"/>
+<line x1="290" y1="350" x2="290" y2="420" stroke="#d8b46a" stroke-width="2"  marker-end="url(#head)"/>
+<line x1="290" y1="500" x2="290" y2="560" stroke="#d8b46a" stroke-width="2"  marker-end="url(#head)"/>
+<line x1="290" y1="630" x2="290" y2="700" stroke="#d8b46a" stroke-width="2"  marker-end="url(#head)"/>
+<line x1="290" y1="790" x2="290" y2="860" stroke="#d8b46a" stroke-width="2"  marker-end="url(#head)"/>
+<line x1="290" y1="990" x2="290" y2="1060" stroke="#d8b46a" stroke-width="2"  marker-end="url(#head)"/>
+<line x1="290" y1="1150" x2="290" y2="1220" stroke="#d8b46a" stroke-width="2"  marker-end="url(#head)"/>
+<line x1="290" y1="1330" x2="290" y2="1400" stroke="#d8b46a" stroke-width="2"  marker-end="url(#head)"/>
+<line x1="290" y1="1480" x2="290" y2="1540" stroke="#d8b46a" stroke-width="2"  marker-end="url(#head)"/>
+<line x1="290" y1="1620" x2="290" y2="1690" stroke="#d8b46a" stroke-width="2"  marker-end="url(#head)"/>
+<line x1="290" y1="1790" x2="290" y2="1870" stroke="#d8b46a" stroke-width="2"  marker-end="url(#head)"/>
+<line x1="290" y1="2000" x2="290" y2="2070" stroke="#d8b46a" stroke-width="2"  marker-end="url(#head)"/>
+<line x1="290" y1="2160" x2="290" y2="2230" stroke="#d8b46a" stroke-width="2"  marker-end="url(#head)"/>
+<line x1="290" y1="2310" x2="290" y2="2370" stroke="#d8b46a" stroke-width="2"  marker-end="url(#head)"/>
+<line x1="290" y1="2440" x2="290" y2="2500" stroke="#d8b46a" stroke-width="2"  marker-end="url(#head)"/>
+<line x1="460" y1="745" x2="620" y2="750" stroke="#7f9e78" stroke-width="2" stroke-dasharray="6 5" marker-end="url(#head)"/>
+<line x1="440" y1="925" x2="620" y2="1110" stroke="#7f9e78" stroke-width="2" stroke-dasharray="6 5" marker-end="url(#head)"/>
+<line x1="460" y1="1580" x2="620" y2="1450" stroke="#7f9e78" stroke-width="2" stroke-dasharray="6 5" marker-end="url(#head)"/>
+<line x1="460" y1="1740" x2="620" y2="1750" stroke="#7f9e78" stroke-width="2" stroke-dasharray="6 5" marker-end="url(#head)"/>
+<line x1="460" y1="1580" x2="620" y2="1580" stroke="#7f9e78" stroke-width="2" stroke-dasharray="6 5" marker-end="url(#head)"/>
+<rect x="120" y="80" width="340" height="80" rx="6" fill="#15211c" stroke="#d8b46a" stroke-width="2"/>
+<text x="290" y="116" fill="#f6e7c4" font-family="monospace" font-size="16" text-anchor="middle">MENU</text>
+<text x="290" y="136" fill="#f6e7c4" font-family="monospace" font-size="16" text-anchor="middle">Continue · Novo jogo · Opções</text>
+<polygon points="290,230 440,290 290,350 140,290" fill="#2a2118" stroke="#d8b46a" stroke-width="2"/>
+<text x="290" y="286" fill="#f6e7c4" font-family="monospace" font-size="16" text-anchor="middle">Continuar</text>
+<text x="290" y="306" fill="#f6e7c4" font-family="monospace" font-size="16" text-anchor="middle">ou novo jogo?</text>
+<rect x="120" y="420" width="340" height="80" rx="6" fill="#15211c" stroke="#d8b46a" stroke-width="2"/>
+<text x="290" y="456" fill="#f6e7c4" font-family="monospace" font-size="16" text-anchor="middle">Dificuldade</text>
+<text x="290" y="476" fill="#f6e7c4" font-family="monospace" font-size="16" text-anchor="middle">Fácil · Normal · Difícil</text>
+<rect x="120" y="560" width="340" height="70" rx="6" fill="#15211c" stroke="#d8b46a" stroke-width="2"/>
+<text x="290" y="601" fill="#f6e7c4" font-family="monospace" font-size="16" text-anchor="middle">Cutscene do capítulo</text>
+<rect x="120" y="700" width="340" height="90" rx="6" fill="#15211c" stroke="#d8b46a" stroke-width="2"/>
+<text x="290" y="741" fill="#f6e7c4" font-family="monospace" font-size="16" text-anchor="middle">Explorar a fase</text>
+<text x="290" y="761" fill="#f6e7c4" font-family="monospace" font-size="16" text-anchor="middle">mover · pular · dash · J · L · F</text>
+<polygon points="290,860 440,925 290,990 140,925" fill="#2a2118" stroke="#d8b46a" stroke-width="2"/>
+<text x="290" y="921" fill="#f6e7c4" font-family="monospace" font-size="16" text-anchor="middle">Recebeu dano?</text>
+<text x="290" y="941" fill="#f6e7c4" font-family="monospace" font-size="16" text-anchor="middle">colono/zumbi/água/estaca</text>
+<rect x="120" y="1060" width="340" height="90" rx="6" fill="#15211c" stroke="#d8b46a" stroke-width="2"/>
+<text x="290" y="1101" fill="#f6e7c4" font-family="monospace" font-size="16" text-anchor="middle">Perde 1 coração</text>
+<text x="290" y="1121" fill="#f6e7c4" font-family="monospace" font-size="16" text-anchor="middle">(chefe tira 2) · total 6</text>
+<polygon points="290,1220 410,1275 290,1330 170,1275" fill="#2a2118" stroke="#d8b46a" stroke-width="2"/>
+<text x="290" y="1281" fill="#f6e7c4" font-family="monospace" font-size="16" text-anchor="middle">HP = 0?</text>
+<rect x="120" y="1400" width="340" height="80" rx="6" fill="#15211c" stroke="#d8b46a" stroke-width="2"/>
+<text x="290" y="1446" fill="#f6e7c4" font-family="monospace" font-size="16" text-anchor="middle">Morte → renasce no checkpoint</text>
+<rect x="120" y="1540" width="340" height="80" rx="6" fill="#15211c" stroke="#d8b46a" stroke-width="2"/>
+<text x="290" y="1586" fill="#f6e7c4" font-family="monospace" font-size="16" text-anchor="middle">Derrotar colonos e zumbis</text>
+<rect x="120" y="1690" width="340" height="100" rx="6" fill="#15211c" stroke="#d8b46a" stroke-width="2"/>
+<text x="290" y="1736" fill="#f6e7c4" font-family="monospace" font-size="16" text-anchor="middle">ARENA DO CHEFE</text>
+<text x="290" y="1756" fill="#f6e7c4" font-family="monospace" font-size="16" text-anchor="middle">nome, aura, ritual, parry de lança</text>
+<polygon points="290,1870 440,1935 290,2000 140,1935" fill="#2a2118" stroke="#d8b46a" stroke-width="2"/>
+<text x="290" y="1931" fill="#f6e7c4" font-family="monospace" font-size="16" text-anchor="middle">Vida do chefe</text>
+<text x="290" y="1951" fill="#f6e7c4" font-family="monospace" font-size="16" text-anchor="middle">&lt; 40%?</text>
+<rect x="120" y="2070" width="340" height="90" rx="6" fill="#15211c" stroke="#d8b46a" stroke-width="2"/>
+<text x="290" y="2111" fill="#f6e7c4" font-family="monospace" font-size="16" text-anchor="middle">Fase de brasa:</text>
+<text x="290" y="2131" fill="#f6e7c4" font-family="monospace" font-size="16" text-anchor="middle">mais rápido e vermelho</text>
+<rect x="120" y="2230" width="340" height="80" rx="6" fill="#15211c" stroke="#d8b46a" stroke-width="2"/>
+<text x="290" y="2276" fill="#f6e7c4" font-family="monospace" font-size="16" text-anchor="middle">Derrotar chefe → totem → vitória</text>
+<rect x="120" y="2370" width="340" height="70" rx="6" fill="#15211c" stroke="#d8b46a" stroke-width="2"/>
+<text x="290" y="2411" fill="#f6e7c4" font-family="monospace" font-size="16" text-anchor="middle">Próximo capítulo</text>
+<rect x="120" y="2500" width="340" height="80" rx="6" fill="#15211c" stroke="#d8b46a" stroke-width="2"/>
+<text x="290" y="2546" fill="#f6e7c4" font-family="monospace" font-size="16" text-anchor="middle">Cap. 5: Guardião → fim da jornada</text>
+<rect x="620" y="700" width="360" height="100" rx="6" fill="#15211c" stroke="#d8b46a" stroke-width="2"/>
+<text x="800" y="746" fill="#f6e7c4" font-family="monospace" font-size="16" text-anchor="middle">Parry do Sand (F)</text>
+<text x="800" y="766" fill="#f6e7c4" font-family="monospace" font-size="16" text-anchor="middle">0,36 s · PERFECT devolve a lança</text>
+<rect x="620" y="1060" width="360" height="100" rx="6" fill="#15211c" stroke="#d8b46a" stroke-width="2"/>
+<text x="800" y="1106" fill="#f6e7c4" font-family="monospace" font-size="16" text-anchor="middle">Água/estacas: 1 dano e resgate</text>
+<text x="800" y="1126" fill="#f6e7c4" font-family="monospace" font-size="16" text-anchor="middle">no último chão seguro</text>
+<rect x="620" y="1400" width="360" height="100" rx="6" fill="#15211c" stroke="#d8b46a" stroke-width="2"/>
+<text x="800" y="1446" fill="#f6e7c4" font-family="monospace" font-size="16" text-anchor="middle">Esc → pausa</text>
+<text x="800" y="1466" fill="#f6e7c4" font-family="monospace" font-size="16" text-anchor="middle">continuar · reiniciar · menu</text>
+<rect x="620" y="1690" width="360" height="120" rx="6" fill="#15211c" stroke="#d8b46a" stroke-width="2"/>
+<text x="800" y="1746" fill="#f6e7c4" font-family="monospace" font-size="16" text-anchor="middle">Chefe: combo, lança correndo,</text>
+<text x="800" y="1766" fill="#f6e7c4" font-family="monospace" font-size="16" text-anchor="middle">investida, guarda e contra-ataque</text>
+<rect x="620" y="1540" width="360" height="80" rx="6" fill="#15211c" stroke="#d8b46a" stroke-width="2"/>
+<text x="800" y="1576" fill="#f6e7c4" font-family="monospace" font-size="16" text-anchor="middle">Memórias coletadas</text>
+<text x="800" y="1596" fill="#f6e7c4" font-family="monospace" font-size="16" text-anchor="middle">marcam a travessia</text>
+</g></svg>
