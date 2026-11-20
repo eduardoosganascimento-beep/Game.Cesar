@@ -3,7 +3,7 @@
 // determinístico no tempo: sem estado por quadro e sem efeitos criados no
 // render, o desenho é idêntico em 60 fps, no pause e nos testes.
 
-import { VIEW_H, VIEW_W, type Camera } from '../engine'
+import { VIEW_W, type Camera } from '../engine'
 import type { Enemy } from '../enemy'
 
 function rgba(hex: string, alpha: number): string {
@@ -32,11 +32,8 @@ export function paintBossArena(
 
   ctx.save()
 
-  // Fora da arena o cenário recua: o olho vai para o chefe sem cortar a leitura.
-  ctx.fillStyle = `rgba(3, 5, 4, ${0.3 * strength})`
-  if (left > 0) ctx.fillRect(0, 0, Math.min(left, VIEW_W), VIEW_H)
-  const outsideRight = Math.max(0, right)
-  if (outsideRight < VIEW_W) ctx.fillRect(outsideRight, 0, VIEW_W - outsideRight, VIEW_H)
+  // Sem moldura escura nas bordas: a arena agora é um espaço aberto de
+  // combate, não uma caixa. O ritual fica só no chão e nas brasas.
 
   // Círculo ritual no chão: três faixas finas e marcas simétricas.
   const radiusX = Math.min(84, Math.max(24, (right - left) / 2 - 10))

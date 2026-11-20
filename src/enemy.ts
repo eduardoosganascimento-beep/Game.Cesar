@@ -357,8 +357,8 @@ export class Enemy {
 
   private stats: Stats
   public speed: number
-  private readonly left: number
-  private readonly right: number
+  private left: number
+  private right: number
   private readonly spawnX: number
   private readonly spawnY: number
   private readonly levelFactor: number
@@ -514,6 +514,14 @@ export class Enemy {
   // Limites da arena do chefe, em coordenadas de mundo.
   get bossArena(): { left: number; right: number } {
     return { left: this.left, right: this.right }
+  }
+
+  // A arena é preparada pelo jogo (não pelo JSON): mais espaço para correr e
+  // recuar do que a grade original de 8 a 16 tiles permitia.
+  setBossArena(left: number, right: number): void {
+    if (!this.bossConfig || right <= left) return
+    this.left = left
+    this.right = right
   }
 
   get rect(): Rect {

@@ -281,21 +281,13 @@ class Game {
         done = player.justThrew
         break
       case 4:
-        done = this.collected >= 1
+        // "Siga até a fogueira": meta da fase, não coleta de memórias
+        // (esse sistema não existe e travava o tutorial para sempre).
+        done = player.x + player.w >= this.goalX - TILE
         break
       case 5:
-        done = false // completar o tutorial normalmente
-        break
-      case 6:
-        // Perry step - verifica se o jogador apertou F para bloquear
-        // ou se o índio está no estado parry
-        if (this.input.parryPressed) {
-          done = true // Jogador ativou o Perry com a tecla F
-        }
-        const indio = this.enemies.find((e) => e.kind === 'indio')
-        if (indio && indio.animator.state === 'parry') {
-          done = true // Perry ativado automaticamente
-        }
+        // O passo do Perry fecha quando a janela de defesa é ativada.
+        done = this.parryTimer > 0 || this.input.parryPressed
         break
       default:
         return
@@ -399,12 +391,38 @@ class Game {
         // O capitão é o mesmo corpo em todos os capítulos; a configuração
         // troca nome, paleta, vida e agressividade. O guardião é o chefão.
         const config = bossConfigFor(this.chapterIndex, entity.kind ?? 'capanga')
-        if (config) enemy.configureBoss(config)
+        if (config) {
+          enemy.configureBoss(config)
+          this.prepareBossArena(enemy)
+        }
         const diff = this.difficulty
         enemy.setSpeedScale(DELTAS.speed[diff] || 1)
         enemy.setHealthScale(DELTAS.enemies[diff] || 1)
         return enemy
       })
+  }
+
+  // Prepara o duelo: seis tiles extras de cada lado e chão sem estacas.
+  // Antes o chefe ficava preso numa caixa de 8 a 16 tiles, estreita demais
+  // para corrida, recuo e arremesso — a arena agora cabe a tela inteira.
+  private prepareBossArena(enemy: Enemy): void {
+    const margin = TILE * 6
+    const original = enemy.bossArena
+    const minWidth = TILE * 20
+    let left = Math.max(TILE, original.left - margin)
+    const right = Math.min(this.map.width - TILE, original.right + margin)
+    // Perto do fim do mapa não há margem à direita: compensa à esquerda
+    // para o duelo nunca virar uma caixa estreita.
+    if (right - left < minWidth) left = Math.max(TILE, right - minWidth)
+    enemy.setBossArena(left, right)
+
+    const from = Math.max(0, Math.floor(left / TILE))
+    const to = Math.min(this.map.cols - 1, Math.floor(right / TILE))
+    for (let ty = 0; ty < this.map.rows; ty += 1) {
+      for (let tx = from; tx <= to; tx += 1) {
+        if (this.map.tiles[ty][tx] === Tile.Spike) this.map.tiles[ty][tx] = Tile.Empty
+      }
+    }
   }
 
   // Limpa estados de combate que podem sobrar de uma morte ou de um golpe.
@@ -1524,11 +1542,13 @@ class Game {
   }
 
   private respawnAtCheckpoint(message: string): void {
-    const x = this.player.x + this.player.w / 2
-    const y = this.player.y - 6
     this.player.hp = MAX_HP
     this.player.respawn()
     this.lastSafe = { x: this.player.x, y: this.player.y }
+    // A mensagem aparece no checkpoint — onde a câmera vai parar —, não no
+    // lugar da morte, que pode estar fora da tela.
+    const x = this.player.x + this.player.w / 2
+    const y = this.player.y - 6
     this.spawnEnemies()
     this.clearCombatState()
     this.animator.reset()

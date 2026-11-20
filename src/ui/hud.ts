@@ -78,6 +78,7 @@ export class Hud {
     if (!this.bossBar || this.bossKey === '') return
     this.bossKey = ''
     this.bossBar.classList.add('is-hidden')
+    this.bossBar.classList.remove('is-enraged')
   }
 
   show(): void {

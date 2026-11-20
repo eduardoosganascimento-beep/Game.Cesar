@@ -145,7 +145,7 @@ export class Screens {
 
     if (this.endStats) {
       this.endStats.textContent = ''
-      this.addStat('Memórias', `${stats.memories}/${stats.total}`)
+      if (stats.total > 0) this.addStat('Memórias', `${stats.memories}/${stats.total}`)
       this.addStat('Tempo', formatTime(stats.seconds))
       if (stats.allMemories) this.addStat('Trilha', 'completa')
     }
