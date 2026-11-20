@@ -416,7 +416,10 @@ export class Enemy {
   // Dificuldades mais duras dão mais fôlego aos inimigos (e chefes).
   setHealthScale(scale: number): void {
     this.healthScale = scale
-    this.maxHp = Math.max(1, Math.round(this.stats.hp * scale))
+    const scaled = Math.round(this.stats.hp * scale)
+    // Na dificuldade fácil um chefe com 6 de vida morria antes de mostrar
+    // o combate; o piso mantém a arena legível sem perder a escala.
+    this.maxHp = this.bossConfig ? Math.max(8, scaled) : Math.max(1, scaled)
     this.hp = this.maxHp
   }
 

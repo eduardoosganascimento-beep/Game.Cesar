@@ -55,6 +55,9 @@ export class Player {
   hp = MAX_HP
   facing = 1
   onGround = false
+  // Plataformas são de um lado só: dá para subir pulando de baixo e descer
+  // com ↓ + Espaço durante a janela curta abaixo.
+  onPlatform = false
   attack = 0
   throw = 0
   throwCooldown = 0
@@ -78,6 +81,7 @@ export class Player {
   private throwElapsed = 0
   private skidCooldown = 0
   private lunge = 0
+  private dropThrough = 0
   private map: TileMap
   private spawnX: number
   private spawnY: number
@@ -105,6 +109,8 @@ export class Player {
     this.vx = 0
     this.vy = 0
     this.onGround = false
+    this.onPlatform = false
+    this.dropThrough = 0
     this.attack = 0
     this.throw = 0
     this.throwCooldown = 0
@@ -233,6 +239,7 @@ export class Player {
     this.justSkidded = false
     this.landingSpeed = 0
     this.skidCooldown = Math.max(0, this.skidCooldown - dt)
+    this.dropThrough = Math.max(0, this.dropThrough - dt)
 
     const wasOnGround = this.onGround
     const fallSpeed = this.vy
@@ -273,17 +280,30 @@ export class Player {
       this.vx = clamp(this.vx, -maxSpeed, maxSpeed)
       this.vy = Math.min(this.vy + GRAVITY * dt, MAX_FALL)
 
-      if (input.jumpPressed && canAct) this.buffer = BUFFER_TIME
-      this.buffer = Math.max(0, this.buffer - dt)
-      this.coyote = this.onGround ? COYOTE_TIME : Math.max(0, this.coyote - dt)
-
-      // Pulo: se houver tempo de coyote ou ground, pular
-      if (this.buffer > 0 && this.coyote > 0) {
-        this.vy = JUMP_SPEED
+      const dropDown =
+        input.jumpPressed && canAct && this.onGround && this.onPlatform && input.downHeld
+      if (dropDown) {
+        // ↓ + Espaço: atravessa a plataforma e cai para o próximo piso.
+        this.dropThrough = 0.22
+        this.vy = 70
         this.onGround = false
+        this.onPlatform = false
         this.buffer = 0
         this.coyote = 0
-        this.justJumped = true
+      } else {
+        if (input.jumpPressed && canAct) this.buffer = BUFFER_TIME
+        this.buffer = Math.max(0, this.buffer - dt)
+        this.coyote = this.onGround ? COYOTE_TIME : Math.max(0, this.coyote - dt)
+
+        // Pulo: se houver tempo de coyote ou ground, pular. De baixo para
+        // cima a plataforma já é atravessada (a colisão só vale ao cair).
+        if (this.buffer > 0 && this.coyote > 0) {
+          this.vy = JUMP_SPEED
+          this.onGround = false
+          this.buffer = 0
+          this.coyote = 0
+          this.justJumped = true
+        }
       }
 
       // Corte do pulo: se o jogador soltar a tecla, a velocidade do pulo diminui
@@ -398,6 +418,7 @@ export class Player {
     const previousBottom = this.y + this.h
     this.y += dy
     this.onGround = false
+    this.onPlatform = false
 
     for (const solid of this.map.solidsIn(this.hurtbox)) {
       if (dy > 0) {
@@ -409,12 +430,13 @@ export class Player {
       this.vy = 0
     }
 
-    if (dy > 0) {
+    if (dy > 0 && this.dropThrough <= 0) {
       for (const platform of this.map.platformsIn(this.hurtbox)) {
         if (previousBottom <= platform.y + 0.5) {
           this.y = platform.y - this.h
           this.vy = 0
           this.onGround = true
+          this.onPlatform = true
         }
       }
     }

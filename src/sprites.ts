@@ -109,6 +109,13 @@ export function getSpearSprite(): Sprite | undefined {
   return spearSprite
 }
 
+// O render espera esta bandeira antes de desenhar personagens: sem ela o
+// primeiro quadro mostrava sprites provisórios e "pipocava" quando a folha
+// terminava de carregar.
+export function spritesReady(): boolean {
+  return playerCache.size > 0 && indioCache.size > 0
+}
+
 export function loadedFrameCount(): number {
   let bossCount = guardiaoCache.size
   for (const cache of Object.values(bossCaches)) bossCount += cache.size

@@ -1238,6 +1238,30 @@ function sceneCanvas(scene: BgScene): HTMLCanvasElement | undefined {
   return canvas
 }
 
+// Copas em paralaxe: duas camadas de silhueta que deslizam devagar conforme
+// a câmera. Dá profundidade sem repetir o cenário central nem custar sprites.
+function drawParallaxCanopy(
+  ctx: CanvasRenderingContext2D,
+  cameraX: number,
+  night: boolean,
+): void {
+  const layers = [
+    { speed: 0.08, base: 56, step: 52, rx: 30, ry: 15, color: night ? '#101b27' : '#1b2916', alpha: 0.42 },
+    { speed: 0.17, base: 84, step: 38, rx: 19, ry: 11, color: night ? '#142334' : '#24371f', alpha: 0.38 },
+  ]
+  for (const layer of layers) {
+    ctx.globalAlpha = layer.alpha
+    const offset = -((cameraX * layer.speed) % layer.step)
+    for (let x = -layer.step; x < W + layer.step; x += layer.step) {
+      const cx = x + offset
+      const jitter = (hash(cx * 0.73) - 0.5) * 8
+      blob(ctx, cx, layer.base + jitter, layer.rx, layer.ry, layer.color)
+      px(ctx, Math.round(cx), layer.base + 6, 2, 34, layer.color)
+    }
+  }
+  ctx.globalAlpha = 1
+}
+
 // Vagalumes: pontos de luz que piscam devagar sobre a floresta.
 const FIREFLIES = Array.from({ length: 24 }, (_, i) => ({
   x: (i * 73 + 19) % W,
@@ -1256,6 +1280,7 @@ export function drawBackground(
   ctx.fillRect(0, 0, W, H)
   const canvas = sceneCanvas(scene)
   if (canvas) ctx.drawImage(canvas, 0, 0)
+  drawParallaxCanopy(ctx, cameraX, night)
 
   if (scene === 'village-fire') {
     drawVillageFire(ctx, time)

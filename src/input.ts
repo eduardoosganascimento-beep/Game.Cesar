@@ -60,6 +60,10 @@ export class Input {
     return this.pressed('Space', 'ArrowUp', 'KeyW')
   }
 
+  get downHeld(): boolean {
+    return this.isDown('ArrowDown', 'KeyS')
+  }
+
   get attackPressed(): boolean {
     return this.pressed('KeyJ', 'KeyZ')
   }

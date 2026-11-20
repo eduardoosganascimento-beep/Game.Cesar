@@ -12,7 +12,7 @@ import { Input } from './input'
 import { TileMap, Tile, type EnemyKind, type LevelData } from './level'
 import { MAX_HP, Player } from './player'
 import { drawScenery } from './scenery'
-import { characterScale, loadSprites, type Sprite } from './sprites'
+import { characterScale, loadSprites, spritesReady, type Sprite } from './sprites'
 import { CutsceneView } from './ui/cutscene'
 import { Hud } from './ui/hud'
 import { Screens, type RunStats } from './ui/screens'
@@ -168,6 +168,7 @@ class Game {
   private winTimer = 0
   private hudKey = ''
   private difficulty: Difficulty = readDifficulty()
+  spritesLoaded = false
 
   constructor() {
     this.hud.setMuted(sfx.muted)
@@ -880,6 +881,21 @@ class Game {
   }
 
   render = (): void => {
+    // Enquanto a folha de sprites não chega, desenha apenas um cartaz limpo.
+    // Antes o primeiro quadro mostrava corpos provisórios e "pipocava".
+    if (!this.spritesLoaded || !spritesReady()) {
+      ctx.fillStyle = '#070a08'
+      ctx.fillRect(0, 0, VIEW_W, VIEW_H)
+      this.hud.hideBoss()
+      ctx.save()
+      ctx.textAlign = 'center'
+      ctx.font = 'bold 8px "Courier New", monospace'
+      ctx.fillStyle = '#d8b46a'
+      ctx.fillText('CARREGANDO A FLORESTA...', VIEW_W / 2, VIEW_H / 2)
+      ctx.restore()
+      return
+    }
+
     // A barra só entra quando o chefe aparece na tela: o nome dele é uma
     // revelação da arena, não um spoiler do começo da fase.
     const bosses = this.enemies
@@ -2068,6 +2084,21 @@ class Game {
       this.paintFallbackPlayer(feetX, feetY)
     }
 
+    // Clarão branco no impacto: o dano vira leitura imediata, sem depender
+    // só da barra de corações.
+    if (player.hurt > 0 && sprite) {
+      ctx.save()
+      ctx.globalAlpha = Math.min(0.42, player.hurt * 1.3)
+      ctx.drawImage(
+        sprite.white,
+        Math.round(feetX - sprite.ax * SPRITE_SCALE),
+        Math.round(feetY - sprite.ay * SPRITE_SCALE),
+        Math.max(1, Math.round(sprite.w * SPRITE_SCALE)),
+        Math.max(1, Math.round(sprite.h * SPRITE_SCALE)),
+      )
+      ctx.restore()
+    }
+
     if (player.attack > 0) {
       const progress = player.actionProgress
       const alpha = Math.max(0, 0.75 - Math.abs(progress - 0.52) * 1.5)
@@ -2327,7 +2358,10 @@ game.onWin = (stats) => {
 const loop = new Loop(game.update, game.render)
 loop.start()
 
-void loadSprites()
+void loadSprites().then(() => {
+  game.spritesLoaded = true
+  game.render()
+})
 
 window.addEventListener('keydown', (event) => {
   if (event.code !== 'Escape' || event.repeat) return
