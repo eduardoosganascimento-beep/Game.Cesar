@@ -3,7 +3,7 @@ import { sfx } from './audio'
 import { drawBackground } from './background'
 import { bossConfigFor } from './bosses'
 import { CHAPTERS, TUTORIAL, shortTitle, type ChapterDef } from './chapters'
-import { DELTAS, DIFFICULTY_LABELS, readCompleted, readDifficulty, readProgress, writeCompleted, writeDifficulty, writeProgress, type Difficulty } from './difficulty'
+import { DELTAS, DIFFICULTY_LABELS, readDifficulty, readProgress, writeCompleted, writeDifficulty, writeProgress, type Difficulty } from './difficulty'
 import { Effects } from './effects'
 import { Camera, Loop, TILE, VIEW_H, VIEW_W, overlaps } from './engine'
 import { BOSS_PARRY_MIN_RANGE, BOSS_PARRY_RANGE, Enemy } from './enemy'
@@ -1671,37 +1671,71 @@ class Game {
     }
   }
 
-  // Placa flutuante com o nome do chefe. A letra é pequena, mas o fundo
-  // escuro e a sombra garantem leitura no meio do cenário.
+  // Placa flutuante com o nome do chefe: letra maior, espaçada e contornada,
+  // com o título (Mãe, Pai, Irmã…) logo abaixo. O fundo escuro e as vinhetas
+  // douradas mantêm a leitura mesmo sobre a folhagem vermelha do capítulo 1.
   private paintBossName(enemy: Enemy, centerX: number, crownTop: number, time: number): void {
-    const name = enemy.bossName
-    const y = Math.round(crownTop) - 9
+    const name = enemy.bossName.toUpperCase()
+    const title = enemy.bossTitle.toUpperCase()
+    const color = enemy.bossNameColor
+    const tracking = 1
+    const nameFont = 'bold 8px "Courier New", monospace'
+    const titleFont = 'italic 6px Georgia, serif'
+
     ctx.save()
     ctx.textAlign = 'center'
     ctx.textBaseline = 'alphabetic'
-    ctx.font = 'bold 7px "Courier New", monospace'
-    const textWidth = Math.ceil(ctx.measureText(name).width)
-    const plateWidth = textWidth + 10
-    const plateX = Math.round(centerX - plateWidth / 2)
-    const plateY = y - 7
 
-    ctx.globalAlpha = 0.62
-    ctx.fillStyle = '#050403'
-    ctx.fillRect(plateX, plateY, plateWidth, 10)
-    ctx.fillStyle = rgba(enemy.bossNameColor, 0.35)
-    ctx.fillRect(plateX, plateY, 1, 10)
-    ctx.fillRect(plateX + plateWidth - 1, plateY, 1, 10)
+    ctx.font = nameFont
+    const nameWidth = [...name].reduce((sum, ch) => sum + ctx.measureText(ch).width + tracking, -tracking)
+    ctx.font = titleFont
+    const titleWidth = title ? ctx.measureText(title).width : 0
+    const plateWidth = Math.ceil(Math.max(nameWidth, titleWidth) + 16)
+    const plateHeight = title ? 20 : 13
+    const y = Math.round(crownTop) - 10
+    const plateY = y - (title ? 13 : 8)
+    const plateX = Math.round(centerX - plateWidth / 2)
+
+    // Moldura: fundo quase preto, filetes dourados e pequenas pontas laterais.
+    ctx.globalAlpha = 0.86
+    ctx.fillStyle = '#070504'
+    ctx.fillRect(plateX, plateY, plateWidth, plateHeight)
+    ctx.fillStyle = rgba(color, 0.72)
+    ctx.fillRect(plateX + 2, plateY, plateWidth - 4, 1)
+    ctx.fillRect(plateX + 2, plateY + plateHeight - 1, plateWidth - 4, 1)
+    ctx.globalAlpha = 0.55
+    ctx.fillRect(plateX, plateY + 3, 1, plateHeight - 6)
+    ctx.fillRect(plateX + plateWidth - 1, plateY + 3, 1, plateHeight - 6)
 
     // Haste curta ligando a placa à coroa.
-    ctx.globalAlpha = 0.5
-    ctx.fillStyle = enemy.bossNameColor
-    ctx.fillRect(Math.round(centerX), plateY + 10, 1, 3)
+    ctx.globalAlpha = 0.6
+    ctx.fillStyle = color
+    ctx.fillRect(Math.round(centerX), plateY + plateHeight, 1, 3)
 
-    ctx.globalAlpha = 0.95 + Math.sin(time * 4) * 0.05
-    ctx.fillStyle = '#120a06'
-    ctx.fillText(name, centerX + 1, y + 1)
-    ctx.fillStyle = enemy.bossNameColor
-    ctx.fillText(name, centerX, y)
+    // Nome: letra por letra para controlar o espaçamento e desenhar contorno.
+    ctx.font = nameFont
+    ctx.globalAlpha = 0.94 + Math.sin(time * 3) * 0.06
+    let cursor = centerX - nameWidth / 2
+    for (const ch of name) {
+      const charWidth = ctx.measureText(ch).width
+      const charX = Math.round(cursor + charWidth / 2)
+      ctx.globalAlpha = 1
+      ctx.fillStyle = '#000'
+      ctx.fillText(ch, charX + 1, y + 1)
+      ctx.fillText(ch, charX - 1, y + 1)
+      ctx.fillStyle = color
+      ctx.fillText(ch, charX, y)
+      cursor += charWidth + tracking
+    }
+
+    if (title) {
+      ctx.font = titleFont
+      ctx.globalAlpha = 0.88
+      ctx.fillStyle = '#000'
+      ctx.fillText(title, centerX + 1, y + 8)
+      ctx.fillStyle = rgba(color, 0.9)
+      ctx.fillText(title, centerX, y + 8)
+    }
     ctx.restore()
   }
 
@@ -2078,7 +2112,6 @@ const screens = new Screens({
     sfx.unlock()
     sfx.click()
     writeProgress(0)
-    screens.setProgress(0)
     game.start(0)
     screens.hideAll()
   },
@@ -2086,7 +2119,6 @@ const screens = new Screens({
     sfx.unlock()
     sfx.click()
     writeProgress(0)
-    screens.setProgress(0)
     game.setDifficulty(difficulty)
     writeDifficulty(difficulty)
     screens.setDifficultySelection(difficulty)
@@ -2144,10 +2176,7 @@ const chapterOptions = CHAPTERS.map((chapter) => ({
   subtitle: chapter.data.subtitle ?? '',
   detail: chapter.detail,
 }))
-screens.setChapters(chapterOptions)
 screens.setChapterSelect(chapterOptions)
-screens.setProgress(readProgress())
-screens.setCompleted(readCompleted())
 
 // Reflete no menu a dificuldade salva da última partida.
 screens.setDifficultySelection(readDifficulty())
@@ -2205,9 +2234,8 @@ if (import.meta.env.DEV) {
   if (view === 'chapters') {
     screens.showChapters()
   }
-  if (view === 'how' || view === 'credits' || view === 'difficulty' || view === 'options' || view === 'saves') {
-    const action =
-      view === 'difficulty' ? 'options' : view === 'saves' ? 'saves' : view
+  if (view === 'how' || view === 'credits' || view === 'difficulty' || view === 'options' || view === 'chapters') {
+    const action = view === 'difficulty' ? 'options' : view
     document.querySelector<HTMLButtonElement>(`[data-action="${action}"]`)?.click()
   }
   if (view === 'pause') {

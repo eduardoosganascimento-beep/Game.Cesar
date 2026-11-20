@@ -112,33 +112,14 @@
                 <span class="menu-label">Novo jogo</span>
                 <span class="menu-note">começar do início</span>
               </button>
-              <button class="menu-item" type="button" data-action="saves">
-                <span class="menu-index">III</span>
-                <span class="menu-label">Jogos salvos</span>
-                <span class="menu-note">capítulos liberados</span>
-              </button>
               <button class="menu-item" type="button" data-action="options">
-                <span class="menu-index">IV</span>
+                <span class="menu-index">III</span>
                 <span class="menu-label">Opções</span>
                 <span class="menu-note">dificuldade e som</span>
               </button>
             </nav>
 
             <p class="menu-hint">↑ ↓ navegar <span>·</span> Enter escolher</p>
-          </div>
-
-          <div class="menu-screen menu-panel is-hidden" data-screen="chapters">
-            <p class="eyebrow">A travessia</p>
-            <h2 class="menu-title">Jogos salvos</h2>
-            <p class="menu-lead">
-              Capítulos liberados pela sua jornada. Escolha um para revisitar ou continuar.
-            </p>
-            <nav id="chapter-list" class="chapter-list" aria-label="Capítulos salvos"></nav>
-            <p id="chapter-detail" class="chapter-detail" aria-live="polite"></p>
-            <button id="chapter-select-btn" class="menu-back" type="button" data-action="chapter-select" disabled>
-              Escolher capítulos (bloqueado)
-            </button>
-            <button class="menu-back" type="button" data-action="back">Voltar</button>
           </div>
 
           <div class="menu-screen menu-panel is-hidden" data-screen="chapter-select">
@@ -172,6 +153,7 @@
             </div>
             <p id="difficulty-summary" class="difficulty-summary">Normal · a lenda como foi escrita.</p>
             <div class="options-extras">
+              <button class="menu-back" type="button" data-action="chapters">Capítulos</button>
               <button class="menu-back" type="button" data-action="toggle-sound"><span id="options-sound">Som: ligado</span></button>
               <button class="menu-back" type="button" data-action="how">Como jogar</button>
               <button class="menu-back" type="button" data-action="credits">Créditos</button>

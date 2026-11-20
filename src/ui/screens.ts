@@ -39,7 +39,7 @@ export type ScreenHandlers = {
   onDifficulty: (difficulty: Difficulty) => void
 }
 
-type ScreenName = 'main' | 'chapters' | 'chapter-select' | 'options' | 'new-difficulty' | 'how' | 'credits'
+type ScreenName = 'main' | 'chapter-select' | 'options' | 'new-difficulty' | 'how' | 'credits'
 type Visible = 'menu' | 'pause' | 'end' | 'none'
 
 export class Screens {
@@ -51,14 +51,9 @@ export class Screens {
   private readonly endText = document.querySelector<HTMLElement>('#end-text')
   private readonly endStats = document.querySelector<HTMLElement>('#end-stats')
   private readonly endNext = document.querySelector<HTMLButtonElement>('#end-next')
-  private readonly chapterList = document.querySelector<HTMLElement>('#chapter-list')
   private readonly chapterSelectList = document.querySelector<HTMLElement>('#chapter-select-list')
-  private readonly chapterSelectBtn = document.querySelector<HTMLButtonElement>('#chapter-select-btn')
   private readonly difficultySummary = document.querySelector<HTMLElement>('#difficulty-summary')
-  private readonly chapterDetail = document.querySelector<HTMLElement>('#chapter-detail')
 
-  private chapters: ChapterOption[] = []
-  private progress = 0
   private buttons: HTMLButtonElement[] = []
   private readonly bound = new WeakSet<HTMLButtonElement>()
   private visible: Visible = 'menu'
@@ -69,64 +64,6 @@ export class Screens {
     this.bindButtons()
     window.addEventListener('keydown', (event) => this.onKeyDown(event))
     this.showMenu()
-  }
-
-  setChapters(chapters: ChapterOption[]): void {
-    const list = this.chapterList
-    if (!list) return
-    this.chapters = chapters
-    list.textContent = ''
-
-    chapters.forEach((chapter, index) => {
-      const button = document.createElement('button')
-      button.className = 'chapter-item'
-      button.type = 'button'
-      button.dataset.action = 'chapter'
-      button.dataset.chapter = String(index)
-
-      const number = document.createElement('span')
-      number.className = 'chapter-number'
-      number.textContent = String(index + 1).padStart(2, '0')
-
-      const copy = document.createElement('span')
-      copy.className = 'chapter-copy'
-      const title = document.createElement('b')
-      title.textContent = chapter.shortTitle
-      const subtitle = document.createElement('small')
-      subtitle.textContent = chapter.subtitle
-      copy.append(title, subtitle)
-
-      const tag = document.createElement('span')
-      tag.className = 'chapter-tag'
-      tag.textContent = chapter.tag
-      if (index > this.progress) {
-        button.classList.add('is-locked')
-        button.setAttribute('aria-disabled', 'true')
-        const lock = document.createElement('span')
-        lock.className = 'chapter-lock'
-        lock.textContent = 'bloqueado'
-        tag.append(lock)
-      }
-
-      button.append(number, copy, tag)
-      list.append(button)
-    })
-
-    this.bindButtons()
-    if (this.visible === 'menu' && this.screen === 'chapters') this.select(0)
-  }
-
-  setProgress(index: number): void {
-    this.progress = Math.max(0, Math.min(4, index))
-    this.setChapters(this.chapters)
-  }
-
-  setCompleted(completed: boolean): void {
-    if (!this.chapterSelectBtn) return
-    this.chapterSelectBtn.disabled = !completed
-    this.chapterSelectBtn.textContent = completed
-      ? 'Escolher capítulos'
-      : 'Escolher capítulos (bloqueado)'
   }
 
   setChapterSelect(chapters: ChapterOption[]): void {
@@ -175,12 +112,13 @@ export class Screens {
     this.setScreen('main')
   }
 
+  // Capítulos agora vivem dentro de Opções: não há mais tela de "jogos salvos".
   showChapters(): void {
     this.visible = 'menu'
     this.menu?.classList.remove('is-hidden')
     this.pause?.classList.add('is-hidden')
     this.end?.classList.add('is-hidden')
-    this.setScreen('chapters')
+    this.setScreen('chapter-select')
   }
 
   showPause(): void {
@@ -296,19 +234,6 @@ export class Screens {
     button?.classList.add('is-selected')
     // Mantém o item escolhido visível quando a lista é maior que a tela.
     button?.scrollIntoView({ block: 'nearest' })
-    this.updateChapterDetail(button)
-  }
-
-  // A linha de detalhes mostra a história do capítulo em foco.
-  private updateChapterDetail(button?: HTMLButtonElement): void {
-    if (!this.chapterDetail) return
-    const index = button?.dataset.chapter
-    if (index === undefined) {
-      this.chapterDetail.textContent = ''
-      return
-    }
-    const chapter = this.chapters[Number(index)]
-    this.chapterDetail.textContent = chapter?.detail ?? ''
   }
 
   private clearSelection(): void {
@@ -321,7 +246,7 @@ export class Screens {
 
     switch (action) {
       case 'chapters':
-      case 'saves':
+      case 'chapter-select':
         this.showChapters()
         break
       case 'continue':
@@ -335,9 +260,6 @@ export class Screens {
         if (index >= 0) this.select(index)
         break
       }
-      case 'chapter-select':
-        if (!this.chapterSelectBtn?.disabled) this.setScreen('chapter-select')
-        break
       case 'difficulty-start': {
         const difficulty = button.dataset.difficulty
         if (difficulty === 'facil' || difficulty === 'normal' || difficulty === 'dificil') {
@@ -417,7 +339,7 @@ export class Screens {
     if (
       this.visible === 'menu' &&
       this.screen !== 'main' &&
-      this.screen !== 'chapters' &&
+      this.screen !== 'chapter-select' &&
       (isMoveUp || isMoveDown)
     ) {
       event.preventDefault()

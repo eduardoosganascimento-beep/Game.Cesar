@@ -244,6 +244,11 @@ export class Enemy {
   // início, para não emendar um golpe no vazio se o jogador recuar.
   private bossComboQueued = false
   private bossChain = false
+  // O chefe nunca fica plantado: entre um golpe e outro ele recua e volta,
+  // trocando de direção de tempos em tempos (a mesma dança do índio).
+  private bossStrafeTimer = 0
+  private bossStrafeDir = 1
+  private bossThrowRecovery = false
 
   stun(seconds: number): void {
     this.stunTimer = Math.max(this.stunTimer, seconds)
@@ -450,6 +455,9 @@ export class Enemy {
     this.bossParryCooldown = 0
     this.bossComboQueued = false
     this.bossChain = false
+    this.bossStrafeTimer = 0
+    this.bossStrafeDir = 1
+    this.bossThrowRecovery = false
     this.attackCooldown = 0.5
   }
 
@@ -666,6 +674,9 @@ export class Enemy {
     this.bossParryCooldown = 0
     this.bossComboQueued = false
     this.bossChain = false
+    this.bossStrafeTimer = 0
+    this.bossStrafeDir = 1
+    this.bossThrowRecovery = false
     this.animator.reset()
   }
 
@@ -932,8 +943,10 @@ export class Enemy {
 
     const arenaLeft = this.left + 4
     const arenaRight = this.right - 4
+    // Margem maior: se o jogador está só um pouco fora da arena, o chefe
+    // ainda ataca da borda em vez de ficar parado esperando ele entrar.
     const playerInside =
-      playerCenterX >= arenaLeft - 20 && playerCenterX <= arenaRight + 20
+      playerCenterX >= arenaLeft - 48 && playerCenterX <= arenaRight + 48
 
     // Decisão de ataque: perto, golpe; média, arremesso ou investida; longe,
     // investida. A escolha alterna para o chefe não repetir o mesmo padrão.
@@ -943,10 +956,13 @@ export class Enemy {
         return
       }
       if (adx <= cfg.throwRange) {
+        // A lança é o ataque de média distância do índio. O chefe prefere
+        // arremessar; a investida só aparece de vez em quando para quebrar
+        // o ritmo e obrigar o jogador a pular/desviar.
         if (
           this.bossChargeCooldown <= 0 &&
           adx > cfg.meleeRange + 26 &&
-          Math.random() < 0.34
+          Math.random() < 0.18
         ) {
           this.startBossAction('charge', dx)
         } else {
@@ -1003,10 +1019,32 @@ export class Enemy {
         }
         return
       }
-      this.accelerate(dir * this.speed, dt)
-    } else {
-      this.accelerate(0, dt)
+      // Corre de verdade quando está longe: o passo do clipe acompanha a
+      // velocidade, então os pés não deslizam no arranque.
+      const runSpeed = adx > cfg.throwRange ? this.speed * 1.3 : this.speed
+      this.accelerate(dir * runSpeed, dt)
+      this.bossStrafeTimer = 0
+      return
     }
+
+    // Corpo a corpo: em vez de travar, ele dá passos curtos para frente e
+    // para trás mantendo a cara voltada para o jogador. Se o passo levar à
+    // borda ou a uma parede, inverte na hora.
+    if (this.bossStrafeTimer <= 0) {
+      this.bossStrafeTimer = 0.32 + Math.random() * 0.38
+      this.bossStrafeDir = adx < stopDistance + 10 ? -dir : Math.random() < 0.5 ? -dir : dir
+    }
+    this.bossStrafeTimer -= dt
+    if (
+      this.onGround &&
+      (this.hasWallAhead(map, this.bossStrafeDir) ||
+        !this.hasGroundAhead(map, this.bossStrafeDir))
+    ) {
+      this.bossStrafeDir = -this.bossStrafeDir
+      this.bossStrafeTimer = 0.4
+    }
+    this.accelerate(this.bossStrafeDir * this.speed * 0.78, dt)
+    this.facing = dir
   }
 
   private startBossAction(kind: BossAction, dx: number, chain = false): void {
@@ -1047,6 +1085,9 @@ export class Enemy {
       this.bossHitAt = this.bossActionDuration * 0.75
       this.attackKind = 'shoot'
       this.attackElapsed = 0
+      // Igual ao índio: ele corre com a lança erguida e só planta o pé no
+      // instante em que arremessa.
+      this.vx = this.facing * this.speed * 0.55
       this.animator.play('shoot')
       return
     }
@@ -1086,6 +1127,9 @@ export class Enemy {
             return
           }
         }
+        // Recua logo após o corte para não virar estátua esperando o cooldown.
+        this.bossStrafeTimer = 0.34
+        this.bossStrafeDir = -this.facing
         this.endBossAction(false)
       }
       return
@@ -1093,12 +1137,17 @@ export class Enemy {
 
     if (action === 'throw') {
       this.attackElapsed = this.bossActionTime
-      this.vx = 0
+      this.vx = this.bossActionTime < this.bossHitAt ? this.facing * this.speed * 0.55 : 0
       if (!this.fired && this.bossActionTime >= this.bossHitAt) {
         this.fired = true
         this.justShot = true
       }
-      if (this.bossActionTime >= this.bossActionDuration) this.endBossAction(false)
+      if (this.bossActionTime >= this.bossActionDuration) {
+        this.bossThrowRecovery = true
+        this.bossStrafeTimer = 0.2
+        this.bossStrafeDir = this.facing
+        this.endBossAction(false)
+      }
       return
     }
 
@@ -1123,11 +1172,14 @@ export class Enemy {
 
     this.vx = 0
     this.bossChargeCanHit = false
+    this.bossStrafeTimer = 0.32
+    this.bossStrafeDir = this.bossChargeDir
     this.endBossAction(true)
   }
 
   private endBossAction(wasCharge: boolean): void {
     const cfg = this.bossConfig
+    const quickThrow = this.bossThrowRecovery
     this.bossAction = null
     this.bossActionTime = 0
     this.attackKind = null
@@ -1138,10 +1190,14 @@ export class Enemy {
     this.bossChargeStarted = false
     this.bossComboQueued = false
     this.bossChain = false
+    this.bossThrowRecovery = false
     this.vx = 0
     this.animator.setTimeScale(1)
     if (!cfg) return
-    this.attackCooldown = cfg.attackCooldown * (0.9 + Math.random() * 0.35)
+    // Depois da lança ele volta a correr mais cedo: o arremesso é o ritmo
+    // do índio, não um movimento pesado de atirador.
+    const tempo = quickThrow ? 0.72 : 1
+    this.attackCooldown = cfg.attackCooldown * tempo * (0.9 + Math.random() * 0.35)
     if (wasCharge) {
       this.bossChargeCooldown = cfg.chargeCooldown * (0.9 + Math.random() * 0.25)
     }
@@ -1158,6 +1214,9 @@ export class Enemy {
     this.struck = false
     this.bossComboQueued = false
     this.bossChain = false
+    this.bossStrafeTimer = 0
+    this.bossStrafeDir = 1
+    this.bossThrowRecovery = false
     this.bossGuardTimer = 0
     this.bossParryWindow = 0
     this.guardTimer = 0

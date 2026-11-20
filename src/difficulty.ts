@@ -48,7 +48,7 @@ export function writeDifficulty(difficulty: Difficulty): void {
   }
 }
 
-// Capítulo mais alto liberado (0 a 4). Usado por Continue e Jogos salvos.
+// Capítulo mais alto liberado (0 a 4). Usado por Continue e pela retomada.
 export function readProgress(): number {
   try {
     const value = Number(window.localStorage.getItem(PROGRESS_KEY))

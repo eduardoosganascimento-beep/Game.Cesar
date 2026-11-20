@@ -158,22 +158,22 @@ body {
 
 .boss-name {
   font-family: var(--display);
-  font-size: clamp(8px, 0.9vw, 11px);
-  letter-spacing: 0.32em;
+  font-size: clamp(9px, 1vw, 12px);
+  letter-spacing: 0.42em;
   text-transform: uppercase;
-  color: #e8c98f;
-  text-shadow: 0 2px 8px #000;
+  color: #f3d9a4;
+  text-shadow: 0 0 12px rgba(227, 193, 126, 0.45), 0 2px 4px #000;
 }
 
 .boss-sub {
-  margin-top: -3px;
+  margin-top: -4px;
   font-family: var(--serif);
   font-style: italic;
-  font-size: clamp(7px, 0.78vw, 9px);
-  letter-spacing: 0.3em;
+  font-size: clamp(8px, 0.82vw, 10px);
+  letter-spacing: 0.38em;
   text-transform: uppercase;
-  color: rgba(201, 161, 90, 0.78);
-  text-shadow: 0 1px 6px #000;
+  color: rgba(224, 184, 112, 0.9);
+  text-shadow: 0 0 8px rgba(163, 58, 42, 0.5), 0 1px 4px #000;
 }
 
 .boss-sub.is-hidden {
@@ -1683,49 +1683,44 @@ kbd {
 }
 
 /* Painéis compactos: cabem na moldura sem esconder o botão de voltar. */
-[data-screen="chapters"] .menu-title,
+[data-screen="chapter-select"] .menu-title,
 [data-screen="how"] .menu-title {
   font-size: clamp(24px, 3vw, 32px);
 }
 
-[data-screen="chapters"] .menu-lead,
+[data-screen="chapter-select"] .menu-lead,
 [data-screen="how"] .menu-lead {
   margin-bottom: 9px;
   font-size: clamp(12px, 1.25vw, 14px);
 }
 
-[data-screen="chapters"] .chapter-item {
+[data-screen="chapter-select"] .chapter-item {
   padding: 5px 8px 5px 4px;
 }
 
-[data-screen="chapters"] .chapter-number {
+[data-screen="chapter-select"] .chapter-number {
   width: 27px;
   height: 27px;
   font-size: 9px;
 }
 
-[data-screen="chapters"] .chapter-copy b {
+[data-screen="chapter-select"] .chapter-copy b {
   font-size: clamp(13px, 1.3vw, 15px);
 }
 
-[data-screen="chapters"] .chapter-copy small {
+[data-screen="chapter-select"] .chapter-copy small {
   font-size: clamp(10px, 1vw, 11px);
 }
 
-[data-screen="chapters"] .chapter-detail {
-  margin-top: 4px;
-  font-size: 10px;
-}
-
-[data-screen="chapters"] .difficulty-panel {
+[data-screen="chapter-select"] .difficulty-panel {
   margin: 6px 0 2px;
 }
 
-[data-screen="chapters"] .difficulty-item {
+[data-screen="chapter-select"] .difficulty-item {
   padding: 5px 9px;
 }
 
-[data-screen="chapters"] .menu-back,
+[data-screen="chapter-select"] .menu-back,
 [data-screen="how"] .menu-back {
   margin-top: 8px;
   padding: 6px 18px;
