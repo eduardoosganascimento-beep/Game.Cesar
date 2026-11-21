@@ -117,6 +117,7 @@ data URI, então o site funciona em qualquer hospedagem, inclusive subpasta.
 - [Guia de arte](docs/ARTE.md)
 - [Fluxograma (SVG)](docs/fluxograma-do-jogo.svg) · [cena editável do Excalidraw](docs/fluxograma-do-jogo.excalidraw)
 - [Notas de versão](docs/CHANGELOG.md)
+- [Banco de dados / API do jogo](database/README.md)
 
 ## Créditos
 
