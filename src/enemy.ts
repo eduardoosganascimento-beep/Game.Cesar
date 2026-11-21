@@ -249,6 +249,9 @@ export class Enemy {
   private bossStrafeTimer = 0
   private bossStrafeDir = 1
   private bossThrowRecovery = false
+  // Memória de perseguição: ao avistar o Sand, o inimigo mantém o alvo por
+  // alguns segundos mesmo se ele sair da linha de visão por um instante.
+  private aggroTimer = 0
 
   stun(seconds: number): void {
     this.stunTimer = Math.max(this.stunTimer, seconds)
@@ -461,6 +464,7 @@ export class Enemy {
     this.bossStrafeTimer = 0
     this.bossStrafeDir = 1
     this.bossThrowRecovery = false
+    this.aggroTimer = 0
     this.attackCooldown = 0.5
   }
 
@@ -715,6 +719,7 @@ export class Enemy {
     this.bossStrafeTimer = 0
     this.bossStrafeDir = 1
     this.bossThrowRecovery = false
+    this.aggroTimer = 0
     this.animator.reset()
   }
 
@@ -735,6 +740,7 @@ export class Enemy {
     this.bossGuardTimer = Math.max(0, this.bossGuardTimer - dt)
     this.bossParryWindow = Math.max(0, this.bossParryWindow - dt)
     this.bossParryCooldown = Math.max(0, this.bossParryCooldown - dt)
+    this.aggroTimer = Math.max(0, this.aggroTimer - dt)
 
     if (!this.alive) {
       this.deathTimer = Math.max(0, this.deathTimer - dt)
@@ -811,9 +817,11 @@ export class Enemy {
       const enemyCenterX = this.x + this.w / 2
       const distance = playerCenterX - enemyCenterX
       const vertical = Math.abs(player.y + player.h / 2 - (this.y + this.h / 2))
-      const inSight = vertical < 48 && Math.abs(distance) < this.stats.chase
+      const inSight = vertical < 64 && Math.abs(distance) < this.stats.chase
+      if (inSight) this.aggroTimer = 2.2
+      const hunting = inSight || this.aggroTimer > 0
 
-      if (inSight) {
+      if (hunting) {
         this.facing = distance >= 0 ? 1 : -1
 
         if (this.attackCooldown <= 0 && this.canAttack(distance)) {
@@ -985,10 +993,14 @@ export class Enemy {
     // ainda ataca da borda em vez de ficar parado esperando ele entrar.
     const playerInside =
       playerCenterX >= arenaLeft - 48 && playerCenterX <= arenaRight + 48
+    // Ao avistar o Sand, o chefe guarda o alvo e parte direto para ele,
+    // sem voltar a patrulhar no primeiro quadro em que perde a linha de visão.
+    if (Math.abs(dy) < 80 && adx < cfg.chargeRange + 80) this.aggroTimer = 2.5
+    const hunting = playerInside || this.aggroTimer > 0
 
     // Decisão de ataque: perto, golpe; média, arremesso ou investida; longe,
     // investida. A escolha alterna para o chefe não repetir o mesmo padrão.
-    if (this.attackCooldown <= 0 && Math.abs(dy) < 58 && playerInside) {
+    if (this.attackCooldown <= 0 && Math.abs(dy) < 58 && hunting) {
       if (adx <= cfg.meleeRange) {
         this.startBossAction('slash', dx)
         return
@@ -1028,7 +1040,7 @@ export class Enemy {
 
     const stopDistance = Math.max(14, (this.w + player.w) / 2 + 3)
 
-    if (!playerInside) {
+    if (!hunting) {
       const edge = playerCenterX < arenaLeft ? arenaLeft : arenaRight - this.w
       const d = edge - this.x
       this.accelerate(Math.abs(d) > 4 ? Math.sign(d) * this.speed * 0.6 : 0, dt)
@@ -1229,6 +1241,7 @@ export class Enemy {
     this.bossComboQueued = false
     this.bossChain = false
     this.bossThrowRecovery = false
+    this.aggroTimer = 0
     this.vx = 0
     this.animator.setTimeScale(1)
     if (!cfg) return
@@ -1255,6 +1268,7 @@ export class Enemy {
     this.bossStrafeTimer = 0
     this.bossStrafeDir = 1
     this.bossThrowRecovery = false
+    this.aggroTimer = 0
     this.bossGuardTimer = 0
     this.bossParryWindow = 0
     this.guardTimer = 0

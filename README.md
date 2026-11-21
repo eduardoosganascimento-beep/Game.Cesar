@@ -1,62 +1,42 @@
-# Sandman — A Lenda da Floresta
+# Sandman — O Guardião da Floresta
 
-Jogo indie 2D em pixel art feito para rodar no navegador com **TypeScript + Canvas 2D + CSS**.
+[![Deploy no GitHub Pages](https://github.com/eduardoosganascimento-beep/Game.Cesar/actions/workflows/deploy.yml/badge.svg)](https://github.com/eduardoosganascimento-beep/Game.Cesar/actions/workflows/deploy.yml)
+![TypeScript](https://img.shields.io/badge/TypeScript-5.6-3178c6?logo=typescript&logoColor=white)
+![Canvas 2D](https://img.shields.io/badge/render-Canvas%202D-2b8a3e)
+![Versão](https://img.shields.io/badge/versão-1.7-d97706)
 
-> A aldeia caiu. A família de Sandman foi levada por colonos portugueses.
-> Anos de preparo depois, ele volta para resgatar quem ama — e acertar as contas.
+Jogo indie 2D em pixel art que roda direto no navegador. **TypeScript + Canvas 2D + CSS**,
+sem dependências de runtime e sem instalação para jogar.
 
-**Versão atual:** `1.4` — nove capítulos, tutorial jogável, zumbis e o boss Urso, com três níveis de dificuldade.
+> A aldeia caiu. A família de Sandman foi levada rio abaixo por colonos.
+> Anos de preparo depois, o guardião volta para resgatar quem ama — e acertar as contas.
 
-## 🎮 Jogar agora
+## Jogar agora
 
-**[https://eduardoosganascimento-beep.github.io/Game.Cesar/](https://eduardoosganascimento-beep.github.io/Game.Cesar/)**
+**[eduardoosganascimento-beep.github.io/Game.Cesar](https://eduardoosganascimento-beep.github.io/Game.Cesar/)**
 
-O site é publicado pelo **GitHub Pages** a partir do workflow `.github/workflows/deploy.yml`:
-todo `push` na branch `main` roda o build e atualiza o site. Funciona em qualquer
-computador com navegador — não precisa instalar nada.
+O site é publicado pelo workflow `.github/workflows/deploy.yml` a cada `push` em `main`.
+Em *Settings → Pages → Source*, mantenha **GitHub Actions** selecionado.
 
-> **Configuração obrigatória:** em *Settings → Pages → Source*, escolha
-> **GitHub Actions**. Se ficar em "Deploy from a branch", o GitHub publica o
-> `index.html` da raiz (que aponta para `src/main.ts`) e o jogo não carrega.
-
-## Capítulos
-
-| # | Capítulo | Tema visual | Mapa |
-| --- | --- | --- | --- |
-| — | Tutorial — A Trilha | Bosque | 96 colunas |
-| 1 | A Aldeia | Aldeia | 132 colunas |
-| 2 | O Rio Escuro | Rio | 156 colunas |
-| 3 | O Acampamento | Acampamento | 176 colunas |
-| 4 | O Reencontro | Noite | 196 colunas |
-| 5 | O Portal | Bosque | 120 colunas |
-| 6 | A Caverna | Bosque | 128 colunas |
-| 7 | O Castelo | Acampamento | 136 colunas |
-| 8 | O Futuro | Noite | 144 colunas |
-| 9 | O Fim | Noite | 152 colunas |
-
-Cada capítulo é um mapa aberto contínuo, com **checkpoints**, **memórias**
-coletáveis e um portal de objetivo no final. Os cinco temas visuais
-(aldeia, rio, acampamento, bosque e noite) são reaproveitados entre capítulos;
-caverna e castelo ainda não têm cenário próprio.
+![Sandman no Capítulo 1](docs/capitulo-1.png)
 
 ## O que tem no jogo
 
-- **Sandman** com sprites próprios de idle, corrida, salto, arremesso de lança,
-  ataque corpo a corpo, dano e morte.
-- **Combate**: golpe de lança, arremesso com projétil, avanço rápido (dash),
-  bloqueio com parry e riposte.
-- **Inimigos**: capangas, soldados, feitores, capitães, índios, lobisomens,
-  guardiões e zumbis — cada um com alcance e comportamento próprios.
-- **Chefão guardião** com barra de vida no HUD.
-- **Três dificuldades** (Fácil, Normal, Difícil) com tela própria no menu,
-  velocidade, dano e resistência dos inimigos ajustados. A escolha fica salva
-  no navegador e aparece no HUD.
-- **Memórias e checkpoints** com progresso salvo durante a fase.
-- **Cenários** de dia, noite e floresta, com parallax em camadas, água, espinhos
-  e fogo.
-- **Efeitos** de impacto, poeira, faíscas e rastro de dash; áudio gerado por
-  Web Audio (com botão de mudo no HUD).
-- **Tutorial jogável** no menu principal, ensinando os controles passo a passo.
+- **Cinco capítulos** com cutscenes, checkpoints e um chefe indígena da família de Sand
+  (Sy, Tuba, Kypy'y e Kybykuera). O guardião final fecha a jornada no Capítulo 5.
+- **Combate**: golpe com a lança, arremesso, dash, **parry com F** (o PERFECT devolve a
+  lança do inimigo) e riposte com dano dobrado.
+- **Chefes com personalidade**: golpes em combo, arremesso correndo como o índio,
+  investida, guarda e contra-ataque. Eles leem a lança do jogador e desviam no impacto;
+  abaixo de 40% de vida entram na **fase de brasa**, mais rápidos e vermelhos.
+- **Vida e dano justos**: Sand começa com **6 corações**. Colonos, zumbis e armadilhas
+  tiram 1; chefes tiram 2. Nenhum dano devolve o jogador ao início — água e quedas
+  resgatam no último chão seguro.
+- **Plataformas**: suba pulando de baixo e desça com **↓ + Espaço**.
+- **Três dificuldades** (Fácil, Normal, Difícil) salvas no navegador, com velocidade,
+  dano e vida escalados — incluindo o chefe.
+- **Tutorial jogável**, pausa (Esc), barra de vida do chefe, efeitos de impacto,
+  poeira, faíscas, rastro de dash e áudio sintetizado com Web Audio.
 
 ## Controles
 
@@ -64,131 +44,81 @@ caverna e castelo ainda não têm cenário próprio.
 | --- | --- |
 | Mover | `←` `→` ou `A` `D` |
 | Pular | `Espaço`, `↑` ou `W` |
+| Descer pela plataforma | `↓` + `Espaço` |
 | Atacar (corpo a corpo) | `J` ou `Z` |
 | Arremessar a lança | `L` ou `X` |
-| Avançar (dash) | `Shift` ou `K` |
-| Reiniciar capítulo | `R` |
+| Parry / bloqueio | `F` |
+| Dash | `Shift` ou `K` |
 | Pausar / voltar | `Esc` |
+| Reiniciar capítulo | `R` |
 
-## Rodar localmente
+## Capítulos
 
-Requisitos: **Node.js 18+** (recomendado 20+) e npm.
+| # | Capítulo | Tema |
+| --- | --- | --- |
+| — | Tutorial — A Trilha | Bosque |
+| 1 | A Aldeia | Aldeia em chamas |
+| 2 | O Rio Escuro | Rio e névoa |
+| 3 | As Ruínas | Templo à noite |
+| 4 | O Reencontro | Bosque sagrado |
+| 5 | O Regresso | Amanhecer e guardião |
 
-```bash
-npm install
-npm run dev
-```
-
-Abra o endereço mostrado no terminal (por padrão `http://localhost:5173`).
-
-Para gerar e conferir a versão de produção:
-
-```bash
-npm run build       # typecheck + vite build em dist/
-npm run preview     # serve dist/ em http://localhost:4173
-npm run typecheck   # só o tsc --noEmit
-npm run levels:check # valida os JSONs de fase
-```
-
-O build embute os arquivos de `public/` no bundle como data URI (plugin
-`virtual:sandman-assets` em `vite.config.ts`), então o site publicado funciona
-em qualquer hospedagem, inclusive em subpasta do GitHub Pages.
+As fases `cap6` a `cap9` também estão versionadas e validadas em `src/data/levels/`,
+prontas para campanhas futuras.
 
 ## Estrutura
 
 ```
 Game.Cesar/
 ├── index.html              # menu, HUD, pausa e tela de fim
-├── styles/main.css         # layout, molduras, overlays e menu
+├── styles/main.css         # layout, molduras e overlays
 ├── src/
-│   ├── main.ts             # loop, regras da fase e renderização
-│   ├── engine.ts           # constantes, câmera, colisão AABB
+│   ├── main.ts             # loop, regras de fase e renderização
+│   ├── engine.ts           # constantes, câmera e colisão AABB
 │   ├── input.ts            # teclado
-│   ├── player.ts           # movimento, colisão, ataque, arremesso e dash
-│   ├── enemy.ts            # IA dos inimigos e do chefão
-│   ├── level.ts            # tilemap e leitura dos JSONs de fase
-│   ├── chapters.ts         # ordem dos capítulos e textos de transição
+│   ├── player.ts           # movimento, plataformas, ataque e arremesso
+│   ├── enemy.ts            # IA dos inimigos e dos chefes
+│   ├── level.ts            # tilemap e leitura dos JSONs
+│   ├── chapters.ts         # capítulos e cutscenes
 │   ├── difficulty.ts       # dificuldades e persistência
 │   ├── animator.ts         # clipes de animação
-│   ├── sprites.ts          # atlas, brilho e recortes
-│   ├── scenery.ts          # cenário, água, construções e objetivo
-│   ├── background.ts       # parallax de floresta e noite
-│   ├── effects.ts          # partículas, tremor e rastro
-│   ├── audio.ts            # efeitos sonoros via Web Audio
-│   ├── ui/hud.ts           # corações, memórias, chefão e prompts
-│   ├── ui/screens.ts       # menu, capítulos, pausa e fim
-│   └── data/levels/        # fases em JSON (cap1..cap9 + tutorial)
-├── public/assets/          # sprites e fundos (embutidos no build)
-├── source-art/             # arte-fonte versionada (folha de zumbi e referências)
-├── scripts/                # geradores de sprites/fases e validadores
-├── docs/                   # plano do jogo e guia de arte
-└── .github/workflows/      # deploy automático no GitHub Pages
+│   ├── sprites.ts          # atlas, recortes e colorização
+│   ├── background.ts       # fundos estáticos e animados
+│   ├── scenery.ts          # chão, água, plataformas e espinhos
+│   ├── effects.ts          # partículas, tremor e texto flutuante
+│   ├── audio.ts            # Web Audio
+│   ├── bosses.ts           # stats e paletas dos chefes
+│   └── ui/                 # HUD, menus e enquadramento da arena
+├── public/assets/          # sprites e fontes (embutidos no build)
+├── scripts/                # geradores de sprites e validador de fases
+├── docs/                   # plano, arte, capturas e fluxograma
+└── .github/workflows/      # deploy automático
 ```
 
-## Como as fases funcionam
+## Desenvolvimento
 
-Cada fase é um JSON em `src/data/levels/`. O mapa é uma lista de strings, uma
-por linha, e cada caractere é um tile de 16×16:
-
-| Char | Significado |
-| --- | --- |
-| `.` | vazio |
-| `#` | bloco sólido |
-| `-` | plataforma atravessável de cima |
-| `~` | água (dano) |
-| `^` | espinhos (dano) |
-| `+` | tile decorativo de fundo (não colide) |
-
-Além dos tiles, o JSON define `spawn` e uma lista de `entities` (`enemy`,
-`checkpoint` e `memory`). O validador confere spawn, chão sob inimigos e
-checkpoints, limites do mapa e largura consistente das linhas:
+Requisitos: **Node.js 18+** e npm.
 
 ```bash
-npm run levels:check
+npm install
+npm run dev              # http://localhost:5173
+npm run typecheck        # tsc --noEmit
+npm run levels:check     # valida cap1..cap9 + tutorial
+npm run build            # build de produção em dist/
+npm run preview          # serve dist/ em http://localhost:4173
 ```
 
-Para gerar/regenerar as fases a partir do gerador:
+O plugin `virtual:sandman-assets` embute os arquivos de `public/` no bundle como
+data URI, então o site funciona em qualquer hospedagem, inclusive subpasta.
 
-```bash
-node scripts/build-levels.mjs
-```
+## Documentação
 
-## Arte e sprites
-
-Os sprites finais ficam em `public/assets/sprites/` e são versionados. Os
-geradores leem as folhas originais:
-
-```bash
-node scripts/build-player-sprites.mjs    # Sandman
-node scripts/build-colonist-sprites.mjs  # colonos
-node scripts/build-wolf-sprites.mjs      # lobisomem Kennedy
-node scripts/build-zombie-sprites.mjs    # zumbis (lê source-art/)
-node scripts/crop-sheet.mjs              # recorte genérico de uma folha
-```
-
-As folhas de Sandman, colonos e lobo ficam em `raw/`, que **não é versionada**
-(~12 MB de material de trabalho). A folha de zumbi e as referências visuais
-ficam em `source-art/`, que é versionada — veja `source-art/README.md`.
-
-Cada pasta de sprite tem um `atlas.json` com a lista de quadros, o tamanho e a
-**âncora** (ponto dos pés usado para posicionar o personagem no chão).
-
-## Estado do desenvolvimento
-
-- O **índio** ainda não tem folha própria recortada: o atlas em
-  `public/assets/sprites/indio/` está vazio e o jogo usa os quadros de Sandman
-  como placeholder.
-- O **urso** (boss do Capítulo 1) tem estatísticas e clipes definidos em
-  `src/enemy.ts` e `src/animator.ts`, mas ainda não tem sprite nem spawn nas
-  fases — não é jogável no momento.
-- O jogo não tem controles por toque; foi pensado para teclado em desktop.
+- [Plano do jogo](docs/PLANO-DO-JOGO.md)
+- [Guia de arte](docs/ARTE.md)
+- [Fluxograma (SVG)](docs/fluxograma-do-jogo.svg) · [cena editável do Excalidraw](docs/fluxograma-do-jogo.excalidraw)
+- [Notas de versão](docs/CHANGELOG.md)
 
 ## Créditos
 
-- Conceito, história e direção: projeto **Game.Cesar**
-- Arte dos personagens: folhas de sprite do próprio projeto
-- Referências históricas em `docs/PLANO-DO-JOGO.md`
-
-## Licença
-
-Projeto pessoal em desenvolvimento. Todos os direitos reservados por enquanto.
+Conceito, história, código e arte: projeto **Game.Cesar**. Referências históricas e
+visuais em `docs/PLANO-DO-JOGO.md`.

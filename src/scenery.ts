@@ -536,17 +536,17 @@ function drawSoil(
 
   if (!top) return
 
-  // Superfície irregular de capim, com silhueta quebrada acima da linha.
-  const capBottom = 5 + Math.floor(hash(seed + 1.1) * 2)
+  // Capim rente e contínuo: a altura fixa evita o aspecto "deformado" de
+  // degraus que o topo aleatório criava entre um tile e outro.
+  const capBottom = 4
   px(ctx, dx, dy, TILE, capBottom, palette.cap)
   for (let x = 0; x < TILE; x += 1) {
     const edge = hash(seed + x * 2.9)
     if (edge > 0.72) px(ctx, dx + x, dy + capBottom - 1, 1, 1, palette.soilDark)
     if (edge > 0.42) px(ctx, dx + x, dy + capBottom, 1, 1, palette.capDark)
-    if (edge > 0.58) px(ctx, dx + x, dy, 1, 1, palette.capLight)
+    if (edge > 0.7) px(ctx, dx + x, dy, 1, 1, palette.capLight)
     if (edge < 0.16) px(ctx, dx + x, dy + 1, 1, 1, palette.capDark)
-    if (edge > 0.76) px(ctx, dx + x, dy - 1, 1, 1, edge > 0.92 ? palette.cap : palette.capDark)
-    if (edge > 0.93) px(ctx, dx + x, dy - 2, 1, 1, palette.cap)
+    if (edge > 0.9) px(ctx, dx + x, dy - 1, 1, 1, palette.capDark)
   }
 
   // Faixa de terra revolvida logo abaixo do capim.
@@ -711,6 +711,8 @@ function drawPlatform(
   dy: number,
   palette: Palette,
   stone: boolean,
+  runStart: boolean,
+  runEnd: boolean,
 ): void {
   const seed = tx * 5.1 + ty * 3.7
   if (stone) {
@@ -727,11 +729,16 @@ function drawPlatform(
     px(ctx, dx, dy, TILE, 1, palette.root)
     px(ctx, dx, dy + 1, TILE, 3, palette.soil)
     px(ctx, dx, dy + 4, TILE, 1, palette.soilDeep)
-    // Amarrações de cipó.
-    px(ctx, dx + 3, dy, 1, 5, palette.capDark)
-    px(ctx, dx + 12, dy, 1, 5, palette.capDark)
-    px(ctx, dx + 3, dy + 1, 1, 1, palette.capLight)
-    px(ctx, dx + 12, dy + 1, 1, 1, palette.capLight)
+    // Amarrações só nas pontas do trecho: antes cada tile repetia as duas
+    // cipós e a plataforma parecia uma cerca listrada, não uma prancha.
+    if (runStart) {
+      px(ctx, dx + 2, dy, 1, 5, palette.capDark)
+      px(ctx, dx + 2, dy + 1, 1, 1, palette.capLight)
+    }
+    if (runEnd) {
+      px(ctx, dx + TILE - 3, dy, 1, 5, palette.capDark)
+      px(ctx, dx + TILE - 3, dy + 1, 1, 1, palette.capLight)
+    }
     // Musgo e folhas sobre a prancha.
     if (hash(seed) > 0.35) {
       const mx = dx + 4 + Math.floor(hash(seed + 2.1) * 7)
@@ -814,7 +821,12 @@ export function drawScenery(
   for (let ty = y0; ty <= y1; ty += 1) {
     for (let tx = x0; tx <= x1; tx += 1) {
       if (map.tileAt(tx, ty) !== Tile.Platform) continue
-      drawPlatform(ctx, tx, ty, tx * TILE - cameraX, ty * TILE - cameraY, palette, stone)
+      const runStart = map.tileAt(tx - 1, ty) !== Tile.Platform
+      const runEnd = map.tileAt(tx + 1, ty) !== Tile.Platform
+      drawPlatform(
+        ctx, tx, ty, tx * TILE - cameraX, ty * TILE - cameraY, palette, stone,
+        runStart, runEnd,
+      )
     }
   }
 

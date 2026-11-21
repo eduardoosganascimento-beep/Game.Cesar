@@ -906,7 +906,7 @@ class Game {
           enemy.x < this.camera.px + VIEW_W + 24,
       )
     const boss = bosses.sort((a, b) => b.maxHp - a.maxHp)[0]
-    if (boss) this.hud.setBoss(boss.bossName, boss.hp, boss.maxHp, boss.bossTitle, boss.isEnraged)
+    if (boss) this.hud.setBoss(boss.bossName, boss.hp, boss.maxHp, '', boss.isEnraged)
     else this.hud.hideBoss()
 
     const time = performance.now() / 1000
@@ -1172,7 +1172,13 @@ class Game {
     this.hitStop = Math.max(this.hitStop, killed ? 0.085 : 0.05)
 
     if (!killed) {
-      this.effects.text(cx, enemy.y - 3, 'ACERTO!', '#ffb38a')
+      // Chefe mostra o número: o jogador precisa ler o dano real do combo/riposte.
+      this.effects.text(
+        cx,
+        enemy.y - 3,
+        enemy.isBoss ? `-${dealt}` : 'ACERTO!',
+        enemy.isBoss ? enemy.bossNameColor : '#ffb38a',
+      )
       sfx.hit()
       return
     }
@@ -1552,7 +1558,13 @@ class Game {
     this.player.throw = 0
     this.clearCombatState()
     this.effects.clear()
-    this.effects.text(Math.max(80, this.player.x + this.player.w / 2), Math.max(60, this.player.y - 12), message, '#ffd166')
+    const deathX = this.player.x + this.player.w / 2
+    const deathY = this.player.y + this.player.h
+    this.effects.burst(deathX, deathY - 10, 'blood', 12, 64)
+    this.effects.burst(deathX, deathY, 'dust', 10, 40)
+    this.effects.addShake(5)
+    sfx.hit()
+    this.effects.text(Math.max(80, deathX), Math.max(60, this.player.y - 12), message, '#ffd166')
     this.camera.snapTo(this.player.hurtbox, this.map.width, this.map.height)
     this.syncHud(true)
   }
@@ -1683,8 +1695,10 @@ class Game {
       ctx.fillRect(feetX - 28, feetY - 44, 56, 48)
     }
 
-    const flash = enemy.invuln > 0 && Math.floor(enemy.invuln * 28) % 2 === 0
-    if (flash) ctx.globalAlpha = 0.55
+    // Chefes não piscam em transparência: o clarão branco de dano é mais
+    // legível e não parece falha de render.
+    const blink = !enemy.isBoss && enemy.invuln > 0 && Math.floor(enemy.invuln * 28) % 2 === 0
+    if (blink) ctx.globalAlpha = 0.55
 
     // Antecipação: o corpo comprime um pouco antes de golpear/soltar a lança
     // e volta ao normal no impacto. É o "peso" que falta no pixel art quieto.
@@ -1735,6 +1749,20 @@ class Game {
       this.paintFallbackColonist(feetX, feetY, scale, enemy.facing)
     }
     ctx.restore()
+
+    // Clarão de dano do chefe: substitui a piscada em transparência.
+    if (enemy.isBoss && enemy.hurt > 0 && enemy.alive && sprite) {
+      ctx.save()
+      ctx.globalAlpha = Math.min(0.38, enemy.hurt * 1.8)
+      ctx.drawImage(
+        sprite.white,
+        Math.round(feetX - sprite.ax * scale),
+        Math.round(feetY - sprite.ay * scale),
+        Math.max(1, Math.round(sprite.w * scale)),
+        Math.max(1, Math.round(sprite.h * scale)),
+      )
+      ctx.restore()
+    }
 
     // Rastro do golpe corpo a corpo: uma lasca clara que sai da arma no
     // instante do impacto, para o ataque ficar legível na mata escura.
@@ -1818,80 +1846,7 @@ class Game {
       ctx.fillRect(feetX - 1, feetY - 46, 2, 2)
       ctx.globalAlpha = 1
 
-      // Nome em tupi antigo flutuando acima da coroa, legível contra a mata.
-      if (sprite) {
-        const crownTop = feetY - (sprite.ay - (sprite.topY ?? 0)) * scale
-        this.paintBossName(enemy, feetX, crownTop, time)
-      }
     }
-  }
-
-  // Placa flutuante com o nome do chefe: letra maior, espaçada e contornada,
-  // com o título (Mãe, Pai, Irmã…) logo abaixo. O fundo escuro e as vinhetas
-  // douradas mantêm a leitura mesmo sobre a folhagem vermelha do capítulo 1.
-  private paintBossName(enemy: Enemy, centerX: number, crownTop: number, time: number): void {
-    const name = enemy.bossName.toUpperCase()
-    const title = enemy.bossTitle.toUpperCase()
-    const color = enemy.bossNameColor
-    const tracking = 1
-    const nameFont = 'bold 8px "Courier New", monospace'
-    const titleFont = 'italic 6px Georgia, serif'
-
-    ctx.save()
-    ctx.textAlign = 'center'
-    ctx.textBaseline = 'alphabetic'
-
-    ctx.font = nameFont
-    const nameWidth = [...name].reduce((sum, ch) => sum + ctx.measureText(ch).width + tracking, -tracking)
-    ctx.font = titleFont
-    const titleWidth = title ? ctx.measureText(title).width : 0
-    const plateWidth = Math.ceil(Math.max(nameWidth, titleWidth) + 16)
-    const plateHeight = title ? 20 : 13
-    const y = Math.round(crownTop) - 10
-    const plateY = y - (title ? 13 : 8)
-    const plateX = Math.round(centerX - plateWidth / 2)
-
-    // Moldura: fundo quase preto, filetes dourados e pequenas pontas laterais.
-    ctx.globalAlpha = 0.86
-    ctx.fillStyle = '#070504'
-    ctx.fillRect(plateX, plateY, plateWidth, plateHeight)
-    ctx.fillStyle = rgba(color, 0.72)
-    ctx.fillRect(plateX + 2, plateY, plateWidth - 4, 1)
-    ctx.fillRect(plateX + 2, plateY + plateHeight - 1, plateWidth - 4, 1)
-    ctx.globalAlpha = 0.55
-    ctx.fillRect(plateX, plateY + 3, 1, plateHeight - 6)
-    ctx.fillRect(plateX + plateWidth - 1, plateY + 3, 1, plateHeight - 6)
-
-    // Haste curta ligando a placa à coroa.
-    ctx.globalAlpha = 0.6
-    ctx.fillStyle = color
-    ctx.fillRect(Math.round(centerX), plateY + plateHeight, 1, 3)
-
-    // Nome: letra por letra para controlar o espaçamento e desenhar contorno.
-    ctx.font = nameFont
-    ctx.globalAlpha = 0.94 + Math.sin(time * 3) * 0.06
-    let cursor = centerX - nameWidth / 2
-    for (const ch of name) {
-      const charWidth = ctx.measureText(ch).width
-      const charX = Math.round(cursor + charWidth / 2)
-      ctx.globalAlpha = 1
-      ctx.fillStyle = '#000'
-      ctx.fillText(ch, charX + 1, y + 1)
-      ctx.fillText(ch, charX - 1, y + 1)
-      ctx.fillStyle = color
-      ctx.fillText(ch, charX, y)
-      cursor += charWidth + tracking
-    }
-
-    if (title) {
-      ctx.font = titleFont
-      ctx.globalAlpha = 0.88
-      ctx.fillStyle = '#000'
-      ctx.fillText(title, centerX + 1, y + 8)
-      ctx.fillStyle = rgba(color, 0.9)
-      ctx.fillText(title, centerX, y + 8)
-    }
-    ctx.restore()
   }
 
   private paintShots(time: number): void {
