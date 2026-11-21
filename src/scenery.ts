@@ -828,17 +828,6 @@ export function drawScenery(
     }
   }
 
-  // Filete contínuo na borda do chão: costura os tiles e tira o aspecto de
-  // "tijolos soltos" que o capim parecia ter quando visto de longe.
-  ctx.globalAlpha = 0.3
-  for (let tx = x0; tx <= x1; tx += 1) {
-    for (let ty = y0; ty <= y1; ty += 1) {
-      if (map.tileAt(tx, ty) !== Tile.Solid || isSolid(map, tx, ty - 1)) continue
-      px(ctx, tx * TILE - cameraX, ty * TILE - cameraY, TILE, 1, palette.capLight)
-    }
-  }
-  ctx.globalAlpha = 1
-
   drawSpikes(ctx, map, cameraX, cameraY, palette)
 
   // O subsolo escurece para a base da tela: dá peso ao chão e fecha a cena.
