@@ -872,6 +872,46 @@ function paintBossWounds(
     }
   }
 
+  // Limpeza do recorte do braço: micro-ilhas de pixels que sobram da três
+  // passadas de erase viram "sujeira" quando o sprite é ampliado na tela.
+  {
+    const w = canvas.width
+    const h = canvas.height
+    const clean = context.getImageData(0, 0, w, h)
+    const pixels = clean.data
+    const solid = (x: number, y: number): boolean =>
+      x >= 0 && x < w && y >= 0 && y < h && pixels[(y * w + x) * 4 + 3] > 24
+    for (
+      let y = Math.max(1, Math.round(hy + 2));
+      y <= Math.min(h - 8, Math.round(hy + 26));
+      y += 1
+    ) {
+      for (let x = 0; x < Math.max(0, Math.floor(hx) - 7); x += 1) {
+        const i = (y * w + x) * 4 + 3
+        if (pixels[i] <= 24) continue
+        if (!solid(x - 1, y) && !solid(x + 1, y) && !solid(x, y - 1) && !solid(x, y + 1)) {
+          pixels[i] = 0
+        }
+      }
+    }
+    context.putImageData(clean, 0, 0)
+  }
+
+  // Acabamento de pixel art: tinta ritual no peito e brilho de concha na testa.
+  // São poucos pixels — o suficiente para dar acabamento sem engordar a silhueta.
+  if (anim !== 'death') {
+    const paint = BOSS_PAINTS[skin]
+    const px0 = Math.round(hx)
+    const py0 = Math.round(hy)
+    context.fillStyle = paint.paint
+    context.fillRect(px0 + 2, py0 + 12, 2, 1)
+    context.fillRect(px0 + 3, py0 + 13, 1, 1)
+    context.fillStyle = paint.bead
+    context.fillRect(px0 + 2, py0 + 1, 1, 1)
+    context.fillStyle = paint.bandLight
+    context.fillRect(px0 + 3, py0 + 2, 1, 1)
+  }
+
   // Ferimento no rosto: olho vazado ou corte profundo.
   const ex = Math.round(hx + 4)
   const ey = Math.round(hy + 7)
